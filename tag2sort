@@ -1,0 +1,1122 @@
+#!/usr/bin/perl -w
+use warnings;
+use strict;
+$|++;
+use Getopt::Long;
+use Cwd;
+use FindBin qw($Bin);
+use lib "$Bin/../lib";
+
+## This program is Copyright (C) 2014-16, Felix Krueger (felix.krueger@babraham.ac.uk)
+
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+
+## You should have received a copy of the GNU General Public License
+## along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+
+my %counting;
+my %fhs;
+
+my $parent_dir = getcwd();
+my $SNPsplit_version = '0.1.2';
+
+my ($paired,$hic,$verbose,$samtools_path,$bam,$output_dir,$conflict,$singletons) = process_commandline();
+
+my ($unassigned,$genome1,$genome2,$conflicting,$snp_found,$no_snp_found,$bizarre,$no_snp);
+my $report_file;
+
+foreach my $file (@ARGV){
+  warn "\nSummary of parameters for SNPsplit-sort:\n";
+  warn '='x40,"\n";
+  warn "SNPsplit tagged infile:\t\t$file\n";
+  warn "Output directory:\t\t>$output_dir<\n";
+  warn "Parent directory:\t\t>$parent_dir<\n";
+  warn "Samtools path:\t\t\t$samtools_path\n";
+  if ($bam){
+    warn "Output format:\t\t\tBAM (default)\n";
+  }
+  else{
+    warn "Output format:\t\t\tSAM\n";
+  }
+  if ($hic){
+    warn "Input format:\t\t\tHi-C (by definition paired-end)\n";
+  }
+  else{
+    if ($paired){
+      if ($singletons){
+	warn "Input format:\t\t\tPaired-end (Singleton alignments will written to extra files)\n";
+      }	
+      else{
+	warn "Input format:\t\t\tPaired-end\n";
+      }
+    }
+    else{
+      warn "Input format:\t\t\tSingle-End\n";
+    }
+  }
+  warn "\n\n";
+
+  sleep (1);
+  my $outfile;
+  if ($hic){
+    process_HiC_paired_end($file);
+  }
+  elsif ($paired){
+    princess_paired_end($file);
+  }
+  else{
+    process_single_end($file);
+  }
+
+  close G1;
+  close G2;
+  close UNASSIGNED;
+  if ($conflict){
+    close CONFLICT;
+  }
+
+  # returning to SNPsplit-tag, or end otherwise
+  warn "Sorting finished successfully\n\n";
+
+}
+
+sub process_single_end{
+
+  my $file = shift;
+
+  open (IN,"samtools view -h $file |") or die "Failed to read from BAM file $file: $!\n";
+  warn "Now processing input file <<< $file >>>\n\n";
+
+  my $outfile = open_output_filehandles($file);
+
+  ### READING FROM MAPPING BAM FILE
+
+  ($genome1,$genome2,$conflicting,$unassigned) = (0,0,0,0);
+  my $count = 0;
+
+  while (<IN>){
+
+    if ($_ =~ /^\@/){ # header lines
+      print UNASSIGNED;
+      print G1;
+      print G2;
+      if ($conflict){
+	print CONFLICT;
+      }
+      next;
+    }
+
+    ++$count;
+
+    if ($count%1000000 == 0){
+      warn "Processed $count lines so far\n";
+    }
+
+    if ($verbose){
+      print $_;
+    }
+
+    my $XX_tag = $1 if ($_ =~ /XX:Z:(.+?)\s+/);  # allele-specificity flag
+
+    unless ($XX_tag){
+      die "Failed to extract XX:Z tag from line:\n$_\n";
+    }
+
+    if ($XX_tag eq 'UA'){
+      ++$unassigned;       # unassigned
+      print UNASSIGNED;
+    }
+    elsif($XX_tag eq 'G1'){
+      $genome1++;          # genome 1-specific
+      print G1;
+    }
+    elsif($XX_tag eq 'G2'){
+      $genome2++;          # genome 2-specific
+      print G2;
+    }
+    elsif($XX_tag eq 'CF'){
+      ++$conflicting;      # conflicting read, something weird was going on
+      if ($conflict){
+	print CONFLICT;
+      }
+    }
+    else{
+      die "The read did not have an expected XX-tag:\n$_\n\n";
+    }
+
+  }
+
+  ### Printing Summary reports of the stats on a per-read basis
+
+  my ($perc_genome1,$perc_genome2,$perc_conflicting,$perc_unassigned);
+  if ($count == 0){
+    $perc_unassigned = $perc_genome1 = $perc_genome2 = $perc_conflicting = 'N/A';
+  }
+  else{
+    $perc_unassigned  = sprintf ("%.2f",$unassigned*100/$count);
+    $perc_genome1     = sprintf ("%.2f",$genome1*100/$count);
+    $perc_genome2     = sprintf ("%.2f",$genome2*100/$count);
+    $perc_conflicting = sprintf ("%.2f",$conflicting*100/$count);
+  }
+
+  warn "\n\nAllele-specific single-end sorting report\n",'='x41,"\n";
+  warn "Read alignments processed in total:\t\t$count\n";
+  warn "Reads were unassignable:\t\t\t$unassigned ($perc_unassigned%)\n";
+  warn "Reads were specific for genome 1:\t\t$genome1 ($perc_genome1%)\n";
+  warn "Reads were specific for genome 2:\t\t$genome2 ($perc_genome2%)\n";
+  warn "Reads contained conflicting SNP information:\t$conflicting ($perc_conflicting)\n\n\n";
+
+}
+
+sub process_HiC_paired_end{
+
+  my $file = shift;
+
+  open (IN,"samtools view -h $file |") or die "Failed to read from BAM file $file: $!\n";
+
+  open_output_filehandles($file);
+
+  ### READING FROM MAPPING BAM FILE
+  # Here we don't need to keep track of chromosome etc but can simply proceed line by line
+
+  my ($g1_ua , $ua_g1 , $g2_ua , $ua_g2, $g1_g2 , $g2_g1) = (0,0,0,0,0,0);
+  my ($g1_g1 , $g2_g2) = (0,0);
+  ($unassigned,$conflicting) = (0,0);
+
+  my $count = 0;
+
+  my $last_id;
+  my $last_line;
+
+  while (<IN>){
+
+    if ($_ =~ /^\@/){ # header lines
+      print UNASSIGNED;
+      print G1;
+      print G2;
+      if ($conflict){
+	print CONFLICT;
+      }
+      print G1UA;
+      print G2UA;
+      print G1G2;
+      next;
+    }
+
+    my ($id)  = (split /\t/)[0];
+
+    unless (defined $last_id){
+      # warn "Setting last_id to $id\n";
+      $last_id = $id;
+      $last_line = $_;
+      next; ### need to process last ID upon exiting the while loop
+    }
+
+    ### Else, read ID has been set already. Determining if the last read and this read are part of a read pair. This is essential for HiCUP Hi-C data
+
+    if ($id eq $last_id){
+      # warn "Paired end read\n$last_id\n$id\n";
+
+      ++$count; # increasing counter for read pair
+
+      my $XX_tag_1 = $1 if ($last_line =~ /XX:Z:(.+?)\s+/);
+      unless ($XX_tag_1){
+	die "Failed to extract XX:Z tag from line:\n$last_line\n";
+      } # warn "XX tag 1: $XX_tag_1\n";sleep(1);
+
+      my $XX_tag_2 = $1 if ($_ =~ /XX:Z:(.+?)\s+/);
+      unless ($XX_tag_2){
+	die "Failed to extract XX:Z tag from line:\n$_\n";
+      } # warn "XX tag 2: $XX_tag_2\n";sleep(1);
+
+
+      ### Processing the allele-specificity of the read pair as a whole
+
+      if ( $XX_tag_1 eq 'UA' and $XX_tag_2 eq 'UA' ){
+	++$unassigned;       # unassigned
+	print UNASSIGNED $last_line;
+	print UNASSIGNED;
+      }
+      elsif( $XX_tag_1 eq 'G1' and $XX_tag_2 eq 'G1' ){
+	$genome1++;          # genome 1-specific
+	print G1 $last_line;
+	print G1;
+      }
+      elsif( $XX_tag_1 eq 'G2' and $XX_tag_2 eq 'G2' ){
+	$genome2++;          # genome 2-specific
+	print G2 $last_line;
+	print G2;
+      }
+      elsif( $XX_tag_1 eq 'CF' or $XX_tag_2 eq 'CF'){
+	++$conflicting;      # conflicting read, something weird was going on
+	if ($conflict){
+	  print CONFLICT $last_line;
+	  print CONFLICT;
+	}
+      }
+      elsif ($XX_tag_1 eq 'G1' and $XX_tag_2 eq 'UA' ){
+	++$g1_ua;
+	print G1UA $last_line;
+	print G1UA;
+      }
+      elsif ($XX_tag_1 eq 'UA' and $XX_tag_2 eq 'G1' ){
+	++$ua_g1;
+	print G1UA $last_line;
+	print G1UA;
+      }
+      elsif ($XX_tag_1 eq 'G2' and $XX_tag_2 eq 'UA' ){
+	++$g2_ua;
+	print G2UA $last_line;
+   	print G2UA;
+      }
+      elsif ($XX_tag_1 eq 'UA' and $XX_tag_2 eq 'G2' ){
+	++$ua_g2;
+	print G2UA $last_line;
+  	print G2UA;
+      }
+      elsif ($XX_tag_1 eq 'G1' and $XX_tag_2 eq 'G2' ){
+	++$g1_g2;
+	print G1G2 $last_line;
+   	print G1G2;
+      }
+      elsif ($XX_tag_1 eq 'G2' and $XX_tag_2 eq 'G1' ){
+	++$g2_g1;
+	print G1G2 $last_line;
+ 	print G1G2;
+      }
+      else{
+	die "The read pairs did not have an expected XX-tag\nXX-tag 1: $XX_tag_1\nXX-tag 2: $XX_tag_2\n\n";
+      }
+
+
+      #  warn "Resetting last_id after processing the paired-end read\n\n"; sleep(1);
+      $last_id = $last_line = undef; # resetting the last id and alignment
+    }
+    else{
+      die "Hi-C data has to be paired-end by definition, however the reads did not have the same read ID:\nRead 1: $last_line\nRead 2: $_\n\n";	
+    }
+
+    if ($count%1000000 == 0){
+      warn "Processed $count lines so far\n";
+    }
+
+  }
+
+  if (defined $last_id){
+    warn "Last read was a singleton, skipping...\n";
+  }
+
+  ### Printing Summary reports
+
+  my $g1_ua_total = $g1_ua + $ua_g1;
+  my $g2_ua_total = $g2_ua + $ua_g2;
+  my $g1_g2_total = $g1_g2 + $g2_g1;
+
+  my ($perc_unassigned,$perc_genome1,$perc_genome2,$perc_conflicting,$perc_g1_ua,$perc_g2_ua,$perc_g1_g2);
+  if ($count == 0){
+    $genome1 = $genome2 = 0;
+    $perc_unassigned = $perc_genome1 = $perc_genome2 = $perc_conflicting = $perc_g1_ua = $perc_g2_ua = $perc_g1_g2 = 'N/A';
+  }
+  else{
+    $perc_unassigned  = sprintf ("%.2f",$unassigned *100/$count);
+    $perc_genome1     = sprintf ("%.2f",$genome1*100/$count);
+    $perc_genome2     = sprintf ("%.2f",$genome2*100/$count);
+    $perc_conflicting = sprintf ("%.2f",$conflicting*100/$count);
+
+    $perc_g1_ua       = sprintf ("%.2f",$g1_ua_total*100/$count);
+    $perc_g2_ua       = sprintf ("%.2f",$g2_ua_total*100/$count);
+    $perc_g1_g2       = sprintf ("%.2f",$g1_g2_total*100/$count);
+
+  }
+
+  warn "\n\nAllele-specific paired-end sorting report\n",'='x41,"\n";
+  warn "Read pairs processed in total:\t\t\t\t$count\n";
+  warn "Read pairs were unassignable (UA/UA):\t\t\t$unassigned ($perc_unassigned%)\n";
+  warn "Read pairs were specific for genome 1 (G1/G1):\t\t$genome1 ($perc_genome1%)\n";
+  warn "Read pairs were specific for genome 2 (G2/G2):\t\t$genome2 ($perc_genome2%)\n";
+  warn "Read pairs were a mix of G1 and UA:\t\t\t$g1_ua_total ($perc_g1_ua%). Of these,\n";
+  warn "\t\t\twere G1/UA: $g1_ua\n";
+  warn "\t\t\twere UA/G1: $ua_g1\n";
+  warn "Read pairs were a mix of G2 and UA:\t\t\t$g2_ua_total ($perc_g2_ua%). Of these,\n";
+  warn "\t\t\twere G2/UA: $g2_ua\n";
+  warn "\t\t\twere UA/G2: $ua_g2\n";
+  warn "Read pairs were a mix of G1 and G2:\t\t\t$g1_g2_total ($perc_g1_g2%). Of these,\n";
+  warn "\t\t\twere G1/G2: $g1_g2\n";
+  warn "\t\t\twere G2/G1: $g2_g1\n";
+  warn "Read pairs contained conflicting SNP information:\t$conflicting ($perc_conflicting%)\n\n";
+
+  print REPORT "\n\nAllele-specific paired-end sorting report\n",'='x41,"\n";
+  print REPORT "Read pairs processed in total:\t\t\t\t$count\n";
+  print REPORT "Read pairs were unassignable (UA/UA):\t\t\t$unassigned ($perc_unassigned%)\n";
+  print REPORT "Read pairs were specific for genome 1 (G1/G1):\t\t$genome1 ($perc_genome1%)\n";
+  print REPORT "Read pairs were specific for genome 2 (G2/G2):\t\t$genome2 ($perc_genome2%)\n";
+  print REPORT "Read pairs were a mix of G1 and UA:\t\t\t$g1_ua_total ($perc_g1_ua%). Of these,\n";
+  print REPORT "\t\t\twere G1/UA: $g1_ua\n";
+  print REPORT "\t\t\twere UA/G1: $ua_g1\n";
+  print REPORT "Read pairs were a mix of G2 and UA:\t\t\t$g2_ua_total ($perc_g2_ua%). Of these,\n";
+  print REPORT "\t\t\twere G2/UA: $g2_ua\n";
+  print REPORT "\t\t\twere UA/G2: $ua_g2\n";
+  print REPORT "Read pairs were a mix of G1 and G2:\t\t\t$g1_g2_total ($perc_g1_g2%). Of these,\n";
+  print REPORT "\t\t\twere G1/G2: $g1_g2\n";
+  print REPORT "\t\t\twere G2/G1: $g2_g1\n";
+  print REPORT "Read pairs contained conflicting SNP information:\t$conflicting ($perc_conflicting%)\n\n";
+
+
+}
+
+sub princess_paired_end{
+
+  my $file = shift;
+
+  open (IN,"samtools view -h $file |") or die "Failed to read from BAM file $file: $!\n";
+
+  open_output_filehandles($file);
+
+  ### READING FROM MAPPING BAM FILE
+  # Here we don't need to keep track of chromosome etc but can simply proceed line by line
+
+  ($unassigned,$genome1,$genome2,$conflicting) = (0,0,0,0);
+
+  my $count = 0;
+  my $count_pairs = 0;
+  my $count_singletons = 0;
+
+  my $g1_pairs = 0;
+  my $g1_singletons = 0;
+
+  my $g2_pairs = 0;
+  my $g2_singletons = 0;
+
+  my $unassigned_pairs = 0;
+  my $unassigned_singletons = 0;
+
+  my $conflicting_pairs = 0;
+  my $conflicting_singletons = 0;
+
+  my $last_id;
+  my $last_line;
+
+  while (<IN>){
+
+    if ($_ =~ /^\@/){ # header lines
+      print UNASSIGNED;
+      print G1;
+      print G2;
+      if ($conflict){
+	print CONFLICT;
+      }
+
+      if ($singletons){
+	print UNASSIGNED_ST;
+	print G1_ST;
+	print G2_ST;
+	if ($conflict){
+	  print CONFLICT_ST;
+	}
+      }
+      next;
+    }
+
+    my ($id)  = (split /\t/)[0];
+
+    unless (defined $last_id){
+    #  warn "Setting last_id to $id\n"; #sleep(1);
+      $last_id = $id;
+      $last_line = $_;
+      next; ### need to process last ID upon exiting the while loop
+    }
+
+    ### Else, read ID has been set already. Determining if the last read and this read are part of a read pair
+
+    if ($id eq $last_id){
+    #  warn "Paired end read\n$last_id\n$id\n";
+
+      ++$count; # increasing counter for read pair
+      ++$count_pairs;
+
+      my $XX_tag_1 = $1 if ($last_line =~ /XX:Z:(.+?)\s+/);
+      unless ($XX_tag_1){
+	die "Failed to extract XX:Z tag from line:\n$last_line\n";
+      } # warn "XX tag 1: $XX_tag_1\n";sleep(1);
+
+      my $XX_tag_2 = $1 if ($_ =~ /XX:Z:(.+?)\s+/);
+      unless ($XX_tag_2){
+	die "Failed to extract XX:Z tag from line:\n$_\n";
+      } # warn "XX tag 2: $XX_tag_2\n";sleep(1);
+
+
+      ### Processing the allele-specificity of the read pair as a whole
+
+      if ($XX_tag_1 eq 'UA' and $XX_tag_2 eq 'UA' ){
+	++$unassigned;       # unassigned
+	++$unassigned_pairs;
+	print UNASSIGNED $last_line;
+	print UNASSIGNED;
+      }
+      elsif( ($XX_tag_1 eq 'G1' and $XX_tag_2 eq 'UA') or ($XX_tag_1 eq 'UA' and $XX_tag_2 eq 'G1') or ($XX_tag_1 eq 'G1' and $XX_tag_2 eq 'G1') ){
+	$genome1++;          # genome 1-specific
+	$g1_pairs++;
+	print G1 $last_line;
+ 	print G1;
+      }
+      elsif( ($XX_tag_1 eq 'G2' and $XX_tag_2 eq 'UA') or ($XX_tag_1 eq 'UA' and $XX_tag_2 eq 'G2') or ($XX_tag_1 eq 'G2' and $XX_tag_2 eq 'G2') ){
+	$genome2++;          # genome 2-specific
+	$g2_pairs++;
+	print G2 $last_line;
+     	print G2;
+      }
+      elsif( ($XX_tag_1 eq 'G1' and $XX_tag_2 eq 'G2') or ($XX_tag_1 eq 'G2' and $XX_tag_2 eq 'G1') ){
+	++$conflicting;      # conflicting read, something weird was going on
+	++$conflicting_pairs;      # conflicting read, something weird was going on
+	if ($conflict){
+	  print CONFLICT $last_line;
+	  print CONFLICT;
+	}
+      }
+      elsif ($XX_tag_1 eq 'CF' or $XX_tag_2 eq 'CF' ){
+	++$conflicting;      # conflicting read, something weird was going on
+	++$conflicting_pairs;
+	if ($conflict){
+	  print CONFLICT $last_line;
+	  print CONFLICT;
+	}
+      }
+      else{
+	die "The read pairs did not have an expected XX-tag\nXX-tag 1: $XX_tag_1\nXX-tag 2: $XX_tag_2\n\n";
+      }
+
+
+      #  warn "Resetting last_id after processing the paired-end read\n\n"; sleep(1);
+      $last_id = $last_line = undef; # resetting the last id and alignment
+    }
+    else{
+      # warn "$last_id was a singleton. Processing this read on its own\n"; # sleep(1);
+
+      ++$count; # increasing counter for singleton
+      ++$count_singletons;
+
+      my $XX_tag = $1 if ($last_line =~ /XX:Z:(.+?)\s+/);  # allele-specificity flag
+      # warn "Extracted XX:Z: '$XX_tag' tag from line:\n$last_line\n";
+
+      unless ($XX_tag){
+	die "Failed to extract XX:Z tag from line:\n$last_line\n";
+      }
+
+      if ($XX_tag eq 'UA'){
+	++$unassigned;       # unassigned
+	++$unassigned_singletons;
+	if ($singletons){
+	  print UNASSIGNED_ST $last_line;
+	}
+	else{
+	  print UNASSIGNED $last_line;
+	}
+      }
+      elsif($XX_tag eq 'G1'){
+	$genome1++;          # genome 1-specific
+	$g1_singletons++;
+	
+	if ($singletons){
+	  print G1_ST $last_line;
+	}
+	else{
+	  print G1 $last_line;
+	}
+      }
+      elsif($XX_tag eq 'G2'){
+	$genome2++;          # genome 2-specific
+	$g2_singletons++;
+	
+	if ($singletons){
+	  print G2_ST $last_line;
+	}
+	else{
+	  print G2 $last_line;
+	}
+
+      }
+      elsif($XX_tag eq 'CF'){
+	++$conflicting;      # conflicting read, something weird was going on
+	++$conflicting_singletons;
+	if ($conflict){
+	  if ($singletons){
+	    print CONFLICT_ST $last_line;
+	  }
+	  else{
+	    print CONFLICT $last_line;
+	  }
+	}
+      }
+      else{
+	die "The read did not have an expected XX-tag:\n$last_line\n\n";
+      }
+
+      ## Once we are done processing
+      # warn "Setting last_id to the current id $id\n\n";# sleep(1);
+      $last_id = $id;
+      $last_line = $_;
+    }
+
+    if ($count%1000000 == 0){
+      warn "Processed $count lines so far\n";
+    }
+
+  }
+
+  if (defined $last_id){
+    # warn "one last singleton read to process:\n$last_id\n$last_line\n";
+
+    my $XX_tag = $1 if ($last_line =~ /XX:Z:(.+?)\s+/);  # allele-specificity flag
+    ++$count;
+    ++$count_singletons;
+
+    unless ($XX_tag){
+      die "Failed to extract XX:Z tag from line:\n$_\n";
+    }
+
+    if ($XX_tag eq 'UA'){
+      ++$unassigned;       # unassigned
+      ++$unassigned_singletons;
+      if ($singletons){
+	print UNASSIGNED_ST $last_line;
+      }
+      else{
+	print UNASSIGNED $last_line;
+      }
+    }
+    elsif($XX_tag eq 'G1'){
+      $genome1++;          # genome 1-specific
+      ++$g1_singletons;
+      if ($singletons){
+	print G1_ST $last_line;
+      }
+      else{
+	print G1 $last_line;
+      }
+    }
+    elsif($XX_tag eq 'G2'){
+      $genome2++;          # genome 2-specific
+      ++$g2_singletons;
+	if ($singletons){
+	print G2_ST $last_line;
+      }
+      else{
+	print G2 $last_line;
+      }
+    }
+    elsif($XX_tag eq 'CF'){
+      ++$conflicting;      # conflicting read, something weird was going on
+      ++$conflicting_singletons;
+      if ($conflict){
+	if ($singletons){
+	  print CONFLICT_ST $last_line;
+	}
+	else{
+	  print CONFLICT $last_line;
+	}
+      }
+    }
+    else{
+      die "The read did not have an expected XX-tag:\n$_\n\n";
+    }
+  }
+  else{
+    warn "Last read was a read pair which has already been processed. all done\n\n";
+  }
+
+  ### Printing Summary reports
+
+  my ($perc_unassigned,$perc_genome1,$perc_genome2,$perc_conflicting);
+  if ($count == 0){
+    $perc_unassigned = $perc_genome1 = $perc_genome2 = $perc_conflicting = 'N/A';
+  }
+  else{
+    $perc_unassigned  = sprintf ("%.2f",$unassigned *100/$count);
+    $perc_genome1     = sprintf ("%.2f",$genome1*100/$count);
+    $perc_genome2     = sprintf ("%.2f",$genome2*100/$count);
+    $perc_conflicting = sprintf ("%.2f",$conflicting*100/$count);
+  }
+
+  warn "\n\nAllele-specific paired-end sorting report\n",'='x41,"\n";
+  warn "Read pairs/singletons processed in total:\t\t$count\n";
+  warn "\tthereof were read pairs:\t\t\t$count_pairs\n";
+  warn "\tthereof were singletons:\t\t\t$count_singletons\n";
+
+  warn "Reads were unassignable (not overlapping SNPs):\t\t$unassigned ($perc_unassigned%)\n";
+  warn "\tthereof were read pairs:\t$unassigned_pairs\n";
+  warn "\tthereof were singletons:\t$unassigned_singletons\n";
+
+  warn "Reads were specific for genome 1:\t\t\t$genome1 ($perc_genome1%)\n";
+  warn "\tthereof were read pairs:\t$g1_pairs\n";
+  warn "\tthereof were singletons:\t$g1_singletons\n";
+
+  warn "Reads were specific for genome 2:\t\t\t$genome2 ($perc_genome2%)\n";
+  warn "\tthereof were read pairs:\t$g2_pairs\n";
+  warn "\tthereof were singletons:\t$g2_singletons\n";
+
+  warn "Reads contained conflicting SNP information:\t\t$conflicting ($perc_conflicting%)\n";
+  warn "\tthereof were read pairs:\t$conflicting_pairs\n";
+  warn "\tthereof were singletons:\t$conflicting_singletons\n\n";
+
+
+  print REPORT "\n\nAllele-specific paired-end sorting report\n",'='x41,"\n";
+  print REPORT "Read pairs/singletons processed in total:\t\t$count\n";
+  print REPORT "\tthereof were read pairs:\t\t\t$count_pairs\n";
+  print REPORT "\tthereof were singletons:\t\t\t$count_singletons\n";
+
+  print REPORT "Reads were unassignable (not overlapping SNPs):\t\t$unassigned ($perc_unassigned%)\n";
+  print REPORT "\tthereof were read pairs:\t$unassigned_pairs\n";
+  print REPORT "\tthereof were singletons:\t$unassigned_singletons\n";
+
+  print REPORT "Reads were specific for genome 1:\t\t\t$genome1 ($perc_genome1%)\n";
+  print REPORT "\tthereof were read pairs:\t$g1_pairs\n";
+  print REPORT "\tthereof were singletons:\t$g1_singletons\n";
+
+  print REPORT "Reads were specific for genome 2:\t\t\t$genome2 ($perc_genome2%)\n";
+  print REPORT "\tthereof were read pairs:\t$g2_pairs\n";
+  print REPORT "\tthereof were singletons:\t$g2_singletons\n";
+
+  print REPORT "Reads contained conflicting SNP information:\t\t$conflicting ($perc_conflicting%)\n";
+  print REPORT "\tthereof were read pairs:\t$conflicting_pairs\n";
+  print REPORT "\tthereof were singletons:\t$conflicting_singletons\n\n";
+
+}
+
+
+sub open_output_filehandles{
+
+  my $infile = my $file = shift;
+  $file =~ s/allele_flagged\.bam$/bam/;
+
+  my $genome1_file = my $genome2_file = my $unassigned_file = my $conflicting_file = $report_file = $file;
+  my $genome1_file_st = my $genome2_file_st = my $unassigned_file_st = my $conflicting_file_st = $file;
+
+  my $g1_ua_file = my $g2_ua_file = my $g1_g2_file = $file;
+  # the input file needs to end in .bam (we tested this in while checking the command line options)
+
+  # using different filenames for Hi-C data altogether
+  if ($hic){
+    $genome1_file     =~ s/bam$/G1_G1.sam/;
+    $genome2_file     =~ s/bam$/G2_G2.sam/;
+    $unassigned_file  =~ s/bam$/UA_UA.sam/;
+    $conflicting_file =~ s/bam$/conflicting.sam/;
+    $g1_ua_file       =~ s/bam$/G1_UA.sam/;
+    $g2_ua_file       =~ s/bam$/G2_UA.sam/;
+    $g1_g2_file       =~ s/bam$/G1_G2.sam/;
+  }
+  else{
+    # for single-end or paired-end mode we end up with up to 4 files
+    $genome1_file     =~ s/bam$/genome1.sam/;
+    $genome2_file     =~ s/bam$/genome2.sam/;
+    $unassigned_file  =~ s/bam$/unassigned.sam/;
+
+    $conflicting_file =~ s/bam$/conflicting.sam/;
+
+    # ... unless someone want singletons to be treated differently to paired-end alignments...
+    if ($singletons){
+      $genome1_file_st     =~ s/bam$/genome1_st.sam/;
+      $genome2_file_st     =~ s/bam$/genome2_st.sam/;
+      $unassigned_file_st  =~ s/bam$/unassigned_st.sam/;
+      $conflicting_file_st =~ s/bam$/conflicting_st.sam/;
+    }
+  }
+
+  $report_file =~ s/bam$/SNPsplit_sort.txt/;
+
+  if ($bam){ # default
+
+    if ($hic){
+      $genome1_file     =~ s/sam$/bam/;
+      $genome2_file     =~ s/sam$/bam/;
+      $unassigned_file  =~ s/sam$/bam/;
+      $conflicting_file =~ s/sam$/bam/;
+      $g1_ua_file       =~ s/sam$/bam/;
+      $g2_ua_file       =~ s/sam$/bam/;
+      $g1_g2_file       =~ s/sam$/bam/;
+
+
+      open (G1,"| $samtools_path view -bS 2>/dev/null - > $genome1_file") or die "Unable to write to BAM file '$genome1_file': $!\n";
+      open (G2,"| $samtools_path view -bS 2>/dev/null - > $genome2_file") or die "Unable to write to BAM file '$genome2_file': $!\n";
+      open (UNASSIGNED,"| $samtools_path view -bS 2>/dev/null - > $unassigned_file") or die "Unable to write to BAM file '$unassigned_file': $!\n";
+      if ($conflict){
+	open (CONFLICT,"| $samtools_path view -bS 2>/dev/null - > $conflicting_file") or die "Unable to write to BAM file '$conflicting_file': $!\n";
+      }
+      open (G1UA,"| $samtools_path view -bS 2>/dev/null - > $g1_ua_file") or die "Unable to write to BAM file '$g1_ua_file': $!\n";
+      open (G2UA,"| $samtools_path view -bS 2>/dev/null - > $g2_ua_file") or die "Unable to write to BAM file '$g2_ua_file': $!\n";
+      open (G1G2,"| $samtools_path view -bS 2>/dev/null - > $g1_g2_file") or die "Unable to write to BAM file '$g1_g2_file': $!\n";
+    }
+    else{
+      $genome1_file     =~ s/sam$/bam/;
+      $genome2_file     =~ s/sam$/bam/;
+      $unassigned_file  =~ s/sam$/bam/;
+      $conflicting_file =~ s/sam$/bam/;
+
+      if ($singletons){
+	$genome1_file_st     =~ s/sam$/bam/;
+	$genome2_file_st     =~ s/sam$/bam/;
+	$unassigned_file_st  =~ s/sam$/bam/;
+	$conflicting_file_st =~ s/sam$/bam/;
+      }
+
+      open (G1,"| $samtools_path view -bSh 2>/dev/null - > $genome1_file") or die "Unable to write to BAM file '$genome1_file': $!\n";
+      open (G2,"| $samtools_path view -bSh 2>/dev/null - > $genome2_file") or die "Unable to write to BAM file '$genome2_file': $!\n";
+      open (UNASSIGNED,"| $samtools_path view -bSh 2>/dev/null - > $unassigned_file") or die "Unable to write to BAM file '$unassigned_file': $!\n";
+      if ($conflict){
+	open (CONFLICT,"| $samtools_path view -bSh 2>/dev/null - > $conflicting_file") or die "Unable to write to BAM file '$conflicting_file': $!\n";
+      }
+
+      if ($singletons){
+	open (G1_ST,"| $samtools_path view -bSh 2>/dev/null - > $genome1_file_st") or die "Unable to write to BAM file '$genome1_file_st': $!\n";
+	open (G2_ST,"| $samtools_path view -bSh 2>/dev/null - > $genome2_file_st") or die "Unable to write to BAM file '$genome2_file_st': $!\n";
+	open (UNASSIGNED_ST,"| $samtools_path view -bSh 2>/dev/null - > $unassigned_file_st") or die "Unable to write to BAM file '$unassigned_file_st': $!\n";
+	if ($conflict){
+	  open (CONFLICT_ST,"| $samtools_path view -bSh 2>/dev/null - > $conflicting_file_st") or die "Unable to write to BAM file '$conflicting_file_st': $!\n";
+	}
+      }
+
+    }
+  }
+  else{ # writing out to a SAM file
+    open (G1,'>',$genome1_file) or die "Unable to write to file '$genome1_file': $!\n";
+    open (G2,'>',$genome2_file) or die "Unable to write to file '$genome2_file': $!\n";
+    open (UNASSIGNED,'>',$unassigned_file) or die "Unable to write to file '$unassigned_file': $!\n";
+    if ($conflict){
+      open (CONFLICT,'>',$conflicting_file) or die "Unable to write to file '$conflicting_file': $!\n";
+    }
+
+    if ($singletons){
+      open (G1_ST,'>',$genome1_file_st) or die "Unable to write to file '$genome1_file_st': $!\n";
+      open (G2_ST,'>',$genome2_file_st) or die "Unable to write to file '$genome2_file_st': $!\n";
+      open (UNASSIGNED_ST,'>',$unassigned_file_st) or die "Unable to write to file '$unassigned_file_st': $!\n";
+      if ($conflict){
+	open (CONFLICT_ST,'>',$conflicting_file_st) or die "Unable to write to file '$conflicting_file_st': $!\n";
+      }
+    }
+  }
+
+  open (REPORT,'>',$report_file) or die "Unable to write to file '$report_file': $!\n";
+
+  if ($hic){
+    warn "Input file:\t\t\t\t\t\t'$infile'\n";
+    print REPORT "Input file:\t\t\t\t\t\t'$infile'\n";
+
+    warn "Writing SNPsplit-sort report to:\t\t\t'$report_file'\n";
+
+    warn "Writing unassigned reads to:\t\t\t\t'$unassigned_file'\n";
+    print REPORT "Writing unassigned reads to:\t\t\t\t'$unassigned_file'\n";
+
+    warn "Writing genome 1-specific reads to:\t\t\t'$genome1_file'\n";
+    print REPORT "Writing genome 1-specific reads to:\t\t\t'$genome1_file'\n";
+
+    warn "Writing genome 2-specific reads to:\t\t\t'$genome2_file'\n";
+    print REPORT "Writing genome 2-specific reads to:\t\t\t'$genome2_file'\n";
+
+    warn "Writing G1/UA reads to:\t\t\t\t\t'$g1_ua_file'\n";
+    print REPORT "Writing G1/UA reads to:\t\t\t\t\t'$g1_ua_file'\n";
+
+    warn "Writing G2/UA reads to:\t\t\t\t\t'$g2_ua_file'\n";
+    print REPORT "Writing G2/UA reads to:\t\t\t\t\t'$g2_ua_file'\n";
+
+    warn "Writing G1/G2 reads to:\t\t\t\t\t'$g1_g2_file'\n";
+    print REPORT "Writing G1/G2 reads to:\t\t\t\t\t'$g1_g2_file'\n";
+
+    if ($conflict){
+      warn "Writing reads with conflicting number of SNPs to:\t'$conflicting_file'\n\n";
+      print REPORT "Writing reads with conflicting number of SNPs to:\t'$conflicting_file'\n\n";
+    }
+
+  }
+  else{
+    warn "Input file:\t\t\t\t\t\t'$infile'\n";
+    print REPORT "Input file:\t\t\t\t\t\t'$infile'\n";
+
+    warn "Writing SNPsplit-sort report to:\t\t\t'$report_file'\n";
+
+    warn "Writing unassigned reads to:\t\t\t\t'$unassigned_file'\n";
+    print REPORT "Writing unassigned reads to:\t\t\t\t'$unassigned_file'\n";
+
+    warn "Writing genome 1-specific reads to:\t\t\t'$genome1_file'\n";
+    print REPORT "Writing genome 1-specific reads to:\t\t\t'$genome1_file'\n";
+
+    warn "Writing genome 2-specific reads to:\t\t\t'$genome2_file'\n";
+    print REPORT "Writing genome 2-specific reads to:\t\t\t'$genome2_file'\n";
+
+    if ($conflict){
+      warn "Writing reads with conflicting number of SNPs to:\t'$conflicting_file'\n\n";
+      print REPORT "Writing reads with conflicting number of SNPs to:\t'$conflicting_file'\n\n";
+    }
+
+    if ($singletons){
+      warn "Writing unassigned singleton reads to:\t\t\t'$unassigned_file_st'\n";
+      print REPORT "Writing unassigned singleton reads to:\t\t\t'$unassigned_file_st'\n";
+
+      warn "Writing genome 1-specific singleton reads to:\t\t'$genome1_file_st'\n";
+      print REPORT "Writing genome 1-specific singleton reads to:\t\t'$genome1_file_st'\n";
+
+      warn "Writing genome 2-specific singleton reads to:\t\t'$genome2_file_st'\n";
+      print REPORT "Writing genome 2-specific singleton reads to:\t\t'$genome2_file_st'\n";
+
+      if ($conflict){
+	warn "Writing singleton reads with conflicting number of SNPs to:'$conflicting_file_st'\n\n";
+	print REPORT "Writing singleton reads with conflicting number of SNPs to:'$conflicting_file_st'\n\n";
+      }
+    }
+
+  }
+}
+
+sub standard_paired_end {
+
+  my ($r1,$r2,$XX_tag_1,$XX_tag_2,$genome1_count_r1,$genome1_count_r2,$genome2_count_r1,$genome2_count_r2,$unassigned_r1,$unassigned_r2) = @_;
+  # print join ("\n",$r1,$r2,$XX_tag_1,$XX_tag_2,$genome1_count_r1,$genome1_count_r2,$genome2_count_r1,$genome2_count_r2,$unassigned_r1,$unassigned_r2),"\n";  sleep(1);
+
+  chomp $r1;
+  chomp $r2;
+
+  ### if we came this far all reads should now have an XX-tag assigned to them
+  $r1 .= "\t$XX_tag_1\n";
+  $r2 .= "\t$XX_tag_2\n";
+
+
+  if ($unassigned_r1 and $unassigned_r2){
+    # if neither of the reads overlapped a SNP, the read pair cannot be assigned
+    print UNASSIGNED $r1;
+    print UNASSIGNED $r2;
+    # warn "Read is Unassigned\n";
+    ++$unassigned;
+  }
+  ### Now booting read pairs where Read 1 and Read 2 had conflicting allelic information
+  if ( ($XX_tag_1 eq 'XX:Z:G1' and $XX_tag_2 eq 'XX:Z:G2') or ($XX_tag_1 eq 'XX:Z:G2' and $XX_tag_2 eq 'XX:Z:G1') ){
+    if ($verbose){
+      warn "Read pair contained conflicting allele-assignments!\nRead 1:\t$XX_tag_1\\nRead 2:\t$XX_tag_2\n";
+      warn "Read1\ng1: $genome1_count_r1\ng2: $genome2_count_r1\n";
+      warn "Read2\ng1: $genome1_count_r2\ng2: $genome2_count_r2\n";
+    }
+    ++$conflicting;
+    return;
+  }
+
+  elsif( ($genome1_count_r1 + $genome1_count_r2) > ($genome2_count_r1 + $genome2_count_r2) ){
+    print G1 $r1;
+    print G1 $r2;
+    ++$genome1;
+    # warn "Read pair is genome 1 specific\n"; sleep(1);
+  }
+  elsif( ($genome1_count_r1 + $genome1_count_r2) < ($genome2_count_r1 + $genome2_count_r2) ){
+    print G2 $r1;
+    print G2 $r2;
+    ++$genome2;
+    # warn "Read pair is genome 2 specific\n"; sleep(1);
+  }
+  else{
+    warn "XX-tag 1: $XX_tag_1\nXX-tag 2: $XX_tag_2\n==============\n";
+    die "The read pair has to be unassigned, g1 or g2 specific!\nRead 1: $r1\nRead 2: $r2\n";
+  }
+  # warn "$XX_tag_1\n$XX_tag_2\n==============\n";sleep(1);
+
+}
+
+sub print_helpfile{
+  print <<EOF
+
+  SYNOPSIS:
+
+  This script ...
+
+  USAGE: tag2sort [options] [SNPsplit tagged input file(s)]
+
+SNPsplit tagged input file(s): These files are required to be SAM/BAM files that contain the
+optional field XX:Z: produced by the SNPsplit-flag module. The tags indicate if a read could
+be assigned to a specific allele, and they are one of the following:
+
+                             XX:Z:UA - Unassigned
+                             XX:Z:G1 - Genome 1-specific
+                             XX:Z:G2 - Genome 2-specific
+                             XX:Z:CF - Conflicting
+
+--paired               Paired-end mode. (Default: OFF).
+
+--singletons           If the allele-tagged paired-end file also contains singleton alignments (which is the
+                       default for e.g. TopHat), these will be written out to extra files (ending in _st.bam)
+                       instead of writing everything to combined paired-end and singleton files. Default: OFF.
+
+--hic                  Assumes Hi-C data processed with HiCUP (www.bioinformatics.babraham.ac.uk/projects/hicup/)
+                       as input, i.e. the input BAM file is paired-end and Reads 1 and 2 follow each other. Thus,
+                       this option also sets the flags --paired and --no_sort. Default: OFF.
+
+--samtools-path        The path to your Samtools installation, e.g. /home/user/samtools/. Does not need to
+                       be specified explicitly if Samtools is in the PATH already.
+
+--conflicting/--weird  Reads or read pairs that were classified as 'Conflicting' (XX:Z:CF) will be written to
+                       an extra file (ending in .conflicting.bam) instead of being simply skipped. Reads may be
+                       classified as 'Conflicting' if a single read contains SNP information for both genomes at
+                       the same time, or if the SNP position was deleted from the read. Read-pairs are considered
+                       'Conflicting' if either read is was tagged with the XX:Z:CF flag. Default: OFF.
+
+--dir                  Output directory. Output is written to the current directory if not specified explicitly.
+
+--help                 Displays this help information and exits.
+
+--version              Displays version information and exits.
+
+
+
+                          Script last modified: 10 July 2014
+
+EOF
+    ;
+  exit 1;
+}
+
+
+
+sub process_commandline{
+  my $help;
+  my $output_dir;
+  my $hic;
+  my $paired;
+  my $verbose;
+  my $version;
+  my $samtools_path;
+  my $sam;
+  my $conflict;
+  my $singletons;
+
+  my $command_line = GetOptions ('help|man' => \$help,
+				 'output_dir=s' => \$output_dir,
+				 'paired' => \$paired,
+				 'verbose' => \$verbose,
+				 'version' => \$version,
+				 'hic' => \$hic,
+				 'samtools_path=s' => \$samtools_path,
+				 'sam' => \$sam,
+				 'conflicting|weird' => \$conflict,
+				 'singletons' => \$singletons,
+				);
+
+  ### EXIT ON ERROR if there were errors with any of the supplied options
+  unless ($command_line){
+    die "Please respecify command line options\n";
+  }
+
+  ### HELPFILE
+  if ($help){
+    print_helpfile();
+    exit;
+  }
+
+  if ($version){
+    print << "VERSION";
+
+
+                         SNPsplit Sorting Module - tag2sort
+                              SNPsplit version: $SNPsplit_version
+                 Copyright 2014 Felix Krueger, Babraham Bioinformatics
+                  www.bioinformatics.babraham.ac.uk/projects/bismark/
+
+
+VERSION
+    exit;
+  }
+
+  # print join ("\t", @ARGV),"\n";
+
+  ### checking to see if all files are indeed present in the folder
+  foreach my $file (@ARGV){
+    unless(-e $file){
+      die "Input file '$file' doesn't exist in the input folder. Please check filenames and try again!\n\n";
+    }
+    unless ($file =~ /\.bam$/){
+      die "Supplied file needs to be a SNPsplit tagged BAM file (ending in .bam). Please respecify!\n";
+    }
+  }
+
+  ### no files provided
+  unless (@ARGV){
+    warn "You need to provide one or more allele-tagged SNPsplit files to start sorting them allele-specifically. Please respecify!\n\n";
+    sleep(2);
+
+    print_helpfile();
+    exit;
+  }
+
+  ### --singletons only make sense for paired-end data
+  if ($singletons){
+    if ($hic){
+      die "The option --singletons can't be used in Hi-C mode since this expects paired-end data. Please respecify!\n\n";
+    }
+
+    unless ($paired){
+      warn "The option --singletons only makes sense for paired-end files. Simply ignoring it in single-end mode...\n"; sleep(1);
+      $singletons = undef;
+    }
+
+  }
+
+  ### PATH TO SAMTOOLS
+  if (defined $samtools_path){
+    # if Samtools was specified as full command
+    if ($samtools_path =~ /samtools$/){
+      if (-e $samtools_path){
+	# Samtools executable found
+      }
+      else{
+	die "Could not find an installation of Samtools at the location $samtools_path. Please respecify\n";
+      }
+    }
+    else{
+      unless ($samtools_path =~ /\/$/){
+	$samtools_path =~ s/$/\//;
+      }
+      $samtools_path .= 'samtools';
+      if (-e $samtools_path){
+	# Samtools executable found
+      }
+      else{
+	die "Could not find an installation of Samtools at the location $samtools_path. Please respecify\n";
+      }
+    }
+  }
+
+  # Check whether Samtools is in the PATH if no path was supplied by the user
+  else{
+    if (!system "which samtools >/dev/null 2>&1"){ # STDOUT is binned, STDERR is redirected to STDOUT. Returns 0 if samtools is in the PATH
+      $samtools_path = `which samtools`;
+      chomp $samtools_path;
+    }
+  }
+
+  unless (defined $samtools_path){
+    die "Could not find an installation of Samtools on your system. Please either install Samtools first or provide the path to an existing installation\n\n";
+  }
+
+  ### OUTPUT DIR PATH
+  if (defined $output_dir){
+    unless ($output_dir eq ''){ # if the output dir has been passed on by the methylation extractor and is an empty string we don't want to change it
+      unless ($output_dir =~ /\/$/){
+	$output_dir =~ s/$/\//;
+      }
+    }
+  }
+  else{
+    $output_dir = '';
+  }
+  my $bam;
+  if ($sam){
+    $bam = 0;
+  }
+  else{
+    $bam = 1;
+  }
+
+  return ($paired,$hic,$verbose,$samtools_path,$bam,$output_dir,$conflict,$singletons);
+}
