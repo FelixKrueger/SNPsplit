@@ -345,22 +345,21 @@ sub process_masked_BAM_file{
 
   my ($pc_n_found , $pc_no_n_found , $pc_n_deletion , $pc_multi_n_deletion);
 
-  $pc_n_deletion   = sprintf ("%.2f",$contained_N_deletion*100/ $count );
-  $pc_multi_n_deletion = sprintf ("%.2f",$multi_N_deletion*100/ $count );
-
   if ($count == 0){
-    $pc_n_found = $pc_no_n_found = $pc_n_deletion = $pc_multi_n_deletion = $pc_n_deletion = $pc_multi_n_deletion ='N/A';
+      $pc_n_found = $pc_no_n_found =  $pc_n_deletion = $pc_multi_n_deletion = 'N/A';
   }
   else{
-    if ( ($snp_found + $no_snp_found) == 0){
-      $pc_n_found = 'N/A';
-      $pc_no_n_found = 'N/A';
-    }
-    else{
-      $pc_n_found    = sprintf ("%.2f",$snp_found*100/($snp_found + $no_snp_found));
-      $pc_no_n_found = sprintf ("%.2f",$no_snp_found*100/ ($snp_found + $no_snp_found) );
-    }
+      if ( ($snp_found + $no_snp_found) == 0){
+	  $pc_n_found = 'N/A';
+	  $pc_no_n_found = 'N/A';
+      }
+      else{
+	  $pc_n_found    = sprintf ("%.2f",$snp_found*100/($snp_found + $no_snp_found));
+	  $pc_no_n_found = sprintf ("%.2f",$no_snp_found*100/ ($snp_found + $no_snp_found) );
+      }
 
+      $pc_n_deletion   = sprintf ("%.2f",$contained_N_deletion*100/ $count );
+      $pc_multi_n_deletion = sprintf ("%.2f",$multi_N_deletion*100/ $count );
   }
 
   warn "SNP coverage report\n===================\n";
@@ -1087,35 +1086,17 @@ sub sam2bam_convert{
 
 }
 
-sub sort_bam{
-
-  my $file = shift;
-
-  my $sorted = $file;
-  $sorted =~ s/bam$/sorted/;
-
-  warn "Sorting BAM file '$file' by chromosomal coordinates ...\n";
-  sleep (3);
-  system ("samtools sort $file $sorted");
-
-  $file = $sorted.'.bam'; # setting sorted BAM file as new $file
-  warn "Finished sorting BAM file into new file '$file'\n\n";
-  sleep (3);
-  return $file;
-
-}
-
 sub sort_by_name_paired_end{
 
   my $file = shift;
 
   my $sorted = $file;
-  $sorted =~ s/bam$/sortedByName/;
+  $sorted =~ s/bam$/sortedByName.bam/;
 
-  warn "Sorting BAM file '$file' by read IDs ...\n";
-  system ("samtools sort -n $file $sorted");
+  warn "Sorting paired-end BAM file '$file' by read IDs ...\n";
+  system ("samtools sort -n $file -o $sorted");
 
-  $file = $sorted.'.bam'; # setting sorted BAM file as new $file
+  $file = $sorted; # setting sorted BAM file as new $file
   warn "Finished sorting BAM file into new file '$file'\n\n";
   sleep (1);
   return $file;
