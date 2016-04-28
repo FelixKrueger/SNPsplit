@@ -29,58 +29,33 @@ use Cwd;
 ## Reading in a BAM or SAM file
 my $pipeline_version = '0.3.devel';
 my $parent_dir = getcwd();
-my ($vcf_file,$ucsc,$strain,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
+my ($vcf_file,$ucsc,$strain) = process_commandline ();
 
 warn "Summarising SNPsplit Genome Preparation Parameters\n";
 warn "="x50,"\n";
 warn "Processing SNPs from VCF file $vcf_file\n\n";
 
 
-extract_SNP_calls_from_VCF();
+# Dealing with chromosomes
+my @chromosomes = detect_chroms();
+print "Using the following chromosomes (detected from VCF file >>$vcf_file<<):\n";
+print join ("\t",@chromosomes),"\n\n";
+
+# Dealing with strains
+my $strain_index;
+deal_with_strains();
+
+filter_relevant_SNP_calls_from_VCF();
 warn "Finished filtering and writing out SNPs\n\n";
 
 
-sub detect_strains{
-    
-    my $vcf_file = shift;
-    my %strains; # detecting the available strains from the VCF file
-    
-    if ($vcf_file =~ /gz$/){
-	open (STRAIN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
-    }
-    else{
-	open (STRAIN, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
-    }
-    
-    # warn "Detecting strains from file '$vcf_file'\n\n";
-    while (<STRAIN>){
-	$_ =~ s/(\r|\n)//g; # removing end of line characters
-	next if ($_ =~ /^\#\#/);	
-	if ($_ =~ /^\#CHROM/){ # header line listing all different strains
-	    # warn "$_\n"; sleep(1);
-	}
-	last unless ($_ =~ /^\#/); # everything from now on are the SNPs themselves
-	
-	my @strains = split (/\t/);
-	
-	foreach my $index(0..$#strains){
-	    next if ($index <= 8); # The first 6 fields are irrelevant: #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  
-	    $strains{$strains[$index]} = $index; 
-	    # warn "$index\t$strains[$index]\n";
-	}
-    }
-    
-    # close STRAIN or warn "Failed to close filehandle STRAIN: $!\n";
-    return %strains;
-
-}
 
 
-sub extract_SNP_calls_from_VCF{
+sub filter_relevant_SNP_calls_from_VCF{
     
     if ($vcf_file =~ /gz$/){
 	open (IN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
-    }
+    } 
     else{
 	open (IN, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
     }
@@ -97,94 +72,77 @@ sub extract_SNP_calls_from_VCF{
     my $homozygous = 0;
     my %all_SNPs;
     
-    # Dealing with chromosomes
-    my @chromosomes = detect_chroms();
-    print "Using the following chromosomes (detected from VCF file >>$vcf_file<<):\n";
-    print join ("\t",@chromosomes),"\n\n";
 
-    # Dealing with strains
-    if (defined $strain){
-	warn "Strain defined as '$strain'\n";
-    }
-    else{
-	warn "No strain specified!\n";
-	detect_strains($vcf_file);
-	die "Please respecify a strain\n";
-    }
-    
+  
     my $dir = "SNPs_$strain";
     unless (-d $dir){
-	warn "Folder '$dir' doesn't exist. Creating it for you...\n";
-	mkdir $dir or die "Failed to created directory $dir\n: $!\n";
+	warn "Folder '$dir' doesn't exist. Creating it for you...\n\n";
+	mkdir $dir or die "Failed to created directory $dir\n: $!\n\n";
     }
     
     # Opening filehandles for the SNP files
-    if ($ucsc){
-	for my $chr (@chromosomes) {
-	    my $filename = 'SNPs_Sanger/chr'.$chr.'.txt';
-	    open (my $fh,'>',$filename) or die "Couldn't open filehandle $!\n";
-	    $fhs{$chr} = $fh;
-	    print {$fhs{$chr}} ">$chr\n";
-	}
-    }
-    else{
-	for my $chr (@chromosomes) {
-	    my $filename = 'SNPs_Sanger/chr'.$chr.'.txt';
-	    open (my $fh,'>',$filename) or die "Couldn't open filehandle $!\n";
-	    $fhs{$chr} = $fh;
-	    print {$fhs{$chr}} ">$chr\n";
-	}
+    for my $chr (@chromosomes) {
+	my $filename = "SNPs_$strain/chr".$chr.'.txt';
+	open (my $fh,'>',$filename) or die "Couldn't open filehandle $!\n";
+	$fhs{$chr} = $fh;
+	print {$fhs{$chr}} ">$chr\n";
     }
     
     while (<IN>){
 	$_ =~ s/(\r|\n)//g; # removing end of line characters
 
-	warn "$_\n"; sleep(1);
-	next if ($_ =~ /^\#\#/); # filters header lines
-	
+	# warn "$_\n"; sleep(1);
+	next if ($_ =~ /^\#\#/); # filters out header information lines
+	if ($_ =~ /^\#CHROM/){ # Table Header
+	    my ($name) = (split /\t/)[$strain_index];
+	    warn "Analysing SNP fields for name >$name<\n";
+	    next;	
+	}
 	$count++;
 	if ($count%1000000 ==0){
 	    warn "processed $count lines\n";
 	}
-	last if ($count == 100);
-	# warn "$_\n";
-	my ($chr,$pos,$ref,$alt,$strain) = (split /\t/)[0,1,3,4,21];
-	# warn "$_$chr , $pos , $ref , $alt , $strain\n";
-	# warn "$strain\n";
-	# sleep(1);
-	# strain is in the form: GT:GQ:DP:SP:PL:FI
-	# my ($gt,$gq,$dp,$sp,$pl,$fi) = split/:/,$strain;
+	# last if ($count == 1000);
+	
+	my ($chr,$pos,$ref,$alt,$strain) = (split /\t/)[0,1,3,4,$strain_index];
+	# warn "$chr , $pos , $ref , $alt , $strain\n"; sleep(1);
+	
+	# $strain is in the form: GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI
 	my ($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi) = split/:/,$strain;
 	
 	
 	unless ($fi){
 	    # warn "genotype: $gt\nfilter:   $fi\n\n";
 	}
+
+	# warn "genotype: $gt\nfilter:   $fi\n\n";
 	# warn "$fi\n"; sleep(1);
 	# $gt is the Genotype:
 	
 	# '.'   = no genotype call was made
-	# '0/0' = genotype is the same as the reference geneome
+	# '0/0' = genotype is the same as the reference genome
 	# '1/1' = homozygous alternative allele; can also be '2/2',
 	# '3/3', etc. if more than one alternative allele is present.
 	# '0/1' = heterozygous genotype; can also be '1/2', '0/2', etc.
 	
 	# $fi is filter, 1 for high confidence SNP, or 0 for low confidence
 	
-	### I guess we are only looking for 1/1 calls, and filter for high confidence as well
-    
-	if ($ref =~ /[^ATCG]/){
+	### We are only looking for 1/1 calls, and filter for high confidence as well
+	
+	# skipping if the reference base is not well defined in Black6
+	if ($ref =~ /[^ATCG]/){ # reference base contained any non A, C, T, G characters or more than one base
 	    warn "ref was: $ref; skipping\n";
 	    next;
 	}
 	
-	# skipping if the SNP is not well defined in Cast
-	if ($alt =~ /[^ATCG]/){
-	    # warn "SNP was: $alt; skipping; $c3h\n";
+	# skipping if the SNP is not well defined in the strain of interest
+	if ($alt =~ /[^ATCG]/){ # Alt base contained any non A, C, T, G characters or more than one base
+	    # warn "SNP was: $alt; skipping\n";
 	    ++$too_many;
 	    next;
 	}
 	
+	# Filtering for genotype
 	if ($gt eq '0/0'){
 	    ++$same;
 	    # warn "same as reference\n";
@@ -196,7 +154,7 @@ sub extract_SNP_calls_from_VCF{
 	}
 	else{
 	    ++$other;
-	next;
+	    next;
 	}
 	
 	# Looking at the Filtering tag
@@ -207,14 +165,15 @@ sub extract_SNP_calls_from_VCF{
 	    my $location = join (':',$chr,$pos);
 	    # warn "$location\n";
 	    my $SNP = join ("\t",$count,$chr,$pos,'1',join ("\/",$ref,$alt));
+	    # field 4: 1 means top strand, -1 means reverse strand
 	    # warn "$SNP\n";sleep(1);
 	    
 	    if (exists $all_SNPs{$location} ){
-		warn "meep\n";
+		# warn "SNP $all_SNPs{$location} position was present already\n";
 	    }
 	    else{
 		$all_SNPs{$location} = $SNP;
-	}
+	    }
 	}
 	else{
 	    ++$low_confidence;
@@ -229,31 +188,67 @@ sub extract_SNP_calls_from_VCF{
 	
     }
 
-    warn "\n\n=========================================================\n\nPositions read in total:\t$count\n\n";
-    warn "SNP position summary for strain Castaneus (GRCm38)\n\n";
-    
+  
+    warn "SNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
+    warn "="x80,"\n\n";
+    warn "Positions read in total:\t$count\n\n";
     warn "$homozygous\tSNP were homozygous. Of these:\n";
-    warn "$hcg_count\tSNP were homozygous and passed high confidence filters, and were included into the Cast genome\n";
-    
-    warn "\nNot included into Cast genome:\n";
+    warn "$hcg_count\tSNP were homozygous and passed high confidence filters and were thus included into the Cast genome\n";
+   
+    warn "\nNot included into $strain genome:\n";
     warn "$same\thad the same sequence as the reference\n";
     warn "$too_many\thad no clearly defined alternative base\n";
     warn "$other\tCalls were neither 0/0 (same as reference) or 1/1 (homozygous SNP)\n";
-    warn "$low_confidence\twere homozygous but the filtering call was low confidence\n";
+    warn "$low_confidence\twere homozygous but the filtering call was low confidence\n\n";
 
     # Also writing all SNP calls out to an all-SNP file
-    warn "Now printing a single list of all SNPs\n";
-    my $all_SNPs = 'all_SNPs.txt.gz';
+    warn "Now printing a single list of all SNPs\n\n";
+    my $all_SNPs = 'all_SNPs_${strain}_GRCm38.txt.gz';
     if (-e $all_SNPs){
 	warn "File '$all_SNPs' existed in the folder already, overwriting it...\n\n";
     }
-    open (ALLSNP,"| gzip -c - $all_SNPs") or die "Failed to write to file $all_SNPs: $!\n";
+    open (ALLSNP,"| gzip -c - > $all_SNPs") or die "Failed to write to file $all_SNPs: $!\n";
     
     foreach my $location (keys %all_SNPs){
-	print OUT "$all_SNPs{$location}\n";
+	print ALLSNP "$all_SNPs{$location}\n";
     }
         
 }
+
+### SUBROUTINES
+
+sub deal_with_strains{
+    # Dealing with strains
+    my %strains = detect_strains($vcf_file); # getting a list of strains to choose from before exiting
+    
+    if (defined $strain){
+	if (exists $strains{$strain}){
+	    $strain_index = $strains{$strain};
+	    warn "Strain defined as '$strain' (strain index: $strain_index)\n";
+	}
+	else{
+	    warn "Strain name specified ($strain) does not match any of the available strain names!\n";
+	    warn "\nAvailable genomes to choose from are:\n";
+	    warn "="x37,"\n";	
+	    foreach my $strain(keys %strains){
+		print "$strain\n";
+	    }
+	    warn "="x37,"\n";
+	    die "\nPlease double check the name and try again (using '--strain NAME')\n\n";
+	}
+    }
+    else{
+	warn "No strain specified!\n";
+	warn "\nAvailable genomes to choose from are:\n";
+	warn "="x37,"\n";	
+	foreach my $strain(keys %strains){
+	    print "$strain\n";
+	}
+	warn "="x37,"\n";
+	die "\nPlease choose one of the available strains using '--strain NAME' and try again\n\n";
+    }
+}
+
 
 sub detect_chroms{
 
@@ -291,6 +286,43 @@ sub detect_chroms{
     return @chrom;
 
 }
+
+sub detect_strains{
+    
+    my $vcf_file = shift;
+    my %strains; # detecting the available strains from the VCF file
+    
+    if ($vcf_file =~ /gz$/){
+	open (STRAIN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
+    }
+    else{
+	open (STRAIN, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
+    }
+    
+    # warn "Detecting strains from file '$vcf_file'\n\n";
+    while (<STRAIN>){
+	$_ =~ s/(\r|\n)//g; # removing end of line characters
+	next if ($_ =~ /^\#\#/);	
+	if ($_ =~ /^\#CHROM/){ # header line listing all different strains
+	    # warn "$_\n"; sleep(1);
+	}
+	last unless ($_ =~ /^\#/); # everything from now on are the SNPs themselves
+	
+	my @strains = split (/\t/);
+	
+	foreach my $index(0..$#strains){
+	    next if ($index <= 8); # The first 6 fields are irrelevant: #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  
+	    $strains{$strains[$index]} = $index; 
+	    # warn "$index\t$strains[$index]\n";
+	}
+    }
+    
+    # close STRAIN or warn "Failed to close filehandle STRAIN: $!\n";
+    return %strains;
+
+}
+
+
 
 sub process_commandline{
     my $help;
@@ -331,14 +363,14 @@ VERSION
     exit;
   }
 
-  if (defined $vcf_file){
-      unless(-e $vcf_file){
-	  die "Input VCF file '$vcf_file' doesn't exist in the folder. Please check filenames and try again!\n\n";
-      }
-  }
-  else{
-      die "\nYou need to provide a VCF file detailing SNPs positions with '--vcf_file your.file' (e.g.: --vcf mgp.v5.merged.snps_all.dbSNP142.vcf.gz). Please respecify!\n\n";
-  }
+    if (defined $vcf_file){
+	unless(-e $vcf_file){
+	    die "Input VCF file '$vcf_file' doesn't exist in the folder. Please check filenames and try again!\n\n";
+	}
+    }
+    else{
+	die "\nYou need to provide a VCF file detailing SNPs positions with '--vcf_file your.file' (e.g.: --vcf mgp.v5.merged.snps_all.dbSNP142.vcf.gz). Please respecify!\n\n";
+    }
     
     if ($list_strains){
 	warn "\nAvailable genomes to choose from are:\n";
