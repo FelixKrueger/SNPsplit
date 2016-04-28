@@ -29,26 +29,28 @@ use Cwd;
 ## Reading in a BAM or SAM file
 my $pipeline_version = '0.3.devel';
 my $parent_dir = getcwd();
-my ($vcf_file,$ucsc,$strain) = process_commandline ();
+my ($vcf_file,$ucsc,$strain,$genome_folder) = process_commandline ();
 
 warn "Summarising SNPsplit Genome Preparation Parameters\n";
 warn "="x50,"\n";
-warn "Processing SNPs from VCF file $vcf_file\n\n";
+warn "Processing SNPs from VCF file:\t\t $vcf_file\n";
+warn "Reference genome:\t\t\t$genome_folder\n";
+warn "\n";
 
-
-# Dealing with chromosomes
+### Dealing with chromosomes
 my @chromosomes = detect_chroms();
 print "Using the following chromosomes (detected from VCF file >>$vcf_file<<):\n";
 print join ("\t",@chromosomes),"\n\n";
 
-# Dealing with strains
+### Dealing with strains
 my $strain_index;
 deal_with_strains();
 
+### Determining and Filtering homozygous high-confidence SNPs for the strain in question
 filter_relevant_SNP_calls_from_VCF();
 warn "Finished filtering and writing out SNPs\n\n";
 
-
+###
 
 
 sub filter_relevant_SNP_calls_from_VCF{
@@ -187,23 +189,36 @@ sub filter_relevant_SNP_calls_from_VCF{
 	print {$fhs{$chr}} join ("\t",$count,$chr,$pos,'1',join ("\/",$ref,$alt),$strain),"\n";
 	
     }
-
-  
+    
+    # Writing a report file
+    my $report = "${strain}_genome_preparation_report.txt";
+    open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";
+    
     warn "SNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
     warn "="x80,"\n\n";
     warn "Positions read in total:\t$count\n\n";
     warn "$homozygous\tSNP were homozygous. Of these:\n";
-    warn "$hcg_count\tSNP were homozygous and passed high confidence filters and were thus included into the Cast genome\n";
-   
+    warn "$hcg_count\tSNP were homozygous and passed high confidence filters and were thus included into the $strain genome\n";
     warn "\nNot included into $strain genome:\n";
     warn "$same\thad the same sequence as the reference\n";
-    warn "$too_many\thad no clearly defined alternative base\n";
-    warn "$other\tCalls were neither 0/0 (same as reference) or 1/1 (homozygous SNP)\n";
-    warn "$low_confidence\twere homozygous but the filtering call was low confidence\n\n";
+    warn "$too_many\t\thad no clearly defined alternative base\n";
+    warn "$other\t\tCalls were neither 0/0 (same as reference) or 1/1 (homozygous SNP)\n";
+    warn "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
 
+    print REPORT "SNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
+    print REPORT "="x80,"\n\n";
+    print REPORT "Positions read in total:\t$count\n\n";
+    print REPORT "$homozygous\tSNP were homozygous. Of these:\n";
+    print REPORT "$hcg_count\tSNP were homozygous and passed high confidence filters and were thus included into the $strain genome\n";
+    print REPORT "\nNot included into $strain genome:\n";
+    print REPORT "$same\thad the same sequence as the reference\n";
+    print REPORT "$too_many\t\thad no clearly defined alternative base\n";
+    print REPORT "$other\t\tCalls were neither 0/0 (same as reference) or 1/1 (homozygous SNP)\n";
+    print REPORT "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
+    
     # Also writing all SNP calls out to an all-SNP file
     warn "Now printing a single list of all SNPs\n\n";
-    my $all_SNPs = 'all_SNPs_${strain}_GRCm38.txt.gz';
+    my $all_SNPs = "all_SNPs_${strain}_GRCm38.txt.gz";
     if (-e $all_SNPs){
 	warn "File '$all_SNPs' existed in the folder already, overwriting it...\n\n";
     }
@@ -284,7 +299,7 @@ sub detect_chroms{
     }
     # close DETECT or warn "Failed to close filehandle DETECT: $!\n";
     return @chrom;
-
+    
 }
 
 sub detect_strains{
@@ -328,16 +343,16 @@ sub process_commandline{
     my $help;
     my $version;
     my $vcf_file;
-    my $ucsc;
     my $strain;
     my $list_strains;
+    my $genome_folder;
     
     my $command_line = GetOptions ('help|man'             => \$help,
 				   'versions'             => \$version,
-				   'ucsc'                 => \$ucsc,
 				   'strain=s'             => \$strain,
 				   'list_strains'         => \$list_strains,
 				   'vcf_file=s'           => \$vcf_file,
+				   'genome_folder=s'      => \$genome_folder,
 	);
   
   ### EXIT ON ERROR if there were errors with any of the supplied options
@@ -383,8 +398,35 @@ VERSION
 	warn "\nPlease choose one using '--strain NAME'\n\n";
 	exit;
     }
+    
+    ### GENOME FOLDER
+    
+    unless ($genome_folder){
+	warn "Genome folder was not specified!\n";
+	# print_helpfile();
+	exit;
+    }
+    my $parent_dir = getcwd();    
 
-    return ($vcf_file,$ucsc,$strain);
+    ### checking that the genome folder, all subfolders and the required bowtie index files exist
+    unless ($genome_folder =~/\/$/){
+	$genome_folder =~ s/$/\//;
+    }
+    
+    if (chdir $genome_folder){
+	my $absolute_genome_folder = getcwd; ## making the genome folder path absolute
+	unless ($absolute_genome_folder =~/\/$/){
+	    $absolute_genome_folder =~ s/$/\//;
+	}
+	warn "Reference genome folder provided is $genome_folder\t(absolute path is '$absolute_genome_folder)'\n\n";
+	$genome_folder = $absolute_genome_folder;
+    }
+    else{
+	die "Failed to move to $genome_folder: $!\n\nSNPsplit_genome_preparation --help for more details\n\n";
+    }
+    chdir $parent_dir or die "Failed to move back to parent directory $parent_dir\n\n";
+    
+    return ($vcf_file,$ucsc,$strain,$genome_folder);
 
 }
 
