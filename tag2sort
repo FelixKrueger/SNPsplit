@@ -27,7 +27,7 @@ my %counting;
 my %fhs;
 
 my $parent_dir = getcwd();
-my $SNPsplit_version = '0.1.2';
+my $SNPsplit_version = '0.3.dev';
 
 my ($paired,$hic,$verbose,$samtools_path,$bam,$output_dir,$conflict,$singletons) = process_commandline();
 
@@ -174,6 +174,16 @@ sub process_single_end{
   warn "Reads were specific for genome 1:\t\t$genome1 ($perc_genome1%)\n";
   warn "Reads were specific for genome 2:\t\t$genome2 ($perc_genome2%)\n";
   warn "Reads contained conflicting SNP information:\t$conflicting ($perc_conflicting)\n\n\n";
+
+
+  print REPORT "\n\nAllele-specific single-end sorting report\n",'='x41,"\n";
+  print REPORT "Read alignments processed in total:\t\t$count\n";
+  print REPORT "Reads were unassignable:\t\t\t$unassigned ($perc_unassigned%)\n";
+  print REPORT "Reads were specific for genome 1:\t\t$genome1 ($perc_genome1%)\n";
+  print REPORT "Reads were specific for genome 2:\t\t$genome2 ($perc_genome2%)\n";
+  print REPORT "Reads contained conflicting SNP information:\t$conflicting ($perc_conflicting)\n\n\n";
+
+
 
 }
 
