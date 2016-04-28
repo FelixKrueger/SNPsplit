@@ -29,7 +29,7 @@ use Cwd;
 ## Reading in a BAM or SAM file
 my $pipeline_version = '0.3.devel';
 my $parent_dir = getcwd();
-my ($vcf_file,$ucsc,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
+my ($vcf_file,$ucsc,$strain,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
 
 warn "Summarising SNPsplit Genome Preparation Parameters\n";
 warn "="x50,"\n";
@@ -38,35 +38,43 @@ warn "Processing SNPs from VCF file $vcf_file\n\n";
 
 extract_SNP_calls_from_VCF();
 warn "Finished filtering and writing out SNPs\n\n";
-sub detect_chroms{
 
-    my %chrom; # detecting the chromosomes from the VCF file
-  
+
+sub detect_strains{
+    
+    my $vcf_file = shift;
+    my %strains; # detecting the available strains from the VCF file
+    
     if ($vcf_file =~ /gz$/){
-	open (DETECT,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
+	open (STRAIN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
     }
     else{
-	open (DETECT, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
+	open (STRAIN, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
     }
     
-    warn "Detecting chromosomes\n\n";
-    while (<IN>){
+    # warn "Detecting strains from file '$vcf_file'\n\n";
+    while (<STRAIN>){
 	$_ =~ s/(\r|\n)//g; # removing end of line characters
-	next unless ($_ =~ /^\#\#contig/); # filters header lines
-
-	warn "$_\n"; # sleep(1);
-	$_ =~ /ID=(.+),/;
-	my $chr = $1;
-	warn "Identified chromosome $chr\n";
-	unless (exists $chrom{$chr}){
-	    $chrom{$chr}++;
+	next if ($_ =~ /^\#\#/);	
+	if ($_ =~ /^\#CHROM/){ # header line listing all different strains
+	    # warn "$_\n"; sleep(1);
 	}
-	last unless ($_ =~ /^\#/);
-
+	last unless ($_ =~ /^\#/); # everything from now on are the SNPs themselves
+	
+	my @strains = split (/\t/);
+	
+	foreach my $index(0..$#strains){
+	    next if ($index <= 8); # The first 6 fields are irrelevant: #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  
+	    $strains{$strains[$index]} = $index; 
+	    # warn "$index\t$strains[$index]\n";
+	}
     }
-    exit;
+    
+    # close STRAIN or warn "Failed to close filehandle STRAIN: $!\n";
+    return %strains;
+
 }
-  
+
 
 sub extract_SNP_calls_from_VCF{
     
@@ -89,9 +97,22 @@ sub extract_SNP_calls_from_VCF{
     my $homozygous = 0;
     my %all_SNPs;
     
+    # Dealing with chromosomes
     my @chromosomes = detect_chroms();
-      
-    my $dir = 'SNPs_Sanger';
+    print "Using the following chromosomes (detected from VCF file >>$vcf_file<<):\n";
+    print join ("\t",@chromosomes),"\n\n";
+
+    # Dealing with strains
+    if (defined $strain){
+	warn "Strain defined as '$strain'\n";
+    }
+    else{
+	warn "No strain specified!\n";
+	detect_strains($vcf_file);
+	die "Please respecify a strain\n";
+    }
+    
+    my $dir = "SNPs_$strain";
     unless (-d $dir){
 	warn "Folder '$dir' doesn't exist. Creating it for you...\n";
 	mkdir $dir or die "Failed to created directory $dir\n: $!\n";
@@ -99,7 +120,7 @@ sub extract_SNP_calls_from_VCF{
     
     # Opening filehandles for the SNP files
     if ($ucsc){
-	for my $chr (1..19,'X','Y','M') {
+	for my $chr (@chromosomes) {
 	    my $filename = 'SNPs_Sanger/chr'.$chr.'.txt';
 	    open (my $fh,'>',$filename) or die "Couldn't open filehandle $!\n";
 	    $fhs{$chr} = $fh;
@@ -107,7 +128,7 @@ sub extract_SNP_calls_from_VCF{
 	}
     }
     else{
-	for my $chr (1..19,'X','Y','MT') {
+	for my $chr (@chromosomes) {
 	    my $filename = 'SNPs_Sanger/chr'.$chr.'.txt';
 	    open (my $fh,'>',$filename) or die "Couldn't open filehandle $!\n";
 	    $fhs{$chr} = $fh;
@@ -233,17 +254,59 @@ sub extract_SNP_calls_from_VCF{
     }
         
 }
-    sub process_commandline{
-	my $help;
-  my $version;
-  my $vcf_file;
-  my $ucsc;
 
-  my $command_line = GetOptions ('help|man'             => \$help,
-                                 'versions'             => \$version,
-				 'ucsc'                 => \$ucsc,
-                                 'vcf_file=s'           => \$vcf_file,
-      );
+sub detect_chroms{
+
+    my %chrom; # detecting the chromosomes from the VCF file
+    my @chrom;
+
+    if ($vcf_file =~ /gz$/){
+	open (DETECT,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
+    }
+    else{
+	open (DETECT, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
+    }
+    
+    # warn "Detecting chromosomes from file '$vcf_file'\n\n";
+    while (<DETECT>){
+	$_ =~ s/(\r|\n)//g; # removing end of line characters
+	last unless ($_ =~ /^\#/);
+	
+	if ($_ =~ /^\#\#contig/){ # filters header lines
+	    # warn "$_\n"; # sleep(1);
+	    $_ =~ /ID=(.+),/;
+	    my $chr = $1;
+	    # warn "Identified chromosome $chr\n";
+	    unless (exists $chrom{$chr}){
+		$chrom{$chr}++;
+	    }
+	}
+    }
+
+    foreach my $chr(keys %chrom){
+	# warn "$chr\n";	
+	push @chrom, $chr;
+    }
+    # close DETECT or warn "Failed to close filehandle DETECT: $!\n";
+    return @chrom;
+
+}
+
+sub process_commandline{
+    my $help;
+    my $version;
+    my $vcf_file;
+    my $ucsc;
+    my $strain;
+    my $list_strains;
+    
+    my $command_line = GetOptions ('help|man'             => \$help,
+				   'versions'             => \$version,
+				   'ucsc'                 => \$ucsc,
+				   'strain=s'             => \$strain,
+				   'list_strains'         => \$list_strains,
+				   'vcf_file=s'           => \$vcf_file,
+	);
   
   ### EXIT ON ERROR if there were errors with any of the supplied options
   unless ($command_line){
@@ -276,8 +339,20 @@ VERSION
   else{
       die "\nYou need to provide a VCF file detailing SNPs positions with '--vcf_file your.file' (e.g.: --vcf mgp.v5.merged.snps_all.dbSNP142.vcf.gz). Please respecify!\n\n";
   }
-  
-  return ($vcf_file,$ucsc);
+    
+    if ($list_strains){
+	warn "\nAvailable genomes to choose from are:\n";
+	warn "="x37,"\n";
+	my %strains = detect_strains($vcf_file);
+	foreach my $strain(keys %strains){
+	    print "$strain\n";
+	}
+	warn "="x37,"\n";
+	warn "\nPlease choose one using '--strain NAME'\n\n";
+	exit;
+    }
+
+    return ($vcf_file,$ucsc,$strain);
 
 }
 
