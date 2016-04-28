@@ -1,0 +1,285 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use Getopt::Long;
+use FindBin qw($Bin);
+use lib "$Bin/../lib";
+use Cwd;
+
+## This program is Copyright (C) 2014-16, Felix Krueger (felix.krueger@babraham.ac.uk)
+
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+
+## You should have received a copy of the GNU General Public License
+## along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+
+### This script filters the latest VCF file for various SNPs versus the GRCm38 mouse genome build and writes high confidence SNPs into a folder called 'SNPs_Sanger';
+### It has been tested with the latest version of the SNP file 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz' at the time of writing (20 Jan 2016). I can't guarantee that
+### it will work with any other supplied VCF file.
+
+## Reading in a BAM or SAM file
+my $pipeline_version = '0.3.devel';
+my $parent_dir = getcwd();
+my ($vcf_file,$ucsc,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
+
+warn "Summarising SNPsplit Genome Preparation Parameters\n";
+warn "="x50,"\n";
+warn "Processing SNPs from VCF file $vcf_file\n\n";
+
+
+extract_SNP_calls_from_VCF();
+warn "Finished filtering and writing out SNPs\n\n";
+sub detect_chroms{
+
+    my %chrom; # detecting the chromosomes from the VCF file
+  
+    if ($vcf_file =~ /gz$/){
+	open (DETECT,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
+    }
+    else{
+	open (DETECT, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
+    }
+    
+    warn "Detecting chromosomes\n\n";
+    while (<IN>){
+	$_ =~ s/(\r|\n)//g; # removing end of line characters
+	next unless ($_ =~ /^\#\#contig/); # filters header lines
+
+	warn "$_\n"; # sleep(1);
+	$_ =~ /ID=(.+),/;
+	my $chr = $1;
+	warn "Identified chromosome $chr\n";
+	unless (exists $chrom{$chr}){
+	    $chrom{$chr}++;
+	}
+	last unless ($_ =~ /^\#/);
+
+    }
+    exit;
+}
+  
+
+sub extract_SNP_calls_from_VCF{
+    
+    if ($vcf_file =~ /gz$/){
+	open (IN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
+    }
+    else{
+	open (IN, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
+    }
+    
+    my $count = 0;
+
+    my $other = 0;
+    my $too_many = 0;
+    
+    my %fhs;
+    my $hcg_count = 0;
+    my $low_confidence = 0;
+    my $same = 0;
+    my $homozygous = 0;
+    my %all_SNPs;
+    
+    my @chromosomes = detect_chroms();
+      
+    my $dir = 'SNPs_Sanger';
+    unless (-d $dir){
+	warn "Folder '$dir' doesn't exist. Creating it for you...\n";
+	mkdir $dir or die "Failed to created directory $dir\n: $!\n";
+    }
+    
+    # Opening filehandles for the SNP files
+    if ($ucsc){
+	for my $chr (1..19,'X','Y','M') {
+	    my $filename = 'SNPs_Sanger/chr'.$chr.'.txt';
+	    open (my $fh,'>',$filename) or die "Couldn't open filehandle $!\n";
+	    $fhs{$chr} = $fh;
+	    print {$fhs{$chr}} ">$chr\n";
+	}
+    }
+    else{
+	for my $chr (1..19,'X','Y','MT') {
+	    my $filename = 'SNPs_Sanger/chr'.$chr.'.txt';
+	    open (my $fh,'>',$filename) or die "Couldn't open filehandle $!\n";
+	    $fhs{$chr} = $fh;
+	    print {$fhs{$chr}} ">$chr\n";
+	}
+    }
+    
+    while (<IN>){
+	$_ =~ s/(\r|\n)//g; # removing end of line characters
+
+	warn "$_\n"; sleep(1);
+	next if ($_ =~ /^\#\#/); # filters header lines
+	
+	$count++;
+	if ($count%1000000 ==0){
+	    warn "processed $count lines\n";
+	}
+	last if ($count == 100);
+	# warn "$_\n";
+	my ($chr,$pos,$ref,$alt,$strain) = (split /\t/)[0,1,3,4,21];
+	# warn "$_$chr , $pos , $ref , $alt , $strain\n";
+	# warn "$strain\n";
+	# sleep(1);
+	# strain is in the form: GT:GQ:DP:SP:PL:FI
+	# my ($gt,$gq,$dp,$sp,$pl,$fi) = split/:/,$strain;
+	my ($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi) = split/:/,$strain;
+	
+	
+	unless ($fi){
+	    # warn "genotype: $gt\nfilter:   $fi\n\n";
+	}
+	# warn "$fi\n"; sleep(1);
+	# $gt is the Genotype:
+	
+	# '.'   = no genotype call was made
+	# '0/0' = genotype is the same as the reference geneome
+	# '1/1' = homozygous alternative allele; can also be '2/2',
+	# '3/3', etc. if more than one alternative allele is present.
+	# '0/1' = heterozygous genotype; can also be '1/2', '0/2', etc.
+	
+	# $fi is filter, 1 for high confidence SNP, or 0 for low confidence
+	
+	### I guess we are only looking for 1/1 calls, and filter for high confidence as well
+    
+	if ($ref =~ /[^ATCG]/){
+	    warn "ref was: $ref; skipping\n";
+	    next;
+	}
+	
+	# skipping if the SNP is not well defined in Cast
+	if ($alt =~ /[^ATCG]/){
+	    # warn "SNP was: $alt; skipping; $c3h\n";
+	    ++$too_many;
+	    next;
+	}
+	
+	if ($gt eq '0/0'){
+	    ++$same;
+	    # warn "same as reference\n";
+	    next;
+	}
+	elsif ($gt eq '1/1'){
+	    ++$homozygous;
+	    # warn "homozygous alternative allele\n";
+	}
+	else{
+	    ++$other;
+	next;
+	}
+	
+	# Looking at the Filtering tag
+	# warn "$fi\n"; sleep(1);
+	if ($fi == 1){
+	    ++$hcg_count;
+	    
+	    my $location = join (':',$chr,$pos);
+	    # warn "$location\n";
+	    my $SNP = join ("\t",$count,$chr,$pos,'1',join ("\/",$ref,$alt));
+	    # warn "$SNP\n";sleep(1);
+	    
+	    if (exists $all_SNPs{$location} ){
+		warn "meep\n";
+	    }
+	    else{
+		$all_SNPs{$location} = $SNP;
+	}
+	}
+	else{
+	    ++$low_confidence;
+	    next;
+	}
+	
+	# Output example
+	# Variation ID    Chromosome name Position on Chromosome (bp)     Strand  Allele
+	# rs2020560       10      98212004        1       A/T
+	
+	print {$fhs{$chr}} join ("\t",$count,$chr,$pos,'1',join ("\/",$ref,$alt),$strain),"\n";
+	
+    }
+
+    warn "\n\n=========================================================\n\nPositions read in total:\t$count\n\n";
+    warn "SNP position summary for strain Castaneus (GRCm38)\n\n";
+    
+    warn "$homozygous\tSNP were homozygous. Of these:\n";
+    warn "$hcg_count\tSNP were homozygous and passed high confidence filters, and were included into the Cast genome\n";
+    
+    warn "\nNot included into Cast genome:\n";
+    warn "$same\thad the same sequence as the reference\n";
+    warn "$too_many\thad no clearly defined alternative base\n";
+    warn "$other\tCalls were neither 0/0 (same as reference) or 1/1 (homozygous SNP)\n";
+    warn "$low_confidence\twere homozygous but the filtering call was low confidence\n";
+
+    # Also writing all SNP calls out to an all-SNP file
+    warn "Now printing a single list of all SNPs\n";
+    my $all_SNPs = 'all_SNPs.txt.gz';
+    if (-e $all_SNPs){
+	warn "File '$all_SNPs' existed in the folder already, overwriting it...\n\n";
+    }
+    open (ALLSNP,"| gzip -c - $all_SNPs") or die "Failed to write to file $all_SNPs: $!\n";
+    
+    foreach my $location (keys %all_SNPs){
+	print OUT "$all_SNPs{$location}\n";
+    }
+        
+}
+    sub process_commandline{
+	my $help;
+  my $version;
+  my $vcf_file;
+  my $ucsc;
+
+  my $command_line = GetOptions ('help|man'             => \$help,
+                                 'versions'             => \$version,
+				 'ucsc'                 => \$ucsc,
+                                 'vcf_file=s'           => \$vcf_file,
+      );
+  
+  ### EXIT ON ERROR if there were errors with any of the supplied options
+  unless ($command_line){
+      die "Please respecify command line options\n";
+  }
+
+  ### HELPFILE
+  if ($help){
+      print_helpfile();
+      exit;
+  }
+
+  if ($version){
+      print << "VERSION";
+
+                               SNPsplit Genome Preparation
+                                   version: $pipeline_version
+                 Copyright 2014-16 Felix Krueger, Babraham Bioinformatics
+
+
+VERSION
+    exit;
+  }
+
+  if (defined $vcf_file){
+      unless(-e $vcf_file){
+	  die "Input VCF file '$vcf_file' doesn't exist in the folder. Please check filenames and try again!\n\n";
+      }
+  }
+  else{
+      die "\nYou need to provide a VCF file detailing SNPs positions with '--vcf_file your.file' (e.g.: --vcf mgp.v5.merged.snps_all.dbSNP142.vcf.gz). Please respecify!\n\n";
+  }
+  
+  return ($vcf_file,$ucsc);
+
+}
+
+
+## Last modified on 28 April 2016
