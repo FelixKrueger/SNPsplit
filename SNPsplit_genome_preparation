@@ -29,7 +29,7 @@ use Cwd;
 ## Reading in a BAM or SAM file
 my $pipeline_version = '0.3.devel';
 my $parent_dir = getcwd();
-my ($vcf_file,$ucsc,$strain,$genome_folder) = process_commandline ();
+my ($vcf_file,$ucsc,$strain,$genome_folder,$skip_filtering,$nmasking) = process_commandline ();
 
 warn "Summarising SNPsplit Genome Preparation Parameters\n";
 warn "="x50,"\n";
@@ -47,105 +47,205 @@ my $strain_index;
 deal_with_strains();
 
 ### Determining and Filtering homozygous high-confidence SNPs for the strain in question
-# filter_relevant_SNP_calls_from_VCF();
-warn "Finished filtering and writing out SNPs\n\n";
+if ($skip_filtering){
+    warn "Skipped reading the VCF file and filtering SNPs again\n\n";
+}
+else{
+    filter_relevant_SNP_calls_from_VCF();
+    warn "Finished filtering and writing out SNPs\n\n";
+}
 
-my %chromosomes; # Storing the genomic sequence
+
+### Storing the entire genome sequence
+my %chromosomes; # genomic sequence
 read_genome_into_memory($parent_dir);
 
-sub read_genome_into_memory{
+### Create modified genome
+
+my $new_total = 0;
+my $already_total = 0;
+my $low_confidence = 0;
+
+# Writing a genome generation report file
+my $report = "${strain}_genome_preparation_report.txt";
+open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";
+
+for my $chr (@chroms) {
+    create_modified_chromosome($chr);
+}
+warn "\n\nSummary\n$new_total Ns were newly introduced in total\n\n";
+print REPORT "\nSummary\n$new_total Ns were newly introduced in total\n\n";
+
+
+sub create_modified_chromosome {
+
+  my ($chr) = @_;
+  warn "Strain is: $strain\nProcessing chr$chr\n";
+
+  my $sequence = $chromosomes{$chr};
+  
+  my @snps = @{read_snps($chr)};
+  unless (@snps){
+    @snps = ();
+    warn "Clearing SNP array...\n"
+  }
+
+  my $count = 0;
+
+  my $lastPos = 0;
+
+  my $already = 0;
+  my $warn = 0;
+  my $new = 0;
+
+  foreach my $snp (@snps) {
+      # Apply the SNP
+      ++$count;
+      # warn "$snp->[0]\t$snp->[1]/$snp->[2]\n";
+      if ($snp->[0] == $lastPos) {
+	  # Duplicate SNP
+	  next;
+      }
+      
+      $lastPos = $snp->[0];
     
-    ## working directoy
-    my $cwd = shift;
-    
-    ## reading in and storing the specified genome in the %chromosomes hash
-    chdir ($genome_folder) or die "Can't move to $genome_folder: $!";
-    warn "Now reading in and storing sequence information of the genome specified in: $genome_folder\n\n";
-
-    my @chromosome_filenames =  <*.fa>;
-
-    ### if there aren't any genomic files with the extension .fa we will look for files with the extension .fasta
-    unless (@chromosome_filenames){
-      @chromosome_filenames =  <*.fasta>;
-    }
-
-    unless (@chromosome_filenames){
-      die "The specified genome folder $genome_folder does not contain any sequence files in FastA format (with .fa or .fasta file extensions)\n";
-    }
-
-    my $SQ_count = 0;
-
-    foreach my $chromosome_filename (@chromosome_filenames){
-
-	open (CHR_IN,$chromosome_filename) or die "Failed to read from sequence file $chromosome_filename $!\n";
-	### first line needs to be a fastA header
-	my $first_line = <CHR_IN>;
-	chomp $first_line;
-	$first_line =~ s/\r//;
-	### Extracting chromosome name from the FastA header
-	my $chromosome_name = extract_chromosome_name($first_line);
-	my $sequence;
-
-	while (<CHR_IN>){
-	  chomp;
-	  $_ =~ s/\r//; # removing carriage returns if present
-	  if ($_ =~ /^>/){
-	
-	    ### storing the previous chromosome in the %chromosomes hash, only relevant for Multi-Fasta-Files (MFA)
-	    if (exists $chromosomes{$chromosome_name}){
-	      print "chr $chromosome_name (",length $sequence ," bp)\n";
-	      die "Exiting because chromosome name already exists. Please make sure all chromosomes have a unique name!\n";
-	    }
-	    else {
-	      if (length($sequence) == 0){
-		warn "Chromosome $chromosome_name in the multi-fasta file $chromosome_filename did not contain any sequence information!\n";
-	      }
-	      print "chr $chromosome_name (",length $sequence ," bp)\n";
-	      $chromosomes{$chromosome_name} = $sequence;
-	    }
-	    ### resetting the sequence variable
-	    $sequence = '';
-	    ### setting new chromosome name
-	    $chromosome_name = extract_chromosome_name($_);
+      # Check if the reference base is the same as the SNP base
+      if (substr ($sequence,$snp->[0]-1,1) eq $snp->[2]) {
+	  # warn "Skipping $snp->[0] $snp->[1]/$snp->[2] since the ref and SNP base are the same\n";
+	  ++$already;
+	  next;
+      }
+      
+      # Check the reference base is correct
+      if (substr ($sequence,$snp->[0]-1,1) ne $snp->[1]) {
+	  # warn "Skipping $snp->[0] $snp->[1]/$snp->[2] since the reference base didn't match\n";
+	  $warn++;
+	  next;
+      }
+      
+      ### Ref/Alt bases are matching, so we can proceed to changing the ref base for the SNP base or Ns (N-masking)
+      if ($nmasking){ # default
+	  my $return =  substr($sequence,($snp->[0])-1,1,'N'); 	  # Replacing the base with 'N'
+	  unless ($return){
+	      warn "Replacing failed...\n";
 	  }
-	  else{
-	    $sequence .= uc$_;
+      }
+      else{
+	  my $return = substr($sequence,$snp->[0]-1,1,$snp->[2]); # Replacing the reference with the SNP base
+	  unless ($return){
+	      warn "Replacing failed...\n";
 	  }
-	}
-	
- 	### Processing last chromosome of a multi Fasta File or the only entry in case of single entry FastA files
+      }
+      ++$new;
+      
+  }
 
-	if (exists $chromosomes{$chromosome_name}){
-	    print "chr $chromosome_name (",length $sequence ," bp)\t";
-	    die "Exiting because chromosome name already exists. Please make sure all chromosomes have a unique name.\n";
-	}
-	else{
-	    if (length($sequence) == 0){
-		warn "Chromosome $chromosome_name in the file $chromosome_filename did not contain any sequence information!\n";
-	    }
+  $new_total += $new;
+  $already_total += $already;
+  
+  write_SNP_chromosome($chr,$sequence);
 
-	    print "chr $chromosome_name (",length $sequence ," bp)\n";
-	    $chromosomes{$chromosome_name} = $sequence;
-	}
-    }
-    print "\n";
-    chdir $cwd or die "Failed to move to directory $cwd\n";
+  warn "$count SNPs total for chromosome $chr\n";
+  if ($nmasking){ # default
+      warn "$new positions on chromosome $chr were changed to 'N'\n\n";
+  }
+  else{
+      warn "$new reference positions on chromosome $chr were changed to the SNP alternative base\n\n";
+  }
 
 }
-sub extract_chromosome_name {
-    ## Bowtie seems to extract the first string after the inition > in the FASTA file, so we are doing this as well
-    my $fasta_header = shift;
-    if ($fasta_header =~ s/^>//){
-	my ($chromosome_name) = split (/\s+/,$fasta_header);
-	return $chromosome_name;
+
+
+sub write_SNP_chromosome {
+
+    warn "Writing modified chromosome\n";
+    my ($chr,$sequence) = @_;
+    my $type;
+    my $outfile;
+    if ($nmasking){
+	$type = 'N-masked';
+	$outfile = "chr${chr}.N-masked.fa";
     }
     else{
-	die "The specified chromosome ($fasta_header) file doesn't seem to be in FASTA format as required!\n";
+	$type = 'full_sequence';
+	$outfile = "chr${chr}.SNPs_introduced.fa";
     }
+    
+    warn "Starting sequence is ".length($sequence)."bp\n";
+    warn "Writing to output file: ${parent_dir}/${strain}_${type}/$outfile\n";
+    
+    open (OUT,'>',"${parent_dir}/${strain}_${type}/${outfile}") or die $!;
+    print OUT ">$chr\n";
+
+    my $pos = 0;
+    
+    # Writing out chromosome files with 100 characters per line
+    while ($pos < length($sequence)-100) {
+	print OUT substr($sequence,$pos,100),"\n";
+	$pos += 100;
+    }
+    print OUT substr($sequence,$pos),"\n"; # rest
+    
+    close OUT or die $!;
 }
 
-###
 
+## // TODO: THis is the only part that need to be looked at
+sub read_snps {
+
+    warn "Reading SNPs\n";
+
+    my ($chr) = @_;
+    my @snps = ();
+    my $file = "/bi/scratch/Genomes/Mouse/C3H_based_on_GRCm38_May2015.v4/SNPs_Sanger/chr$chr.txt";
+
+    unless (-e $file) {
+      warn "Couldn't find SNP file for '$chr' '$file' didn't exist. Skipping...\n";
+      return \@snps;
+    }
+
+    open (IN,$file) or die $!;
+
+    while (<IN>) {
+      chomp;
+      next unless ($_);
+
+      my (undef,undef,$pos,$strand,$allele) = split(/\t/);
+
+      my ($b6_allele,$c3h_allele);
+
+      next unless ($allele);
+
+      if ($allele =~ /^([GATC])\/([GATC])$/) {
+	$b6_allele = $1;
+	$c3h_allele = $2;
+      }
+      else {
+	warn "Skipping allele $allele\n";
+	next;
+      }
+
+      if ($strand == -1) {
+	$b6_allele =~ tr/GATC/CTAG/;
+	$c3h_allele =~ tr/GATC/CTAG/;
+      }
+
+      push @snps,[$pos,$b6_allele,$c3h_allele];
+    }
+
+    @snps = sort {$a->[0] <=> $b->[0]} @snps;
+	
+    return \@snps;
+
+    close IN;
+
+}
+
+
+
+
+
+###
 
 sub filter_relevant_SNP_calls_from_VCF{
     
@@ -285,7 +385,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     }
     
     # Writing a report file
-    my $report = "${strain}_genome_preparation_report.txt";
+    my $report = "${strain}_SNP_filtering_report.txt";
     open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";
     
     warn "SNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
@@ -310,6 +410,8 @@ sub filter_relevant_SNP_calls_from_VCF{
     print REPORT "$other\t\tCalls were neither 0/0 (same as reference) or 1/1 (homozygous SNP)\n";
     print REPORT "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
     
+    close (REPORT) or warn "Failed to close filehandle REPORT\n";
+
     # Also writing all SNP calls out to an all-SNP file
     warn "Now printing a single list of all SNPs\n\n";
     my $all_SNPs = "all_SNPs_${strain}_GRCm38.txt.gz";
@@ -431,6 +533,100 @@ sub detect_strains{
 
 }
 
+sub read_genome_into_memory{
+    
+    ## working directoy
+    my $cwd = shift;
+    
+    ## reading in and storing the specified genome in the %chromosomes hash
+    chdir ($genome_folder) or die "Can't move to $genome_folder: $!";
+    warn "Now reading in and storing sequence information of the genome specified in: $genome_folder\n\n";
+
+    my @chromosome_filenames =  <*.fa>;
+
+    ### if there aren't any genomic files with the extension .fa we will look for files with the extension .fasta
+    unless (@chromosome_filenames){
+      @chromosome_filenames =  <*.fasta>;
+    }
+
+    unless (@chromosome_filenames){
+      die "The specified genome folder $genome_folder does not contain any sequence files in FastA format (with .fa or .fasta file extensions)\n";
+    }
+
+    my $SQ_count = 0;
+
+    foreach my $chromosome_filename (@chromosome_filenames){
+
+	open (CHR_IN,$chromosome_filename) or die "Failed to read from sequence file $chromosome_filename $!\n";
+	### first line needs to be a fastA header
+	my $first_line = <CHR_IN>;
+	chomp $first_line;
+	$first_line =~ s/\r//;
+	### Extracting chromosome name from the FastA header
+	my $chromosome_name = extract_chromosome_name($first_line);
+	my $sequence;
+
+	while (<CHR_IN>){
+	  chomp;
+	  $_ =~ s/\r//; # removing carriage returns if present
+	  if ($_ =~ /^>/){
+	
+	    ### storing the previous chromosome in the %chromosomes hash, only relevant for Multi-Fasta-Files (MFA)
+	    if (exists $chromosomes{$chromosome_name}){
+	      print "chr $chromosome_name (",length $sequence ," bp)\n";
+	      die "Exiting because chromosome name already exists. Please make sure all chromosomes have a unique name!\n";
+	    }
+	    else {
+	      if (length($sequence) == 0){
+		warn "Chromosome $chromosome_name in the multi-fasta file $chromosome_filename did not contain any sequence information!\n";
+	      }
+	      print "chr $chromosome_name (",length $sequence ," bp)\n";
+	      $chromosomes{$chromosome_name} = $sequence;
+	    }
+	    ### resetting the sequence variable
+	    $sequence = '';
+	    ### setting new chromosome name
+	    $chromosome_name = extract_chromosome_name($_);
+	  }
+	  else{
+	    $sequence .= uc$_;
+	  }
+	}
+	
+ 	### Processing last chromosome of a multi Fasta File or the only entry in case of single entry FastA files
+
+	if (exists $chromosomes{$chromosome_name}){
+	    print "chr $chromosome_name (",length $sequence ," bp)\t";
+	    die "Exiting because chromosome name already exists. Please make sure all chromosomes have a unique name.\n";
+	}
+	else{
+	    if (length($sequence) == 0){
+		warn "Chromosome $chromosome_name in the file $chromosome_filename did not contain any sequence information!\n";
+	    }
+
+	    print "chr $chromosome_name (",length $sequence ," bp)\n";
+	    $chromosomes{$chromosome_name} = $sequence;
+	}
+    }
+    print "\n";
+    chdir $cwd or die "Failed to move to directory $cwd\n";
+
+}
+
+sub extract_chromosome_name {
+    ## Bowtie seems to extract the first string after the inition > in the FASTA file, so we are doing this as well
+    my $fasta_header = shift;
+    if ($fasta_header =~ s/^>//){
+	my ($chromosome_name) = split (/\s+/,$fasta_header);
+	return $chromosome_name;
+    }
+    else{
+	die "The specified chromosome ($fasta_header) file doesn't seem to be in FASTA format as required!\n";
+    }
+}
+
+
+###################################################################
 
 
 sub process_commandline{
@@ -439,12 +635,14 @@ sub process_commandline{
     my $vcf_file;
     my $strain;
     my $list_strains;
+    my $skip_filtering;
     my $genome_folder;
     
     my $command_line = GetOptions ('help|man'             => \$help,
 				   'versions'             => \$version,
 				   'strain=s'             => \$strain,
 				   'list_strains'         => \$list_strains,
+				   'skip_filtering'       => \$skip_filtering,
 				   'vcf_file=s'           => \$vcf_file,
 				   'genome_folder=s'      => \$genome_folder,
 	);
@@ -519,8 +717,9 @@ VERSION
 	die "Failed to move to $genome_folder: $!\n\nSNPsplit_genome_preparation --help for more details\n\n";
     }
     chdir $parent_dir or die "Failed to move back to parent directory $parent_dir\n\n";
-    
-    return ($vcf_file,$ucsc,$strain,$genome_folder);
+
+    my $nmasking = 1;
+    return ($vcf_file,$ucsc,$strain,$genome_folder,$skip_filtering,$nmasking);
 
 }
 
