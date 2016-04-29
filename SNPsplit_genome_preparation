@@ -38,17 +38,111 @@ warn "Reference genome:\t\t\t$genome_folder\n";
 warn "\n";
 
 ### Dealing with chromosomes
-my @chromosomes = detect_chroms();
+my @chroms = detect_chroms();
 print "Using the following chromosomes (detected from VCF file >>$vcf_file<<):\n";
-print join ("\t",@chromosomes),"\n\n";
+print join ("\t",@chroms),"\n\n";
 
 ### Dealing with strains
 my $strain_index;
 deal_with_strains();
 
 ### Determining and Filtering homozygous high-confidence SNPs for the strain in question
-filter_relevant_SNP_calls_from_VCF();
+# filter_relevant_SNP_calls_from_VCF();
 warn "Finished filtering and writing out SNPs\n\n";
+
+my %chromosomes; # Storing the genomic sequence
+read_genome_into_memory($parent_dir);
+
+sub read_genome_into_memory{
+    
+    ## working directoy
+    my $cwd = shift;
+    
+    ## reading in and storing the specified genome in the %chromosomes hash
+    chdir ($genome_folder) or die "Can't move to $genome_folder: $!";
+    warn "Now reading in and storing sequence information of the genome specified in: $genome_folder\n\n";
+
+    my @chromosome_filenames =  <*.fa>;
+
+    ### if there aren't any genomic files with the extension .fa we will look for files with the extension .fasta
+    unless (@chromosome_filenames){
+      @chromosome_filenames =  <*.fasta>;
+    }
+
+    unless (@chromosome_filenames){
+      die "The specified genome folder $genome_folder does not contain any sequence files in FastA format (with .fa or .fasta file extensions)\n";
+    }
+
+    my $SQ_count = 0;
+
+    foreach my $chromosome_filename (@chromosome_filenames){
+
+	open (CHR_IN,$chromosome_filename) or die "Failed to read from sequence file $chromosome_filename $!\n";
+	### first line needs to be a fastA header
+	my $first_line = <CHR_IN>;
+	chomp $first_line;
+	$first_line =~ s/\r//;
+	### Extracting chromosome name from the FastA header
+	my $chromosome_name = extract_chromosome_name($first_line);
+	my $sequence;
+
+	while (<CHR_IN>){
+	  chomp;
+	  $_ =~ s/\r//; # removing carriage returns if present
+	  if ($_ =~ /^>/){
+	
+	    ### storing the previous chromosome in the %chromosomes hash, only relevant for Multi-Fasta-Files (MFA)
+	    if (exists $chromosomes{$chromosome_name}){
+	      print "chr $chromosome_name (",length $sequence ," bp)\n";
+	      die "Exiting because chromosome name already exists. Please make sure all chromosomes have a unique name!\n";
+	    }
+	    else {
+	      if (length($sequence) == 0){
+		warn "Chromosome $chromosome_name in the multi-fasta file $chromosome_filename did not contain any sequence information!\n";
+	      }
+	      print "chr $chromosome_name (",length $sequence ," bp)\n";
+	      $chromosomes{$chromosome_name} = $sequence;
+	    }
+	    ### resetting the sequence variable
+	    $sequence = '';
+	    ### setting new chromosome name
+	    $chromosome_name = extract_chromosome_name($_);
+	  }
+	  else{
+	    $sequence .= uc$_;
+	  }
+	}
+	
+ 	### Processing last chromosome of a multi Fasta File or the only entry in case of single entry FastA files
+
+	if (exists $chromosomes{$chromosome_name}){
+	    print "chr $chromosome_name (",length $sequence ," bp)\t";
+	    die "Exiting because chromosome name already exists. Please make sure all chromosomes have a unique name.\n";
+	}
+	else{
+	    if (length($sequence) == 0){
+		warn "Chromosome $chromosome_name in the file $chromosome_filename did not contain any sequence information!\n";
+	    }
+
+	    print "chr $chromosome_name (",length $sequence ," bp)\n";
+	    $chromosomes{$chromosome_name} = $sequence;
+	}
+    }
+    print "\n";
+    chdir $cwd or die "Failed to move to directory $cwd\n";
+
+}
+sub extract_chromosome_name {
+    ## Bowtie seems to extract the first string after the inition > in the FASTA file, so we are doing this as well
+    my $fasta_header = shift;
+    if ($fasta_header =~ s/^>//){
+	my ($chromosome_name) = split (/\s+/,$fasta_header);
+	return $chromosome_name;
+    }
+    else{
+	die "The specified chromosome ($fasta_header) file doesn't seem to be in FASTA format as required!\n";
+    }
+}
 
 ###
 
@@ -83,7 +177,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     }
     
     # Opening filehandles for the SNP files
-    for my $chr (@chromosomes) {
+    for my $chr (@chroms) {
 	my $filename = "SNPs_$strain/chr".$chr.'.txt';
 	open (my $fh,'>',$filename) or die "Couldn't open filehandle $!\n";
 	$fhs{$chr} = $fh;
