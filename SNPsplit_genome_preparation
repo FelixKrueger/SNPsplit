@@ -23,18 +23,48 @@ use Cwd;
 
 
 ### This script filters the latest VCF file for various SNPs versus the GRCm38 mouse genome build and writes high confidence SNPs into a folder called 'SNPs_Sanger';
-### It has been tested with the latest version of the SNP file 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz' at the time of writing (20 Jan 2016). I can't guarantee that
+### It has been tested with the latest version of the SNP file 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz' at the time of writing (11 May 2016). I can't guarantee that
 ### it will work with any other supplied VCF file.
 
 ## Reading in a BAM or SAM file
 my $pipeline_version = '0.3.devel';
 my $parent_dir = getcwd();
-my ($vcf_file,$ucsc,$strain,$genome_folder,$skip_filtering,$nmasking) = process_commandline ();
+my ($vcf_file,$strain,$genome_folder,$skip_filtering,$nmasking,$full_sequence) = process_commandline ();
 
 warn "Summarising SNPsplit Genome Preparation Parameters\n";
 warn "="x50,"\n";
 warn "Processing SNPs from VCF file:\t\t $vcf_file\n";
 warn "Reference genome:\t\t\t$genome_folder\n";
+if ($nmasking){
+    warn "N-masking:\t\t\t\tYes\n";
+}
+else{
+    warn "N-masking:\t\t\t\tNo\n";
+}
+
+if ($skip_filtering){
+    warn "Reading/filtering VCF file:\t\tNo (skipped by user)\n";
+}
+else{
+    warn "Reading/filtering VCF file:\t\tYes (default)\n";
+}
+
+# N-masking
+if ($nmasking){
+    warn "N-masking:\t\t\t\tYes\n";
+}
+else{
+    warn "N-masking:\t\t\t\tNo\n";
+}
+
+# Full SNP incorporation
+if ($full_sequence){
+    warn "Full SNP genome:\t\t\tYes\n";
+}
+else{
+    warn "Full SNP genome:\t\t\tNo\n";
+}
+
 warn "\n";
 
 ### Dealing with chromosomes
@@ -48,7 +78,7 @@ deal_with_strains();
 
 ### Determining and Filtering homozygous high-confidence SNPs for the strain in question
 if ($skip_filtering){
-    warn "Skipped reading the VCF file and filtering SNPs again\n\n";
+    warn "Skipped reading the VCF file and filtering SNPs again (specified by user)\n\n";
 }
 else{
     filter_relevant_SNP_calls_from_VCF();
@@ -62,7 +92,8 @@ read_genome_into_memory($parent_dir);
 
 ### Create modified genome
 
-my $new_total = 0;
+my $new_n_total = 0;
+my $new_snp_total = 0;
 my $already_total = 0;
 my $low_confidence = 0;
 
@@ -73,171 +104,224 @@ open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";
 for my $chr (@chroms) {
     create_modified_chromosome($chr);
 }
-warn "\n\nSummary\n$new_total Ns were newly introduced in total\n\n";
-print REPORT "\nSummary\n$new_total Ns were newly introduced in total\n\n";
 
+if ($nmasking){
+    warn "\n\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome in total\n";
+    print REPORT "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome in total\n";
+}
+
+if ($full_sequence){
+    warn "$new_snp_total SNPs were newly introduced into the full sequence genome version in total\n\n";
+    print REPORT "$new_snp_total SNPs were newly introduced into the full sequence genome version in total\n";
+}
+warn "\n";
 
 sub create_modified_chromosome {
 
-  my ($chr) = @_;
-  warn "Strain is: $strain\nProcessing chr$chr\n";
-
-  my $sequence = $chromosomes{$chr};
-  
-  my @snps = @{read_snps($chr)};
-  unless (@snps){
-    @snps = ();
-    warn "Clearing SNP array...\n"
-  }
-
-  my $count = 0;
-
-  my $lastPos = 0;
-
-  my $already = 0;
-  my $warn = 0;
-  my $new = 0;
-
-  foreach my $snp (@snps) {
-      # Apply the SNP
-      ++$count;
-      # warn "$snp->[0]\t$snp->[1]/$snp->[2]\n";
-      if ($snp->[0] == $lastPos) {
-	  # Duplicate SNP
-	  next;
-      }
-      
-      $lastPos = $snp->[0];
+    my ($chr) = @_;
+    warn "Processing chr$chr (for strain $strain)\n";
     
-      # Check if the reference base is the same as the SNP base
-      if (substr ($sequence,$snp->[0]-1,1) eq $snp->[2]) {
-	  # warn "Skipping $snp->[0] $snp->[1]/$snp->[2] since the ref and SNP base are the same\n";
-	  ++$already;
-	  next;
-      }
-      
-      # Check the reference base is correct
-      if (substr ($sequence,$snp->[0]-1,1) ne $snp->[1]) {
-	  # warn "Skipping $snp->[0] $snp->[1]/$snp->[2] since the reference base didn't match\n";
-	  $warn++;
-	  next;
-      }
-      
-      ### Ref/Alt bases are matching, so we can proceed to changing the ref base for the SNP base or Ns (N-masking)
-      if ($nmasking){ # default
-	  my $return =  substr($sequence,($snp->[0])-1,1,'N'); 	  # Replacing the base with 'N'
-	  unless ($return){
-	      warn "Replacing failed...\n";
-	  }
-      }
-      else{
-	  my $return = substr($sequence,$snp->[0]-1,1,$snp->[2]); # Replacing the reference with the SNP base
-	  unless ($return){
-	      warn "Replacing failed...\n";
-	  }
-      }
-      ++$new;
-      
-  }
+    my $sequence = $chromosomes{$chr};
+    my $n_sequence;
+    
+    if ($nmasking){
+	$n_sequence = $sequence;
+    }
 
-  $new_total += $new;
-  $already_total += $already;
+    my @snps = @{read_snps($chr)};
+    unless (@snps){
+	@snps = ();
+	warn "Clearing SNP array...\n"
+    }
+    
+    my $count = 0;
+
+    my $lastPos = 0;
+
+    my $already = 0;
+    my $warn = 0;
+    my $new_n = 0;
+    my $new_snp = 0;
+
+    foreach my $snp (@snps) {
+	# Apply the SNP
+	++$count;
+	# warn "$snp->[0]\t$snp->[1]/$snp->[2]\n";
+	if ($snp->[0] == $lastPos) {
+	    # Duplicate SNP
+	    next;
+	}
+      
+	$lastPos = $snp->[0];
+	
+	# Check if the reference base is the same as the SNP base
+	if (substr ($sequence,$snp->[0]-1,1) eq $snp->[2]) {
+	    # warn "Skipping $snp->[0] $snp->[1]/$snp->[2] since the ref and SNP base are the same\n";
+	    ++$already;
+	    next;
+	}
+      
+	# Check the reference base is correct
+	if (substr ($sequence,$snp->[0]-1,1) ne $snp->[1]) {
+	    # warn "Skipping $snp->[0] $snp->[1]/$snp->[2] since the reference base didn't match\n";
+	    $warn++;
+	    next;
+	}
+      
+	### Ref/Alt bases are matching, so we can proceed to changing the ref base for the SNP base or Ns (N-masking)
+	
+	### N-masking 
+	if ($nmasking){ # default
+	    my $return =  substr($n_sequence,($snp->[0])-1,1,'N');  # Replacing the base with 'N'
+	    unless ($return){
+		warn "Replacing failed...\n";
+	    }
+	    ++$new_n;
+	}
+	
+	if ($full_sequence){
+	    my $return = substr($sequence,$snp->[0]-1,1,$snp->[2]); # Replacing the reference with the SNP base
+	    unless ($return){
+		warn "Replacing failed...\n";
+	    }
+	    ++$new_snp;
+	}
+	
+    }
   
-  write_SNP_chromosome($chr,$sequence);
-
-  warn "$count SNPs total for chromosome $chr\n";
-  if ($nmasking){ # default
-      warn "$new positions on chromosome $chr were changed to 'N'\n\n";
-  }
-  else{
-      warn "$new reference positions on chromosome $chr were changed to the SNP alternative base\n\n";
-  }
+    $new_n_total += $new_n;
+    $new_snp_total += $new_snp;
+    
+    $already_total += $already;
+    if ($nmasking){ 
+	write_SNP_chromosome($chr,$n_sequence,1);
+    }
+    if ($full_sequence){
+	write_SNP_chromosome($chr,$sequence,0);
+    }
+    
+    warn "$count SNPs total for chromosome $chr\n";
+    if ($nmasking){ # default
+	warn "$new_n positions on chromosome $chr were changed to 'N'\n";
+	print REPORT "$new_n positions on chromosome $chr were changed to 'N'\n";
+    }
+    if ($full_sequence){
+	warn "$new_snp reference positions on chromosome $chr were changed to the SNP alternative base\n\n";
+	print REPORT "$new_snp reference positions on chromosome $chr were changed to the SNP alternative base\n\n";
+    }
+    warn "\n";
 
 }
 
 
 sub write_SNP_chromosome {
 
-    warn "Writing modified chromosome\n";
-    my ($chr,$sequence) = @_;
+    my ($chr,$sequence,$nm) = @_; # $nm will discriminate between N-masking and full sequence output
+    if ($nm){
+	warn "Writing modified chromosome (N-masking)\n";
+    }
+    else{
+	warn "Writing modified chromosome (incorporating SNPs)\n";
+    }
+    
     my $type;
     my $outfile;
-    if ($nmasking){
+    
+    if ($nm){
 	$type = 'N-masked';
 	$outfile = "chr${chr}.N-masked.fa";
     }
-    else{
+    if ($nm == 0){
 	$type = 'full_sequence';
 	$outfile = "chr${chr}.SNPs_introduced.fa";
     }
     
-    warn "Starting sequence is ".length($sequence)."bp\n";
-    warn "Writing to output file: ${parent_dir}/${strain}_${type}/$outfile\n";
+    # warn "Starting sequence is ".length($sequence)." bp\n";
+    if ($nm){
+	warn "Writing N-masked output to: ${parent_dir}/${strain}_${type}/$outfile\n";
+	unless (-d "${parent_dir}/${strain}_${type}/"){ # creating the output directory if required
+	    mkdir "${parent_dir}/${strain}_${type}/";
+	}      
+	open (OUT,'>',"${parent_dir}/${strain}_${type}/${outfile}") or die "Failed to write to file ${parent_dir}/${strain}_${type}/${outfile}: $!\n\n";
+	print OUT ">$chr\n";
+    }
+    elsif ($nm == 0){
+	warn "Writing full sequence output to: ${parent_dir}/${strain}_${type}/$outfile\n";
+	unless (-d "${parent_dir}/${strain}_${type}/"){ # creating the output directory if required
+	    mkdir "${parent_dir}/${strain}_${type}/";
+	}      
+ 	open (OUT,'>',"${parent_dir}/${strain}_${type}/${outfile}") or die "Failed to write to file ${parent_dir}/${strain}_${type}/${outfile}: $!\n\n";
+	print OUT ">$chr\n";
+    }
+    else{
+	warn "Running out of options...\n\n";
+    }
     
-    open (OUT,'>',"${parent_dir}/${strain}_${type}/${outfile}") or die $!;
-    print OUT ">$chr\n";
-
     my $pos = 0;
-    
+
     # Writing out chromosome files with 100 characters per line
     while ($pos < length($sequence)-100) {
 	print OUT substr($sequence,$pos,100),"\n";
 	$pos += 100;
     }
     print OUT substr($sequence,$pos),"\n"; # rest
-    
     close OUT or die $!;
+   
 }
 
 
-## // TODO: THis is the only part that need to be looked at
 sub read_snps {
-
-    warn "Reading SNPs\n";
-
+    
     my ($chr) = @_;
     my @snps = ();
-    my $file = "/bi/scratch/Genomes/Mouse/C3H_based_on_GRCm38_May2015.v4/SNPs_Sanger/chr$chr.txt";
+    my $file = "${parent_dir}/SNPs_${strain}/chr$chr.txt";
 
-    unless (-e $file) {
-      warn "Couldn't find SNP file for '$chr' '$file' didn't exist. Skipping...\n";
-      return \@snps;
+    ### If the SNP folder doesn't exist we can be certain that something is going wrong
+    unless (-d "${parent_dir}/SNPs_${strain}"){
+	die "Folder >>${parent_dir}/SNPs_${strain}<< doesn't exist. Try losing the option --skip_filtering to generate the folder and SNP files from the VCF file\n\n";
     }
 
+    ### not sure but I think for some chromosomes there might not be any SNP files, e.g. chr MT or chrY. In this case the sequence is written out again unmodified
+    unless (-e $file) {
+	warn "Couldn't find SNP file for chromosome '$chr' '$file' didn't exist. Skipping...\n";
+	return \@snps;
+    }
+    warn "Reading SNPs from file $file\n";
+    
     open (IN,$file) or die $!;
 
     while (<IN>) {
-      chomp;
-      next unless ($_);
+	chomp;
+	next unless ($_);
+	
+	my (undef,undef,$pos,$strand,$allele) = split(/\t/);
+	next unless ($allele);
+	
+	my ($ref_allele,$snp_allele);
 
-      my (undef,undef,$pos,$strand,$allele) = split(/\t/);
-
-      my ($b6_allele,$c3h_allele);
-
-      next unless ($allele);
-
-      if ($allele =~ /^([GATC])\/([GATC])$/) {
-	$b6_allele = $1;
-	$c3h_allele = $2;
-      }
-      else {
-	warn "Skipping allele $allele\n";
-	next;
-      }
-
-      if ($strand == -1) {
-	$b6_allele =~ tr/GATC/CTAG/;
-	$c3h_allele =~ tr/GATC/CTAG/;
-      }
-
-      push @snps,[$pos,$b6_allele,$c3h_allele];
+	if ($allele =~ /^([GATC])\/([GATC])$/) {
+	    $ref_allele = $1;
+	    $snp_allele = $2;
+	}
+	else {
+	    warn "Skipping allele $allele\n";
+	    next;
+	}
+	
+	if ($strand == -1) { # if the strand is given as -1 it means that the SNP is on the reverse strand and thus needs reverse-coplementing
+	    $ref_allele =~ tr/GATC/CTAG/;
+	    $snp_allele =~ tr/GATC/CTAG/;
+	}
+	
+	push @snps,[$pos,$ref_allele,$snp_allele];
     }
 
+    # sorting snps
     @snps = sort {$a->[0] <=> $b->[0]} @snps;
-	
+    
     return \@snps;
-
-    close IN;
+    
+    close IN or warn "Failed to close filehandle IN for file $file: $!\n\n";
 
 }
 
@@ -636,39 +720,45 @@ sub process_commandline{
     my $strain;
     my $list_strains;
     my $skip_filtering;
+    my $full_sequence;
     my $genome_folder;
-    
+    my $nmasking = 1; # This is the default
+    my $no_nmasking;
+
     my $command_line = GetOptions ('help|man'             => \$help,
 				   'versions'             => \$version,
 				   'strain=s'             => \$strain,
 				   'list_strains'         => \$list_strains,
 				   'skip_filtering'       => \$skip_filtering,
 				   'vcf_file=s'           => \$vcf_file,
+				   'full_sequence'        => \$full_sequence,
+				   'no_nmasking'          => \$no_nmasking,
 				   'genome_folder=s'      => \$genome_folder,
 	);
   
-  ### EXIT ON ERROR if there were errors with any of the supplied options
-  unless ($command_line){
-      die "Please respecify command line options\n";
-  }
-
-  ### HELPFILE
-  if ($help){
-      print_helpfile();
-      exit;
-  }
-
-  if ($version){
-      print << "VERSION";
-
+    ### EXIT ON ERROR if there were errors with any of the supplied options
+    unless ($command_line){
+	die "Please respecify command line options\n";
+    }
+    
+    ### HELPFILE
+    if ($help){
+	print_helpfile();
+	exit;
+    }
+    
+    if ($version){
+	print << "VERSION";
+	
                                SNPsplit Genome Preparation
-                                   version: $pipeline_version
+				 version: $pipeline_version
                  Copyright 2014-16 Felix Krueger, Babraham Bioinformatics
 
 
 VERSION
-    exit;
-  }
+		 ;
+   	exit;
+    }
 
     if (defined $vcf_file){
 	unless(-e $vcf_file){
@@ -714,14 +804,104 @@ VERSION
 	$genome_folder = $absolute_genome_folder;
     }
     else{
-	die "Failed to move to $genome_folder: $!\n\nSNPsplit_genome_preparation --help for more details\n\n";
+	die "Failed to move to genome folder > $genome_folder <: $!\n\nSNPsplit_genome_preparation --help for more details\n\n";
     }
     chdir $parent_dir or die "Failed to move back to parent directory $parent_dir\n\n";
 
-    my $nmasking = 1;
-    return ($vcf_file,$ucsc,$strain,$genome_folder,$skip_filtering,$nmasking);
+    ###
+    if ($no_nmasking){
+	$nmasking = 0;
+	$full_sequence = 1;
+    }
+    
+    return ($vcf_file,$strain,$genome_folder,$skip_filtering,$nmasking,$full_sequence);
 
 }
 
 
-## Last modified on 28 April 2016
+sub print_helpfile{
+  print <<EOF
+
+  SYNOPSIS:
+
+SNPsplit is designed to read in alignment files in SAM/BAM format and determine the allelic origin of reads
+that cover known SNP positions. For this to work the alignment step must have been carried out against a 
+genome that had all SNP positions replaced by Ns, and a list of SNP positions between the two different genomes
+has to be provided using the option --snp_file.
+
+This module, SNPsplit_genome_preparation, allows you to specify a VCF file and generate a modified genome
+
+  I) SNPsplit-tag: SNPsplit analyses reads (single-end mode) or read pairs (paired-end mode) for overlaps 
+     with known SNP positions, and writes out a tagged BAM file in the same order as the original file.
+
+ II) SNPsplit-sort: the tagged BAM file is read in and is being sorted into allele-specific files. This process
+     may also be run as a stand-alone module (tag2sort).
+
+
+The SNPsplit-tag module determines whether a read can be assigned to a certain allele and appends an additional
+optional field 'XX:Z:' to each read. The tag can be one of the following:
+
+                                        XX:Z:UA - Unassigned
+                                        XX:Z:G1 - Genome 1-specific
+                                        XX:Z:G2 - Genome 2-specific
+                                        XX:Z:CF - Conflicting
+
+
+The SNPsplit-sort module reads in the tagged BAM file and sorts the reads (or read pairs) according to their XX:Z:
+tag (or the combination of tags for paired-end or Hi-C reads) into subfiles.
+
+
+  USAGE:    SNPsplit_genome_preparation  [options] --vcf_file <file> --genome /path/to/genome/ --strain <strain_name>
+
+
+--vcf_file <file>             Mandatory file specifying SNP information for mouse strains from the Mouse Genomes Project
+                              (http://www.sanger.ac.uk/science/data/mouse-genomes-project). The file used and approved for
+                              testing is called 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz'. Please note that future versions
+                              of this file or entirely different VCF files might not work out-of-be-box but may require some
+                              tweaking. SNP calls are read from the VCF files, and high confidence SNPs are written into
+                              a folder in the current working directory called SNPs_<strain_name>/chr<chromosome>.txt,
+                              in the following format:
+
+                                          SNP-ID     Chromosome  Position    Strand   Ref/SNP
+                              example:   33941939        9       68878541       1       T/G
+
+
+--strain <strain_name>        The strain you would like to use as Alt or SNP genome. For an overview of strain names just run
+                              SNPsplit_genome_preparation without selecting '--strain'. The reference (given with --genome_folder)
+                              is typically the strain 'Black6' (C57BL/6J). Using --strain <strain_name> is mandatory.
+
+--dual_hybrid                 Optional. This is a multi-step process:
+                                 1) Read/filter SNPs for first strain (specified with --strain <strain_name>)
+                                 2) Write full SNP incorporated (and optionally N-masking) sequence for first strain
+                                 3) Read/filter SNPs for second strain (specified with --second_strain <strain_name>)
+                                 4) Write full SNP incorporated (and optionally N-masking) sequence for second strain
+                                 5) //TODO
+
+--second_strain <strain_name> Optional. //TODO 
+
+--genome_folder               The path to the reference genome, typically the strain 'Black6' (C57BL/6J), e.g.
+                              --genome /bi/scratch/Genomes/Mouse/GRCm38/. Expects one or more FastA files in this folder
+                              (file extension: .fa or .fasta).
+
+--skip_filtering              This option skips reading and filtering the VCF file. This assumes that a folder named
+                              'SNPs_<Strain_Name>' exists in the working directory, and that text files with SNP information
+                              are contained therein in the following format:
+
+                                          SNP-ID     Chromosome  Position    Strand   Ref/SNP
+                              example:   33941939        9       68878541       1       T/G
+
+
+
+
+--help                        Displays this help information and exits.
+
+--version                     Displays version information and exits.
+
+
+                                                             Last modified: 11 May 2016
+
+EOF
+    ;
+  exit 1;
+}
+

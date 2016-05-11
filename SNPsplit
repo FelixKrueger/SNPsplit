@@ -1604,7 +1604,7 @@ The SNPsplit-sort module reads in the tagged BAM file and sorts the reads (or re
 tag (or the combination of tags for paired-end or Hi-C reads) into subfiles.
 
 
-  USAGE:      SNPsplit  [options] --snp_file <SNP.file> [input file(s)]
+  USAGE:      SNPsplit_genome_preparation  [options] --vcf_file <VCF.file> --genome /path/to/genome/ [input file(s)]
 
 
 input file(s)          Mapping output file in SAM or BAM format. SAM files (ending in .sam) will first be
