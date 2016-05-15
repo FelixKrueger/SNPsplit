@@ -32,9 +32,11 @@ my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid) = process_commandline ();
 
 my %snps; # storing all filtered SNPs
+my %snps_dual_genome; # storing all SNPs for dual genome
 
 my $snp_file_strain =   "all_SNPs_${strain}_GRCm38.txt.gz";
 my $snp_file_strain2 = "all_SNPs_${strain2}_GRCm38.txt.gz";
+my $new_ref_snp_annoations; # this will store the new Ref/SNP annotations for dual hybrids
 my $genome_build = 'GRCm38';
 
 warn "Summarising SNPsplit Genome Preparation Parameters\n";
@@ -151,19 +153,93 @@ if ($dual_hybrid){
 	warn "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain $strain2 in total\n\n";
 	print REPORT "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain $strain2 in total\n";
     }
+
+
+    ### Now just need to construct the dual hybrid genome
+    determine_SNPs_between_strain_and_strain2();
+    warn "done\n";
+  
+    ### Resetting the genomic reference sequence
+    %chromosomes = (); # genomic sequence
+    warn "Changing the genomic reference sequence to the full sequence of strain $strain\n\n";
+    $genome_folder = "${parent_dir}/${strain}_full_sequence/";
+    read_genome_into_memory("${parent_dir}");
+    
+    warn "Reading and storing all new SNPs with Ref/SNP: $strain/$strain2\n";
+    read_new_snp_annotation($new_ref_snp_annoations,$strain,$strain2);
+
+    for my $chr (@chroms) {
+	create_modified_chromosome_dual_hybrid($chr,$strain,$strain2);
+    }
 }
+
 warn "\n";      
 close REPORT;
 
-### Now just need to construct the dual hybrid genome
-determine_SNPs_between_strain_and_strain2();
-warn "done\n";
+
+
+
 
 
 #############################################################
 ### SUBROUTINES
 #############################################################
 
+sub read_new_snp_annotation {
+    
+    my ($file,$strain,$strain2) = @_;
+    warn "Reading $strain/$strain2 SNPs from file '$file'\n"; sleep(1);
+    
+    unless (-e $file) {
+	die "Couldn't find SNP file '$file'\n";
+    }
+
+    if ($file =~ /gz$/){
+	open (IN, "zcat $file |") or die $!;
+    }
+    else{
+	open (IN,$file) or die $!;
+    }
+    my $count = 0;
+
+    while (<IN>) {
+	chomp;
+	$count++;
+	if ($count %1000000 == 0){
+	    warn "Processed $count lines so far\n";
+	}
+
+	#  warn "$_\n"; sleep(1);
+	my (undef,$chr,$pos,$strand,$allele) = split(/\t/);
+
+	unless ($allele){
+	    warn "'$_'\n"; sleep(1);
+	}
+	# warn "$allele\n";
+	# ref here is the $strain sequence, SNP is the $strain2 sequence
+	my ($ref,$snp);
+	
+	if ($allele =~ /^([GATC])\/([GATC])$/) {
+	    $ref = $1;
+	    $snp = $2;
+	}
+	else {
+	    warn "Skipping allele '$allele'\n";
+	    next;
+	}
+	
+    if ($strand == -1) {
+	$ref =~ tr/GATC/CTAG/;
+	$snp =~ tr/GATC/CTAG/;
+    }
+
+	$snps_dual_genome{$chr} -> {$pos}-> {ref} = $ref;
+	$snps_dual_genome{$chr} -> {$pos}-> {snp} = $snp;
+    }
+    
+  close IN or die;
+
+}
 
 sub determine_SNPs_between_strain_and_strain2{
 
@@ -181,9 +257,11 @@ sub determine_SNPs_between_strain_and_strain2{
     open (OUT_COMMON,'>',$out_common) or die $!;
     warn "Writing SNPs in common between $strain and $strain2 (relative to the $genome_build reference) to >>$out_common<<\n";
     
-    open (ALL_STRAIN_STRAIN2,'>',"all_${strain2}_SNPs_${strain}_reference.based_on_${genome_build}.txt") or die $!;
-    warn "Writing all new SNPs >>$strain/$strain2 to all_${strain2}_SNPs_${strain}_reference.based_on_${genome_build}.txt<<\n\n";
-   
+    my $all_strain_strain2 = "all_${strain2}_SNPs_${strain}_reference.based_on_${genome_build}.txt";
+    open (ALL_STRAIN_STRAIN2,'>',$all_strain_strain2) or die $!;
+    warn "Writing all new SNPs >>$strain/$strain2 to >>$all_strain_strain2<<\n\n";
+    $new_ref_snp_annoations = $all_strain_strain2; # required for N-masking etc.
+
     read_snp_files();
     
 }
@@ -304,7 +382,7 @@ sub read_snp_files{
     
     foreach my $chr (keys %snps){
 	foreach my $pos (keys %{$snps{$chr}}){
-	    if ($snps{$chr}->{$pos}->{read} == 0 ){
+	    if ($snps{$chr}->{$pos}->{read} == 0){
 		++$unique_ref;
 		
 		### here we need to use the SNP position (i.e. Strain sequence) as new reference and the GRCm38 sequence as the SNP (i.e. where Strain2 is the same as GRCm38)
@@ -410,6 +488,97 @@ sub create_modified_chromosome {
     }
     if ($full_sequence){
 	write_SNP_chromosome($chr,$sequence,0,$strain);
+    }
+    
+    warn "$count SNPs total for chromosome $chr\n";
+    if ($nmasking){ # default
+	warn "$new_n positions on chromosome $chr were changed to 'N'\n";
+	print REPORT "$new_n positions on chromosome $chr were changed to 'N'\n";
+    }
+    if ($full_sequence){
+	warn "$new_snp reference positions on chromosome $chr were changed to the SNP alternative base\n\n";
+	print REPORT "$new_snp reference positions on chromosome $chr were changed to the SNP alternative base\n\n";
+    }
+    warn "\n";
+
+}
+
+sub create_modified_chromosome_dual_hybrid {
+    
+    my ($chr,$strain,$strain2) = @_;
+    warn "Processing chr$chr (to create new genome for $strain/$strain2)\n";
+    
+    my $sequence = $chromosomes{$chr};
+    my $n_sequence;
+    
+    if ($nmasking){
+	$n_sequence = $sequence;
+    }
+
+    my $count = 0;
+
+    my $lastPos = 0;
+
+    my $already = 0;
+    my $warn = 0;
+    my $new_n = 0;
+    my $new_snp = 0;
+
+   foreach my $pos (keys %{$snps_dual_genome{$chr}}) {
+
+       # Apply the SNP
+       ++$count;
+
+       if ($pos == $lastPos) {
+	   # Duplicate SNP
+	   next;
+       }
+    
+       $lastPos = $pos;
+	
+       # Check if the reference base is the same as the SNP base
+       if (substr ($sequence,$pos-1,1) eq $snps_dual_genome{$chr}->{$pos}->{snp}) {
+	   # warn "Skipping $pos $snps_dual_genome{$chr}->{$pos}->{ref}/$snps_dual_genome{$chr}->{$pos}->{snp} since the ref and SNP base are the same\n";
+	   ++$already;
+	   next;
+       }
+      
+       # Check the reference base is correct
+       if (substr ($sequence,$pos-1,1) ne $snps_dual_genome{$chr}->{$pos}->{ref}) {
+	   # warn "Skipping $pos $snps_dual_genome{$chr}->{$pos}->{ref}/$snps_dual_genome{$chr}->{$pos}->{snp} since the reference base didn't match\n";
+	   $warn++;
+	   next;
+       }
+       
+       ### Ref/Alt bases are matching, so we can proceed to changing the ref base for the SNP base or Ns (N-masking)
+	
+       ### N-masking 
+       if ($nmasking){ # default
+	   my $return =  substr($n_sequence,$pos-1,1,'N');  # Replacing the base with 'N'
+	   unless ($return){
+	       warn "Replacing failed...\n";
+	   }
+	   ++$new_n;
+       }
+       
+       if ($full_sequence){
+	   my $return = substr($sequence,$pos-1,1,$snps_dual_genome{$chr}->{$pos}->{snp}); # Replacing the reference with the SNP base
+	   unless ($return){
+	       warn "Replacing failed...\n";
+	   }
+	   ++$new_snp;
+       }
+   }
+  
+    $new_n_total += $new_n;
+    $new_snp_total += $new_snp;
+    
+    $already_total += $already;
+    if ($nmasking){ 
+	write_SNP_chromosome($chr,$n_sequence,1,"${strain}_${strain2}_dual_hybrid.based_on_${genome_build}");
+    }
+    if ($full_sequence){
+	write_SNP_chromosome($chr,$sequence,0,"${strain}_${strain2}_dual_hybrid.based_on_${genome_build}");
     }
     
     warn "$count SNPs total for chromosome $chr\n";
