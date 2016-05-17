@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+l#!/usr/bin/perl
 use warnings;
 use strict;
 use Getopt::Long;
@@ -984,7 +984,7 @@ sub read_genome_into_memory{
     }
 
     unless (@chromosome_filenames){
-      die "The specified genome folder $genome_folder does not contain any sequence files in FastA format (with .fa or .fasta file extensions)\n";
+      die "The specified reference genome folder $genome_folder does not contain any sequence files in FastA format (with .fa or .fasta file extensions)\n";
     }
 
     my $SQ_count = 0;
@@ -1177,6 +1177,10 @@ VERSION
     }
     if ($dual_hybrid){
 	warn "Dual Hybrid strain selected\n";
+
+	# this automatically sets the full_sequence option
+	$full_sequence = 1;
+
 	if (defined $strain2){
 	    if (exists $strains{$strain2}){
 		$strain2_index = $strains{$strain2};
@@ -1213,7 +1217,7 @@ VERSION
     ### GENOME FOLDER
     
     unless ($genome_folder){
-	warn "Genome folder was not specified!\n";
+	warn "Reference genome folder was not specified! Please use --reference_genome </genome/folder/>\n";
 	# print_helpfile();
 	exit;
     }
@@ -1303,19 +1307,21 @@ tag (or the combination of tags for paired-end or Hi-C reads) into subfiles.
 
 --list_strains                Displays a list of strain names present in the VCF file for use with '--strain <strain_name>'.
 
---dual_hybrid                 Optional. This will invoke a multi-step process:
+--dual_hybrid                 Optional. The resulting genome will no longer relate to the original reference specified with '--reference_genome'.
+                              Instead the new Reference (Ref) is defined by '--strain <strain_name>' and the new SNP genome
+                              is defined by '--strain2 <strain_name>'. '--dual_hybrid' automatically sets '--full_sequence'.
+                              This will invoke a multi-step process:
                                  1) Read/filter SNPs for first strain (specified with '--strain <strain_name>')
                                  2) Write full SNP incorporated (and optionally N-masked) genome sequence for first strain
                                  3) Read/filter SNPs for second strain (specified with '--strain2 <strain_name>')
                                  4) Write full SNP incorporated (and optionally N-masked) genome sequence for second strain
-                                 5) //TODO
+                                 5) Generate new Ref/Alt SNP annoations for Strain1/Strain2
+                                 6) Set Strain1 as new reference genome and construct full SNP incorporated (and optionally 
+                                    N-masked) genome sequences for Strain1/Strain2
+                                                            
 
-                              The resulting genome will no longer relate to the original reference specified with '--reference_genome'.
-                              Instead the new Reference (Ref) is defined by '--strain <strain_name>' and the new SNP genome
-                              is defined by '--strain2 <strain_name>'.
-                              
-
---strain2 <strain_name>       Optional. //TODO 
+--strain2 <strain_name>       Optional for constructing dual hybdid genomes (see '--dual_hybrid' for more information). For an
+                              overview of strain names just run SNPsplit_genome_preparation selecting '--list_strains'.
 
 --reference_genome            The path to the reference genome, typically the strain 'Black6' (C57BL/6J), e.g.
                               '--reference_genome /bi/scratch/Genomes/Mouse/GRCm38/'. Expects one or more FastA files in this folder
@@ -1345,7 +1351,7 @@ tag (or the combination of tags for paired-end or Hi-C reads) into subfiles.
 --version                     Displays version information and exits.
 
 
-                                                             Last modified: 12 May 2016
+                                                             Last modified: 17 May 2016
 
 EOF
     ;
