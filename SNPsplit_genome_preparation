@@ -27,7 +27,7 @@ use Cwd;
 ### it will work with any other supplied VCF file.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.devel';
+my $pipeline_version = '0.3.0';
 my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build) = process_commandline ();
 
