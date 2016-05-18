@@ -1,4 +1,4 @@
-l#!/usr/bin/perl
+#!/usr/bin/perl
 use warnings;
 use strict;
 use Getopt::Long;
@@ -29,7 +29,7 @@ use Cwd;
 ## Reading in a BAM or SAM file
 my $pipeline_version = '0.3.devel';
 my $parent_dir = getcwd();
-my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid) = process_commandline ();
+my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build) = process_commandline ();
 
 my %snps; # storing all filtered SNPs
 my %snps_dual_genome; # storing all SNPs for dual genome
@@ -37,7 +37,6 @@ my %snps_dual_genome; # storing all SNPs for dual genome
 my $snp_file_strain =   "all_SNPs_${strain}_GRCm38.txt.gz";
 my $snp_file_strain2 = "all_SNPs_${strain2}_GRCm38.txt.gz";
 my $new_ref_snp_annoations; # this will store the new Ref/SNP annotations for dual hybrids
-my $genome_build = 'GRCm38';
 
 warn "Summarising SNPsplit Genome Preparation Parameters\n";
 warn "="x50,"\n";
@@ -122,6 +121,7 @@ close REPORT;
 ### Create modified genome 2
 if ($dual_hybrid){
 
+    warn "Now starting to work on strain 2 [$strain2]\n";
     # Need to read and filter the SNP file once more for Strain 2
     ### Determining and Filtering homozygous high-confidence SNPs for the strain in question                                                                             
     if ($skip_filtering){                                                                                                                                            
@@ -136,8 +136,8 @@ if ($dual_hybrid){
     $new_snp_total = 0;
     $already_total = 0;
     $low_confidence = 0;
-
-    # Writing a genome generation report file                                                                                                                     
+    
+    # Writing a genome generation report file for Strain 2                                                                                                                   
     my $report = "${strain2}_genome_preparation_report.txt";
 
     open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";    
@@ -145,39 +145,60 @@ if ($dual_hybrid){
 	create_modified_chromosome($chr,$strain2);
     }
     if ($nmasking){
-	warn "\n\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain $strain2 in total\n";
-	print REPORT "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain $strain2 in total\n";
+	warn "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain 2 [$strain2] in total\n";
+	print REPORT "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain 2 [$strain2] in total\n";
     }
 
     if ($full_sequence){
-	warn "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain $strain2 in total\n\n";
-	print REPORT "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain $strain2 in total\n";
+	warn "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain 2 [$strain2] in total\n\n";
+	print REPORT "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain 2 [$strain2] in total\n";
     }
+    close REPORT;
 
-
+    ### Final dual genome contruction report
+    $report = "${strain}_${strain2}_dual_hybrid.genome_preparation_report.txt";
+    open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";
+    
     ### Now just need to construct the dual hybrid genome
     determine_SNPs_between_strain_and_strain2();
-    warn "done\n";
+    warn "done...\n";
   
     ### Resetting the genomic reference sequence
     %chromosomes = (); # genomic sequence
     warn "Changing the genomic reference sequence to the full sequence of strain $strain\n\n";
+    print REPORT "Changing the genomic reference sequence to the full sequence of strain $strain\n\n";
+    
     $genome_folder = "${parent_dir}/${strain}_full_sequence/";
     read_genome_into_memory("${parent_dir}");
     
-    warn "Reading and storing all new SNPs with Ref/SNP: $strain/$strain2\n";
+    warn "Reading and storing all new SNPs with Ref/SNP: $strain/$strain2 from '$new_ref_snp_annoations'\n";
+    print REPORT "Reading and storing all new SNPs with Ref/SNP: $strain/$strain2 from '$new_ref_snp_annoations'\n";
     read_new_snp_annotation($new_ref_snp_annoations,$strain,$strain2);
+
+    $new_n_total = 0;                                                                                      
+    $new_snp_total = 0;
+    $already_total = 0;
+    $low_confidence = 0; 
 
     for my $chr (@chroms) {
 	create_modified_chromosome_dual_hybrid($chr,$strain,$strain2);
     }
+
+    if ($nmasking){
+	warn "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain/strain 2 [${strain}/$strain2] in total\n";
+	print REPORT "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strainstrain 2 [${strain}$strain2] in total\n";
+    }
+
+    if ($full_sequence){
+	warn "$new_snp_total SNPs were newly introduced into the full sequence genome version for strainstrain 2 [${strain}/$strain2] in total\n\n";
+	print REPORT "$new_snp_total SNPs were newly introduced into the full sequence genome version for strainstrain 2 [${strain}/$strain2] in total\n";
+    }
+    close REPORT;
+
+    
+
 }
-
-warn "\n";      
-close REPORT;
-
-
-
+warn "All done. Genome(s) are now ready to be indexed with your favourite aligner!\nFYI, aligners shown to work with SNPsplit are Bowtie2, Tophat, STAR, Hisat2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)\n\n";      
 
 
 
@@ -398,13 +419,27 @@ sub read_snp_files{
 	}
     }
     
-    warn "Looked at positions from new Reference strain [$strain]:\t$snp_count_strain\n";
+    warn "\nLooked at positions from new Reference strain [$strain]:\t\t$snp_count_strain\n";
     warn "Compared positions from new SNP strain [$strain2]:\t\t$snp_count_strain2\n";
     warn "======================================================\n";
     warn "SNPs were the same in Ref and SNP genome (not written out):\t$same\n";
     warn "SNPs were present in both Ref and SNP genome but had a different sequence:\t$different\n";
-    warn "SNPs were unique to Ref [$strain]:\t\t\t$unique_ref\n";
-    warn "SNPs were unique to SNP [$strain2]:\t\t$unique_SNP\n\n";
+    warn "SNPs were unique to Ref [$strain]:\t\t\t\t$unique_ref\n";
+    warn "SNPs were unique to SNP [$strain2]:\t\t\t\t$unique_SNP\n\n";
+
+    print REPORT "Looked at positions from new Reference strain [$strain]:\t\t$snp_count_strain\n";
+    print REPORT "Compared positions from new SNP strain [$strain2]:\t\t$snp_count_strain2\n";
+    print REPORT "======================================================\n";
+    print REPORT "SNPs were the same in Ref and SNP genome (not written out):\t$same\n";
+    print REPORT "SNPs were present in both Ref and SNP genome but had a different sequence:\t$different\n";
+    print REPORT "SNPs were unique to Ref [$strain]:\t\t\t\t$unique_ref\n";
+    print REPORT "SNPs were unique to SNP [$strain2]:\t\t\t\t$unique_SNP\n\n";
+
+    close OUT_STRAIN;
+    close OUT_STRAIN2;
+    close OUT_COMMON;
+    close ALL_STRAIN_STRAIN2;
+
 }
 
 sub create_modified_chromosome {
@@ -855,8 +890,8 @@ sub filter_relevant_SNP_calls_from_VCF{
     my $report = "${strain}_SNP_filtering_report.txt"; # $strain here may be strain 1 or strain 2
     open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";
     
-    warn "SNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
-    warn "="x80,"\n\n";
+    warn "\nSNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
+    warn "="x75,"\n\n";
     warn "Positions read in total:\t$count\n\n";
     warn "$homozygous\tSNP were homozygous. Of these:\n";
     warn "$hcg_count\tSNP were homozygous and passed high confidence filters and were thus included into the $strain genome\n";
@@ -867,7 +902,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     warn "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
 
     print REPORT "SNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
-    print REPORT "="x80,"\n\n";
+    print REPORT "="x75,"\n\n";
     print REPORT "Positions read in total:\t$count\n\n";
     print REPORT "$homozygous\tSNP were homozygous. Of these:\n";
     print REPORT "$hcg_count\tSNP were homozygous and passed high confidence filters and were thus included into the $strain genome\n";
@@ -877,11 +912,13 @@ sub filter_relevant_SNP_calls_from_VCF{
     print REPORT "$other\t\tCalls were neither 0/0 (same as reference) or 1/1 (homozygous SNP)\n";
     print REPORT "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
     
+  
+    # Also writing all SNP calls out to an all-SNP file
+    my $all_SNPs = "all_SNPs_${strain}_GRCm38.txt.gz";
+    warn "Now printing a single list of all SNPs to >$all_SNPs<...\n";
+    print REPORT "Printed a single list of all SNPs to >$all_SNPs<...\n";
     close (REPORT) or warn "Failed to close filehandle REPORT\n";
 
-    # Also writing all SNP calls out to an all-SNP file
-    warn "Now printing a single list of all SNPs...\n";
-    my $all_SNPs = "all_SNPs_${strain}_GRCm38.txt.gz";
     if (-e $all_SNPs){
 	warn "File '$all_SNPs' existed in the folder already, overwriting it...\n\n";
     }
@@ -1076,6 +1113,7 @@ sub process_commandline{
     my $nmasking;
     my $dual_hybrid;
     my $no_nmasking;
+    my $genome_build;
     
     my $command_line = GetOptions ('help|man'             => \$help,
 				   'versions'             => \$version,
@@ -1089,6 +1127,7 @@ sub process_commandline{
 				   'no_nmasking'          => \$no_nmasking,
 				   'dual_hybrid'          => \$dual_hybrid,
 				   'reference_genome=s'   => \$genome_folder,
+				   'build=s'              => \$genome_build,
 	);
   
     ### EXIT ON ERROR if there were errors with any of the supplied options
@@ -1250,7 +1289,11 @@ VERSION
 	$nmasking = 1; # This is the default
     }
 
-    return ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid);
+    unless (defined $genome_build){
+	$genome_build = 'GRCm38';
+    }
+
+    return ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build);
 
 }
 
@@ -1260,34 +1303,41 @@ sub print_helpfile{
 
   SYNOPSIS:
 
-SNPsplit is designed to read in alignment files in SAM/BAM format and determine the allelic origin of reads
-that cover known SNP positions. For this to work the alignment step must have been carried out against a 
-genome that had all SNP positions replaced by Ns, and a list of SNP positions between the two different genomes
-has to be provided using the option --snp_file.
+SNPsplit_genome_preparation is designed to read in a variant call files from the Mouse Genomes Project (e.g. this latest
+file: 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz') and generate new genome versions where the strain SNPs are either incorporated
+into the new genome (full sequence) or masked by the ambiguity nucleo-base 'N' (N-masking).
 
-This module, SNPsplit_genome_preparation, allows you to specify a VCF file and generate a modified genome
+SNPsplit_genome_preparation may be run in two different modes:
 
-  I) SNPsplit-tag: SNPsplit analyses reads (single-end mode) or read pairs (paired-end mode) for overlaps 
-     with known SNP positions, and writes out a tagged BAM file in the same order as the original file.
+Single strain mode:
 
- II) SNPsplit-sort: the tagged BAM file is read in and is being sorted into allele-specific files. This process
-     may also be run as a stand-alone module (tag2sort).
+   1) The VCF file is read and filtered for high-confidence SNPs in the strain specified with --strain <name>
+   2) The reference genome (given with --reference_genome <genome>) is read into memory, and the filtered high-
+      confidence SNP positions are incorporated either as N-masking (default) or full sequence (option --full_sequence)
+
+Dual strain mode:
+
+   1) The VCF file is read and filtered for high-confidence SNPs in the strain specified with --strain <name>
+   2) The reference genome (given with --reference_genome <genome>) is read into memory, and the filtered high-
+      confidence SNP positions are incorporated as full sequence and optionally as N-masking
+   3) The VCF file is read one more time and filtered for high-confidence SNPs in strain 2 specified with --strain2 <name>
+   4) The filtered high-confidence SNP positions of strain 2 are incorporated as full sequence and optionally as N-masking
+   5) The SNP information of strain and strain 2 relative to the reference genome build are compared, and a new Ref/SNP
+      annotation is constructed whereby the new Ref/SNP information will be Strain/Strain2 (and no longer the standard
+      reference genome strain Black6 (C57BL/6J))
+   6) The full genome sequence given with --strain <name> is read into memory, and the high-confidence SNP positions between
+      Strain and Strain2 are incorporated as full sequence and optionally as N-masking
+
+The resulting .fa files are ready to be indexed with your favourite aligner. Proved and tested aligners include Bowtie2,
+Tophat, STAR, Hisat2, HiCUP and Bismark. Please note that STAR and Hisat2 may require you to disable soft-clipping, please
+refer to the SNPsplit manual for more details
+
+Both the SNP filtering as well as the genome preparation write out little report files for record keeping.
+Please note that the SNPsplit genome preparation writes out files and creates new folders for the SNPs and new genomes into
+the current working directory, so move there before invoking SNPsplit_genome_preparation.
 
 
-The SNPsplit-tag module determines whether a read can be assigned to a certain allele and appends an additional
-optional field 'XX:Z:' to each read. The tag can be one of the following:
-
-                                        XX:Z:UA - Unassigned
-                                        XX:Z:G1 - Genome 1-specific
-                                        XX:Z:G2 - Genome 2-specific
-                                        XX:Z:CF - Conflicting
-
-
-The SNPsplit-sort module reads in the tagged BAM file and sorts the reads (or read pairs) according to their XX:Z:
-tag (or the combination of tags for paired-end or Hi-C reads) into subfiles.
-
-
-  USAGE:    SNPsplit_genome_preparation  [options] --vcf_file <file> --genome /path/to/genome/ --strain <strain_name>
+  USAGE:    SNPsplit_genome_preparation  [options] --vcf_file <file> --reference_genome /path/to/genome/ --strain <strain_name>
 
 
 --vcf_file <file>             Mandatory file specifying SNP information for mouse strains from the Mouse Genomes Project
@@ -1310,13 +1360,14 @@ tag (or the combination of tags for paired-end or Hi-C reads) into subfiles.
 --dual_hybrid                 Optional. The resulting genome will no longer relate to the original reference specified with '--reference_genome'.
                               Instead the new Reference (Ref) is defined by '--strain <strain_name>' and the new SNP genome
                               is defined by '--strain2 <strain_name>'. '--dual_hybrid' automatically sets '--full_sequence'.
+
                               This will invoke a multi-step process:
                                  1) Read/filter SNPs for first strain (specified with '--strain <strain_name>')
                                  2) Write full SNP incorporated (and optionally N-masked) genome sequence for first strain
                                  3) Read/filter SNPs for second strain (specified with '--strain2 <strain_name>')
                                  4) Write full SNP incorporated (and optionally N-masked) genome sequence for second strain
-                                 5) Generate new Ref/Alt SNP annoations for Strain1/Strain2
-                                 6) Set Strain1 as new reference genome and construct full SNP incorporated (and optionally 
+                                 5) Generate new Ref/Alt SNP annotations for Strain1/Strain2
+                                 6) Set first strain as new reference genome and construct full SNP incorporated (and optionally 
                                     N-masked) genome sequences for Strain1/Strain2
                                                             
 
@@ -1345,13 +1396,15 @@ tag (or the combination of tags for paired-end or Hi-C reads) into subfiles.
 
 --no_nmasking                 Disable N-masking if it is not desirable. Will automatically set '--full_sequence' instead.
 
+--genome_build <name>         Name of the mouse genome build, e.g. mm10. Will be incorporated into some of the output files.
+                              Defaults to 'GRCm38'.
 
 --help                        Displays this help information and exits.
 
 --version                     Displays version information and exits.
 
 
-                                                             Last modified: 17 May 2016
+                                                             Last modified: 18 May 2016
 
 EOF
     ;
