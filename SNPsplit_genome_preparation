@@ -1341,9 +1341,9 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 
 
 --vcf_file <file>             Mandatory file specifying SNP information for mouse strains from the Mouse Genomes Project
-                              (http://www.sanger.ac.uk/science/data/mouse-genomes-project). The file used and approved for
-                              testing is called 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz'. Please note that future versions
-                              of this file or entirely different VCF files might not work out-of-be-box but may require some
+                              (http://www.sanger.ac.uk/science/data/mouse-genomes-project). The file used and approved is 
+                              called 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz'. Please note that future versions
+                              of this file or entirely different VCF files might not work out-of-the-box but may require some
                               tweaking. SNP calls are read from the VCF files, and high confidence SNPs are written into
                               a folder in the current working directory called SNPs_<strain_name>/chr<chromosome>.txt,
                               in the following format:
@@ -1371,7 +1371,7 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
                                     N-masked) genome sequences for Strain1/Strain2
                                                             
 
---strain2 <strain_name>       Optional for constructing dual hybdid genomes (see '--dual_hybrid' for more information). For an
+--strain2 <strain_name>       Optional for constructing dual hybrid genomes (see '--dual_hybrid' for more information). For an
                               overview of strain names just run SNPsplit_genome_preparation selecting '--list_strains'.
 
 --reference_genome            The path to the reference genome, typically the strain 'Black6' (C57BL/6J), e.g.
