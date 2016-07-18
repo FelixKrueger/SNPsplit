@@ -35,7 +35,13 @@ my %snps; # storing all filtered SNPs
 my %snps_dual_genome; # storing all SNPs for dual genome
 
 my $snp_file_strain =   "all_SNPs_${strain}_GRCm38.txt.gz";
-my $snp_file_strain2 = "all_SNPs_${strain2}_GRCm38.txt.gz";
+my $snp_file_strain2;
+if ($strain2){
+    $snp_file_strain2 = "all_SNPs_${strain2}_GRCm38.txt.gz";
+}
+else{
+    $snp_file_strain2 = 'irrelevant_for_single_hybrid_mode';
+}
 my $new_ref_snp_annoations; # this will store the new Ref/SNP annotations for dual hybrids
 
 warn "Summarising SNPsplit Genome Preparation Parameters\n";
@@ -993,7 +999,7 @@ sub detect_strains{
 	my @strains = split (/\t/);
 	
 	foreach my $index(0..$#strains){
-	    next if ($index <= 8); # The first 6 fields are irrelevant: #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  
+	    next if ($index <= 8); # The first 8 fields are irrelevant: #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  
 	    $strains{$strains[$index]} = $index; 
 	    # warn "$index\t$strains[$index]\n";
 	}
