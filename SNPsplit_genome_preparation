@@ -27,7 +27,7 @@ use Cwd;
 ### it will work with any other supplied VCF file.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.0';
+my $pipeline_version = '0.3.1_dev';
 my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build) = process_commandline ();
 
@@ -46,7 +46,7 @@ my $new_ref_snp_annoations; # this will store the new Ref/SNP annotations for du
 
 warn "Summarising SNPsplit Genome Preparation Parameters\n";
 warn "="x50,"\n";
-warn "Processing SNPs from VCF file:\t\t $vcf_file\n";
+warn "Processing SNPs from VCF file:\t\t$vcf_file\n";
 if ($skip_filtering){
     warn "Reading/filtering VCF file:\t\tNo (skipped by user)\n";
 }
@@ -451,8 +451,16 @@ sub read_snp_files{
 sub create_modified_chromosome {
     
     my ($chr,$strain) = @_; # $strain may be strain 1 or 2
-    warn "Processing chr$chr (for strain $strain)\n";
-    
+    warn "Processing chromosome $chr (for strain $strain)\n";
+    unless ($chromosomes{$chr}){
+	warn "\nThe chromosome name given in the VCF file was '$chr' and was not found in the reference genome.\nA rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)\nbut the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)\n";
+	warn "The chromosome names in the reference genome folder were:\n";
+	foreach my $c (sort keys %chromosomes){
+	    warn "$c\n";
+	}
+	die "[FATAL ERROR] Please ensure that the same version of the genome is used for both VCF annotations and reference genome (FastA files). Exiting...\n\n";
+    }
+
     my $sequence = $chromosomes{$chr};
     my $n_sequence;
     
@@ -1402,7 +1410,7 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 
 --no_nmasking                 Disable N-masking if it is not desirable. Will automatically set '--full_sequence' instead.
 
---genome_build <name>         Name of the mouse genome build, e.g. mm10. Will be incorporated into some of the output files.
+--genome_build <name>         Name of the mouse genome build, e.g. GRCm38. Will be incorporated into some of the output files.
                               Defaults to 'GRCm38'.
 
 --help                        Displays this help information and exits.
@@ -1410,7 +1418,7 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 --version                     Displays version information and exits.
 
 
-                                                             Last modified: 18 May 2016
+                                                             Last modified: 13 Oct 2016
 
 EOF
     ;
