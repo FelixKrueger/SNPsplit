@@ -1,3 +1,28 @@
+RELEASE NOTES FOR SNPsplit v0.3.1_dev (03 Nov 2016)
+---------------------------------------------------
+
+SNPsplit
+========
+
+Minor fixed for path to Samtools when checking files for BS.
+
+Option --genome_build [NAME] should now work as intended (used to be --build only).
+
+
+SNPsplit_genome_preparation
+===========================
+
+
+
+
+RELEASE NOTES FOR SNPsplit v0.3.1 (18 Jul 2016)
+-----------------------------------------------
+
+Added a new section to the SNPsplit manual explaining in more detail how the SNP filtering
+step works and which lines and fields are relevant.
+
+
+
 RELEASE NOTES FOR SNPsplit v0.3.0 (18 May 2016)
 -----------------------------------------------
 
