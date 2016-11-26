@@ -12,5 +12,5 @@ We have recently added a check to the SNPsplit genome preparation script that wi
 
 Here is a one line `awk` script that does an Ensembl=>UCSC conversion, but you could of course also run an equivalent script in Perl or Python...
 ```
-awk '{if($1 ~ "^#") {gsub("contig=<ID=", "contig=<ID=chr"); gsub("contig=<ID=chrMT", "contig=<ID=chrM"); print} else gsub("^MT", "M"); print "chr"$0}' mgp.v5.merged.snps_all.dbSNP142.vcf
+awk '{if($1 ~ "^#") {gsub("contig=<ID=", "contig=<ID=chr"); gsub("contig=<ID=chrMT", "contig=<ID=chrM"); print} else {gsub("^MT", "M"); print "chr"$0}}' mgp.v5.merged.snps_all.dbSNP142.vcf
 ```
