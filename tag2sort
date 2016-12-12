@@ -963,7 +963,7 @@ be assigned to a specific allele, and they are one of the following:
                        as input, i.e. the input BAM file is paired-end and Reads 1 and 2 follow each other. Thus,
                        this option also sets the flags --paired and --no_sort. Default: OFF.
 
---samtools-path        The path to your Samtools installation, e.g. /home/user/samtools/. Does not need to
+--samtools_path        The path to your Samtools installation, e.g. /home/user/samtools/. Does not need to
                        be specified explicitly if Samtools is in the PATH already.
 
 --conflicting/--weird  Reads or read pairs that were classified as 'Conflicting' (XX:Z:CF) will be written to
