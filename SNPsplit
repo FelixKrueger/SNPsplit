@@ -1094,7 +1094,7 @@ sub sort_by_name_paired_end{
   $sorted =~ s/bam$/sortedByName.bam/;
 
   warn "Sorting paired-end BAM file '$file' by read IDs ...\n";
-  system ("$samtools_path sort -n $file -o $sorted");
+  system ("$samtools_path sort -O BAM -n $file -o $sorted"); # added -O BAM on 13 Dec 2016
 
   $file = $sorted; # setting sorted BAM file as new $file
   warn "Finished sorting BAM file into new file '$file'\n\n";
