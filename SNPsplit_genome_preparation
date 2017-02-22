@@ -6,7 +6,7 @@ use FindBin qw($Bin);
 use lib "$Bin/../lib";
 use Cwd;
 
-## This program is Copyright (C) 2014-16, Felix Krueger (felix.krueger@babraham.ac.uk)
+## This program is Copyright (C) 2014-17, Felix Krueger (felix.krueger@babraham.ac.uk)
 
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -765,7 +765,7 @@ sub filter_relevant_SNP_calls_from_VCF{
 
     my $strain = shift;
     my $strain_index = shift;
-
+    
     if ($vcf_file =~ /gz$/){
 	open (IN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
     } 
@@ -814,7 +814,7 @@ sub filter_relevant_SNP_calls_from_VCF{
 	if ($count%1000000 ==0){
 	    warn "processed $count lines\n";
 	}
-	# last if ($count == 1000);
+	# last if ($count == 10000);
 	
 	my ($chr,$pos,$ref,$alt,$strain) = (split /\t/)[0,1,3,4,$strain_index];
 	# warn "$chr , $pos , $ref , $alt , $strain\n"; sleep(1);
@@ -823,11 +823,7 @@ sub filter_relevant_SNP_calls_from_VCF{
 	my ($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi) = split/:/,$strain;
 	
 	
-	unless ($fi){
-	    # warn "genotype: $gt\nfilter:   $fi\n\n";
-	}
-
-	# warn "genotype: $gt\nfilter:   $fi\n\n";
+	# warn "genotype: $gt\nfilter:   $fi\n";
 	# warn "$fi\n"; sleep(1);
 	# $gt is the Genotype:
 	
@@ -837,9 +833,9 @@ sub filter_relevant_SNP_calls_from_VCF{
 	# '3/3', etc. if more than one alternative allele is present.
 	# '0/1' = heterozygous genotype; can also be '1/2', '0/2', etc.
 	
-	# $fi is filter, 1 for high confidence SNP, or 0 for low confidence
+	# $fi is FILTER, 1 for high confidence SNP, or 0 for low confidence
 	
-	### We are only looking for 1/1 calls, and filter for high confidence as well
+	### We are only looking for 1/1, 2/2 or 3/3 calls, and filter for high confidence as well
 	
 	# skipping if the reference base is not well defined in Black6
 	if ($ref =~ /[^ATCG]/){ # reference base contained any non A, C, T, G characters or more than one base
@@ -848,8 +844,8 @@ sub filter_relevant_SNP_calls_from_VCF{
 	}
 	
 	# skipping if the SNP is not well defined in the strain of interest
-	if ($alt =~ /[^ATCG]/){ # Alt base contained any non A, C, T, G characters or more than one base
-	    # warn "SNP was: $alt; skipping\n";
+	if ($alt =~ /[^ATCG,]/){ # Alt base contained any non A, C, T, G characters or commas which separate several different variants
+	    # warn "SNP was: $alt; GT was $gt; FI was: $fi; skipping\n";
 	    ++$too_many;
 	    next;
 	}
@@ -862,14 +858,38 @@ sub filter_relevant_SNP_calls_from_VCF{
 	}
 	elsif ($gt eq '1/1'){
 	    ++$homozygous;
-	    # warn "homozygous alternative allele\n";
+	    if ($alt =~ /[^ATCG]/){ 	 
+		# warn "homozygous alternative allele: >$alt<\n";
+		my ($new_alt) = (split (/,/,$alt))[0];
+		# warn "New ALT is $new_alt\n";
+		# warn "genotype: $gt\nfilter:   $fi\n\n"; sleep(1);
+		$alt = $new_alt;  
+	    }
+	}
+	elsif ($gt eq '2/2'){
+	    ++$homozygous;
+	    if ($alt =~ /[^ATCG]/){ 	 
+		# warn "homozygous alternative allele: >$alt<\n";
+		my ($new_alt) = (split (/,/,$alt))[1];
+		# warn "New ALT is $new_alt\n\n"; sleep(1);
+		$alt = $new_alt;    
+	    }
+	}
+	elsif ($gt eq '3/3'){
+	    ++$homozygous;
+	    if ($alt =~ /[^ATCG]/){
+		# warn "homozygous alternative allele: >$alt<\n";
+		my ($new_alt) = (split (/,/,$alt))[2];                                                                                                                                                     
+		# warn "New ALT is $new_alt\n\n"; sleep(1);                                                                                                                                              
+                $alt = $new_alt;   
+	    }
 	}
 	else{
 	    ++$other;
 	    next;
 	}
 	
-	# Looking at the Filtering tag
+	# Looking at the Filtering tag now
 	# warn "$fi\n"; sleep(1);
 	if ($fi == 1){
 	    ++$hcg_count;
@@ -912,7 +932,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     warn "\nNot included into $strain genome:\n";
     warn "$same\thad the same sequence as the reference\n";
     warn "$too_many\t\thad no clearly defined alternative base\n";
-    warn "$other\t\tCalls were neither 0/0 (same as reference) or 1/1 (homozygous SNP)\n";
+    warn "$other\t\tCalls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)\n";
     warn "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
 
     print REPORT "SNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
