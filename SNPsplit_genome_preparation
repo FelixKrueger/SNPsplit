@@ -396,18 +396,11 @@ sub read_snp_files{
 	else{
 	    # Now we need to check whether the SNP was also present but failing the filter in Strain 1
 	    if (exists $homozygous_SNPs{$location}->{strain1_genotype}){
-		if ($homozygous_SNPs{$location}->{strain1_filter} == 0){
-		    # warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
-		    # warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
-		    # warn "skipping because of low confidence in strain 1\n";
-		    ++$confidence_discrepancy;
-		    next;
-		}
-		else{
-		    warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
-		    warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
-		    die "Strain 1 should have low confidence, so something is wrong...\n";
-		}
+		# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+		# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+		# warn "skipping because of low confidence in strain 1\n";
+		++$confidence_discrepancy;
+		next;
 	    }
 	    
 	    ++$unique_SNP; 
@@ -434,19 +427,12 @@ sub read_snp_files{
 	    if ($snps{$chr}->{$pos}->{read} == 0){ # present only for Strain 1
 		
 		# Now we need to check whether the SNP was also present but failing the filter in Strain 2
-		if (exists $homozygous_SNPs{$location}->{strain2_genotype}){
-		    if ($homozygous_SNPs{$location}->{strain2_filter} == 0 ){
-			# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
-			# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
-			# warn "skipping because of low confidence in strain 2\n";
-			++$confidence_discrepancy;
-			next;
-		    }
-		    else{
-			warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
-			warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
-			warn "Strain 2 should have low confidence, so something is appears to be wrong...\n";
-		    }
+		if (exists $homozygous_SNPs{$location}->{strain2_filter}){
+		    # warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+		    # warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+		    # warn "skipping because of low confidence in strain 2\n";
+		    ++$confidence_discrepancy;
+		    next;
 		}
 		
 		++$unique_ref;
@@ -469,7 +455,7 @@ sub read_snp_files{
     warn "======================================================\n";
     warn "SNPs were the same in Ref and SNP genome (not written out):\t$same\n";
     warn "SNPs were present in both Ref and SNP genome but had a different sequence:\t$different\n";
-    warn "SNPs were homozygously different to reference in both strains but low confidence in one strain:\t$confidence_discrepancy\n";
+    warn "SNPs were homozygously different to the reference in both strains, but of low confidence in one strain:\t$confidence_discrepancy\n";
     warn "SNPs were unique to Ref [$strain]:\t\t\t\t$unique_ref\n";
     warn "SNPs were unique to SNP [$strain2]:\t\t\t\t$unique_SNP\n\n";
 
@@ -478,7 +464,7 @@ sub read_snp_files{
     print REPORT "======================================================\n";
     print REPORT "SNPs were the same in Ref and SNP genome (not written out):\t$same\n";
     print REPORT "SNPs were present in both Ref and SNP genome but had a different sequence:\t$different\n";
-    print REPORT "SNPs were homozygously different to reference in both strains but low confidence in one strain:\t$confidence_discrepancy\n";
+    print REPORT "SNPs were homozygously different to the reference in both strains, but low confidence in one strain:\t$confidence_discrepancy\n";
     print REPORT "SNPs were unique to Ref [$strain]:\t\t\t\t$unique_ref\n";
     print REPORT "SNPs were unique to SNP [$strain2]:\t\t\t\t$unique_SNP\n\n";
 
@@ -854,7 +840,7 @@ sub filter_relevant_SNP_calls_from_VCF{
 	if ($count%1000000 ==0){
 	    warn "processed $count lines\n";
 	}
-	# last if ($count == 10000);
+	last if ($count == 100000);
 	
 	my ($chr,$pos,$ref,$alt,$strain) = (split /\t/)[0,1,3,4,$strain_index];
 	# warn "$chr , $pos , $ref , $alt , $strain\n"; sleep(1);
@@ -889,51 +875,17 @@ sub filter_relevant_SNP_calls_from_VCF{
 	    next;
 	}
 	
-	# Filtering for genotype
+	# Filtering for genotype. If the genotype is the same as the reference we will move on to the next position
 	if ($gt eq '0/0'){
 	    ++$same;
 	    # warn "same as reference\n";
 	    next;
 	}
-	elsif ($gt eq '1/1'){
-	    ++$homozygous;
-	    if ($alt =~ /[^ATCG]/){ 	 
-		# warn "homozygous alternative allele: >$alt<\n";
-		my ($new_alt) = (split (/,/,$alt))[0];
-		# warn "New ALT is $new_alt\n";
-		# warn "genotype: $gt\nfilter:   $fi\n\n"; sleep(1);
-		$alt = $new_alt;  
-	    }
-	}
-	elsif ($gt eq '2/2'){
-	    ++$homozygous;
-	    if ($alt =~ /[^ATCG]/){ 	 
-		# warn "homozygous alternative allele: >$alt<\n";
-		my ($new_alt) = (split (/,/,$alt))[1];
-		# warn "New ALT is $new_alt\n\n"; sleep(1);
-		$alt = $new_alt;    
-	    }
-	}
-	elsif ($gt eq '3/3'){
-	    ++$homozygous;
-	    if ($alt =~ /[^ATCG]/){
-		# warn "homozygous alternative allele: >$alt<\n";
-		my ($new_alt) = (split (/,/,$alt))[2];                                                                                                        
- 		# warn "New ALT is $new_alt\n\n"; sleep(1);                                                                             
-		$alt = $new_alt;   
-	    }
-	}
-	else{
-	    ++$other;
-	    next;
-	}
 
-	### If we made it this far the SNP is a homozygous substitution in the current strain
-	
 	my $location = join (':',$chr,$pos);
-
 	# warn "$location\n";   
-	### For dual hybrids we will store all homozygous positions so we can add an additional filter later for positions that pass the filter (FI=1) in both strains
+
+	### For dual hybrids we will store all positions so we can add an additional filter later for positions that pass the filter (FI=1) in both strains
 	if ($dual_hybrid){
 	    if ($strain_identity == 1){
 		# warn "Strain 1. Adding $location, $fi and $gt\n"; sleep(1);
@@ -950,6 +902,47 @@ sub filter_relevant_SNP_calls_from_VCF{
 	    }
 	}
 
+
+	if ($gt eq '1/1'){
+	    ++$homozygous;
+	    if ($alt =~ /[^ATCG]/){ 	 
+		# warn "homozygous alternative allele: >$alt<\n";
+		my ($new_alt) = (split (/,/,$alt))[0];
+		# warn "New ALT is $new_alt\n";
+		# warn "genotype: $gt\nfilter:   $fi\n\n"; sleep(1);
+		$alt = $new_alt;  
+	    }
+	}
+	elsif ($gt eq '2/2'){
+	    # warn "$gt\n";
+	    ++$homozygous;
+	    if ($alt =~ /[^ATCG]/){ 	 
+		# warn "homozygous alternative allele: >$alt<\n";
+		my ($new_alt) = (split (/,/,$alt))[1];
+		# warn "New ALT is $new_alt\n\n"; sleep(1);
+		$alt = $new_alt;    
+	    }
+	}
+	elsif ($gt eq '3/3'){
+	    # warn "$gt\n";
+	    ++$homozygous;
+	    if ($alt =~ /[^ATCG]/){
+		# warn "homozygous alternative allele: >$alt<\n";
+		my ($new_alt) = (split (/,/,$alt))[2];                                                                                                        
+ 		# warn "New ALT is $new_alt\n\n"; sleep(1);                                                                             
+		$alt = $new_alt;   
+	    }
+	}
+	else{
+	    # this could be positions without genotype call ./. or any form of heterozygous call. In any case we will blacklist these positions and not use them for dual genomes
+	    # we do skip these positions but keep them on the 'blacklist' for dual genomes
+	    ++$other;
+	    #  warn "$gt\n"; 
+	    next;
+	}
+
+	### If we made it this far the SNP is a homozygous substitution in the current strain
+	
 	# Looking at the Filtering tag now
 	# warn "$fi\n"; sleep(1);
 	if ($fi == 1){
@@ -968,6 +961,7 @@ sub filter_relevant_SNP_calls_from_VCF{
 	}
 	else{
 	    ++$low_confidence;
+	    # warn "FI was $fi\n";
 	    next;
 	}
 	
@@ -1002,7 +996,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     print REPORT "\nNot included into $strain genome:\n";
     print REPORT "$same\thad the same sequence as the reference\n";
     print REPORT "$too_many\t\thad no clearly defined alternative base\n";
-    print REPORT "$other\t\tCalls were neither 0/0 (same as reference) or 1/1 (homozygous SNP)\n";
+    print REPORT "$other\t\tCalls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)\n";
     print REPORT "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
     
   
