@@ -840,7 +840,7 @@ sub filter_relevant_SNP_calls_from_VCF{
 	if ($count%1000000 ==0){
 	    warn "processed $count lines\n";
 	}
-	last if ($count == 100000);
+	# last if ($count == 100000);
 	
 	my ($chr,$pos,$ref,$alt,$strain) = (split /\t/)[0,1,3,4,$strain_index];
 	# warn "$chr , $pos , $ref , $alt , $strain\n"; sleep(1);
