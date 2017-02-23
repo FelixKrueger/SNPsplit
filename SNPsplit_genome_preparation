@@ -396,11 +396,18 @@ sub read_snp_files{
 	else{
 	    # Now we need to check whether the SNP was also present but failing the filter in Strain 1
 	    if (exists $homozygous_SNPs{$location}->{strain1_genotype}){
-		# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
-		# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
-		# warn "skipping because of low confidence in strain 1\n";
-		++$confidence_discrepancy;
-		next;
+		if ($homozygous_SNPs{$location}->{strain1_filter} == 0){
+		    # warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+		    # warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+		    # warn "skipping because of low confidence in strain 1\n";
+		    ++$confidence_discrepancy;
+		    next;
+		}
+		else{
+		    warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+		    warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+		    die "Strain 1 should have low confidence, so something is wrong...\n";
+		}
 	    }
 	    
 	    ++$unique_SNP; 
@@ -428,11 +435,18 @@ sub read_snp_files{
 		
 		# Now we need to check whether the SNP was also present but failing the filter in Strain 2
 		if (exists $homozygous_SNPs{$location}->{strain2_genotype}){
-		    #  warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
-		    # warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
-		    # warn "skipping because of low confidence in strain 2\n";
-		    ++$confidence_discrepancy;
-		    next;
+		    if ($homozygous_SNPs{$location}->{strain2_filter} == 0 ){
+			# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+			# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+			# warn "skipping because of low confidence in strain 2\n";
+			++$confidence_discrepancy;
+			next;
+		    }
+		    else{
+			warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+			warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+			warn "Strain 2 should have low confidence, so something is appears to be wrong...\n";
+		    }
 		}
 		
 		++$unique_ref;
