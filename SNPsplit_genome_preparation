@@ -33,6 +33,7 @@ my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip
 
 my %snps; # storing all filtered SNPs
 my %snps_dual_genome; # storing all SNPs for dual genome
+my %homozygous_SNPs; # storing SNP genotypes and FILTER value for dual hybrids
 
 my $snp_file_strain =   "all_SNPs_${strain}_GRCm38.txt.gz";
 my $snp_file_strain2;
@@ -89,7 +90,7 @@ if ($skip_filtering){
     warn "Skipped reading the VCF file and filtering SNPs again (specified by user)\n\n";
 }
 else{
-    filter_relevant_SNP_calls_from_VCF($strain,$strain_index);
+    filter_relevant_SNP_calls_from_VCF($strain,$strain_index,'1'); # the last number is the strain identity, here the first strain
     warn "Finished filtering and writing out SNPs for strain $strain\n\n";
 }
 
@@ -134,7 +135,7 @@ if ($dual_hybrid){
 	warn "Skipped reading the VCF file and filtering SNPs again for strain 2 (specified by user)\n\n";                                                                               
     }                                                                                                                                                                            
     else{
-	filter_relevant_SNP_calls_from_VCF($strain2,$strain2_index);
+	filter_relevant_SNP_calls_from_VCF($strain2,$strain2_index,'2'); # the last number is the strain identity, here the second strain for dual hybrids
 	warn "Finished filtering and writing out SNPs for strain 2 [$strain2]\n\n";
     }                                                                                                                                                                          
     
@@ -317,7 +318,7 @@ sub read_snp_files{
 	open (SNP_STRAIN2,"$snp_file_strain2") or die "Failed to read from file $snp_file_strain2: $!\n\n";
     }
     
-    ### READING FROM SNP FILE FOR STRAIN 1
+    ### READING FROM SNP FILE FOR STRAIN 1 (these are only high confidence SNPs)
     warn "Storing SNP positions for strain $strain provided in '$snp_file_strain'\n";
     sleep (1);
     
@@ -346,19 +347,22 @@ sub read_snp_files{
     my $different = 0;
     my $unique_ref = 0; # unique ref here means the new Reference, i.e. Strain
     my $unique_SNP = 0; # unique SNP here means the new SNP genome, i.e. Strain2
-    
+    my $confidence_discrepancy = 0; # a measure for how many times a SNP was found as homozygous in both strains but with low confidence in one of them
+
     while (<SNP_STRAIN2>){
 	
 	++$snp_count_strain2;
 	chomp;
-
+	
 	my ($chr,$pos,$diff)  = (split /\t/)[1,2,4];
+	my $location = join (':',$chr,$pos);
+	
 	my ($ref,$snp) = (split /\//,$diff);
 	# warn "$chr\t$pos\tRef: $ref\tSNP: $snp\n"; sleep(1);
 	
 	if (exists $snps{$chr}->{$pos} ){
 	    
-	    $snps{$chr}->{$pos}->{read}++; # SNP is present in both genomes
+	    $snps{$chr}->{$pos}->{read}++; # SNP is present in both genomes as high confidence SNP.
 	    
 	    unless ($ref eq $snps{$chr}->{$pos}->{ref}){
 		warn "reference was different for the same position!!!\n";
@@ -390,8 +394,17 @@ sub read_snp_files{
 	    }
 	}
 	else{
-	    ++$unique_SNP;
-	    # warn "SNP is unique to SNP (Strain2). Printing...\n";
+	    # Now we need to check whether the SNP was also present but failing the filter in Strain 1
+	    if (exists $homozygous_SNPs{$location}->{strain1_genotype}){
+		# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+		# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+		# warn "skipping because of low confidence in strain 1\n";
+		++$confidence_discrepancy;
+		next;
+	    }
+	    
+	    ++$unique_SNP; 
+	    # warn "SNP is unique to Strain2. Printing...\n";
 	    # warn "$genome_strain sequence: $ref\n";
 	    # warn "SNP (=Strain2) sequence: $snp\n"; sleep(1);
 	    print OUT_STRAIN2 "$_\n"; # Strain has the same sequence as Black6 ($genome_build)
@@ -409,7 +422,19 @@ sub read_snp_files{
     
     foreach my $chr (keys %snps){
 	foreach my $pos (keys %{$snps{$chr}}){
-	    if ($snps{$chr}->{$pos}->{read} == 0){
+	    my $location = join (':',$chr,$pos);
+	    
+	    if ($snps{$chr}->{$pos}->{read} == 0){ # present only for Strain 1
+		
+		# Now we need to check whether the SNP was also present but failing the filter in Strain 2
+		if (exists $homozygous_SNPs{$location}->{strain2_genotype}){
+		    #  warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+		    # warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+		    # warn "skipping because of low confidence in strain 2\n";
+		    ++$confidence_discrepancy;
+		    next;
+		}
+		
 		++$unique_ref;
 		
 		### here we need to use the SNP position (i.e. Strain sequence) as new reference and the GRCm38 sequence as the SNP (i.e. where Strain2 is the same as GRCm38)
@@ -430,6 +455,7 @@ sub read_snp_files{
     warn "======================================================\n";
     warn "SNPs were the same in Ref and SNP genome (not written out):\t$same\n";
     warn "SNPs were present in both Ref and SNP genome but had a different sequence:\t$different\n";
+    warn "SNPs were homozygously different to reference in both strains but low confidence in one strain:\t$confidence_discrepancy\n";
     warn "SNPs were unique to Ref [$strain]:\t\t\t\t$unique_ref\n";
     warn "SNPs were unique to SNP [$strain2]:\t\t\t\t$unique_SNP\n\n";
 
@@ -438,6 +464,7 @@ sub read_snp_files{
     print REPORT "======================================================\n";
     print REPORT "SNPs were the same in Ref and SNP genome (not written out):\t$same\n";
     print REPORT "SNPs were present in both Ref and SNP genome but had a different sequence:\t$different\n";
+    print REPORT "SNPs were homozygously different to reference in both strains but low confidence in one strain:\t$confidence_discrepancy\n";
     print REPORT "SNPs were unique to Ref [$strain]:\t\t\t\t$unique_ref\n";
     print REPORT "SNPs were unique to SNP [$strain2]:\t\t\t\t$unique_SNP\n\n";
 
@@ -762,9 +789,8 @@ sub read_snps {
 ###
 
 sub filter_relevant_SNP_calls_from_VCF{
-
-    my $strain = shift;
-    my $strain_index = shift;
+    
+    my ($strain, $strain_index, $strain_identity) = @_;    
     
     if ($vcf_file =~ /gz$/){
 	open (IN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
@@ -821,8 +847,7 @@ sub filter_relevant_SNP_calls_from_VCF{
 	
 	# $strain is in the form: GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI
 	my ($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi) = split/:/,$strain;
-	
-	
+		
 	# warn "genotype: $gt\nfilter:   $fi\n";
 	# warn "$fi\n"; sleep(1);
 	# $gt is the Genotype:
@@ -879,23 +904,43 @@ sub filter_relevant_SNP_calls_from_VCF{
 	    ++$homozygous;
 	    if ($alt =~ /[^ATCG]/){
 		# warn "homozygous alternative allele: >$alt<\n";
-		my ($new_alt) = (split (/,/,$alt))[2];                                                                                                                                                     
-		# warn "New ALT is $new_alt\n\n"; sleep(1);                                                                                                                                              
-                $alt = $new_alt;   
+		my ($new_alt) = (split (/,/,$alt))[2];                                                                                                        
+ 		# warn "New ALT is $new_alt\n\n"; sleep(1);                                                                             
+		$alt = $new_alt;   
 	    }
 	}
 	else{
 	    ++$other;
 	    next;
 	}
+
+	### If we made it this far the SNP is a homozygous substitution in the current strain
 	
+	my $location = join (':',$chr,$pos);
+
+	# warn "$location\n";   
+	### For dual hybrids we will store all homozygous positions so we can add an additional filter later for positions that pass the filter (FI=1) in both strains
+	if ($dual_hybrid){
+	    if ($strain_identity == 1){
+		# warn "Strain 1. Adding $location, $fi and $gt\n"; sleep(1);
+		$homozygous_SNPs{$location}->{strain1_filter} = $fi;  
+		$homozygous_SNPs{$location}->{strain1_genotype} = $gt;  
+	    }
+	    elsif($strain_identity == 2){
+		# warn "Strain 2. Adding $location, $fi and $gt\n"; sleep(1);
+		$homozygous_SNPs{$location}->{strain2_filter} = $fi;      
+		$homozygous_SNPs{$location}->{strain2_genotype} = $gt; 
+	    }
+	    else{
+		die "Strain was lacking the strain identity flag\n\n";
+	    }
+	}
+
 	# Looking at the Filtering tag now
 	# warn "$fi\n"; sleep(1);
 	if ($fi == 1){
 	    ++$hcg_count;
-	    
-	    my $location = join (':',$chr,$pos);
-	    # warn "$location\n";
+	   
 	    my $SNP = join ("\t",$count,$chr,$pos,'1',join ("\/",$ref,$alt));
 	    # field 4: 1 means top strand, -1 means reverse strand
 	    # warn "$SNP\n";sleep(1);
