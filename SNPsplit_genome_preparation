@@ -395,14 +395,25 @@ sub read_snp_files{
 	}
 	else{
 	    # Now we need to check whether the SNP was also present but failing the filter in Strain 1
-	    if (exists $homozygous_SNPs{$location}->{strain1_genotype}){
+	    if (exists $homozygous_SNPs{$location}->{strain1_filter}){
 		# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
 		# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
-		# warn "skipping because of low confidence in strain 1\n";
-		++$confidence_discrepancy;
-		next;
+		if ($homozygous_SNPs{$location}->{strain1_filter} eq 1){
+		    # warn "Fine, positions was high confidence\n";
+		}
+		else{ # if the position failed the filter we move on irrespective of what the genotype was
+		    ++$confidence_discrepancy;
+		    # warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+		    # warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+		    # warn "Confidence in Strain 1 SNP call was low, skipping this position irrespective of genotype\n\n";
+		    next;
+		}
+		# warn "\n";
 	    }
-	    
+	    else{
+		warn "SNP did not exist in hash\n";
+	    }
+
 	    ++$unique_SNP; 
 	    # warn "SNP is unique to Strain2. Printing...\n";
 	    # warn "$genome_strain sequence: $ref\n";
@@ -428,11 +439,18 @@ sub read_snp_files{
 		
 		# Now we need to check whether the SNP was also present but failing the filter in Strain 2
 		if (exists $homozygous_SNPs{$location}->{strain2_filter}){
-		    # warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
-		    # warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
-		    # warn "skipping because of low confidence in strain 2\n";
-		    ++$confidence_discrepancy;
-		    next;
+		    if ($homozygous_SNPs{$location}->{strain2_filter} eq 1){    
+			# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+			# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+			# warn "Fine, genotype call was good in both strains\n";
+		    }
+		    else{
+			# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+			# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+			# warn "Confidence in Strain 2 SNP call was low, skipping this position irrespective of genotype\n\n";   
+			++$confidence_discrepancy;
+			next;
+		    }
 		}
 		
 		++$unique_ref;
@@ -455,7 +473,7 @@ sub read_snp_files{
     warn "======================================================\n";
     warn "SNPs were the same in Ref and SNP genome (not written out):\t$same\n";
     warn "SNPs were present in both Ref and SNP genome but had a different sequence:\t$different\n";
-    warn "SNPs were homozygously different to the reference in both strains, but of low confidence in one strain:\t$confidence_discrepancy\n";
+    warn "SNPs were low confidence in one strain and thus ignored:\t$confidence_discrepancy\n";
     warn "SNPs were unique to Ref [$strain]:\t\t\t\t$unique_ref\n";
     warn "SNPs were unique to SNP [$strain2]:\t\t\t\t$unique_SNP\n\n";
 
@@ -464,7 +482,7 @@ sub read_snp_files{
     print REPORT "======================================================\n";
     print REPORT "SNPs were the same in Ref and SNP genome (not written out):\t$same\n";
     print REPORT "SNPs were present in both Ref and SNP genome but had a different sequence:\t$different\n";
-    print REPORT "SNPs were homozygously different to the reference in both strains, but low confidence in one strain:\t$confidence_discrepancy\n";
+    print REPORT "SNPs were low confidence in one strain and thus ignored:\t$confidence_discrepancy\n";
     print REPORT "SNPs were unique to Ref [$strain]:\t\t\t\t$unique_ref\n";
     print REPORT "SNPs were unique to SNP [$strain2]:\t\t\t\t$unique_SNP\n\n";
 
@@ -472,7 +490,7 @@ sub read_snp_files{
     close OUT_STRAIN2;
     close OUT_COMMON;
     close ALL_STRAIN_STRAIN2;
-
+ 
 }
 
 sub create_modified_chromosome {
@@ -840,7 +858,7 @@ sub filter_relevant_SNP_calls_from_VCF{
 	if ($count%1000000 ==0){
 	    warn "processed $count lines\n";
 	}
-	# last if ($count == 100000);
+	# last if ($count == 10000);
 	
 	my ($chr,$pos,$ref,$alt,$strain) = (split /\t/)[0,1,3,4,$strain_index];
 	# warn "$chr , $pos , $ref , $alt , $strain\n"; sleep(1);
@@ -875,16 +893,9 @@ sub filter_relevant_SNP_calls_from_VCF{
 	    next;
 	}
 	
-	# Filtering for genotype. If the genotype is the same as the reference we will move on to the next position
-	if ($gt eq '0/0'){
-	    ++$same;
-	    # warn "same as reference\n";
-	    next;
-	}
-
 	my $location = join (':',$chr,$pos);
 	# warn "$location\n";   
-
+	
 	### For dual hybrids we will store all positions so we can add an additional filter later for positions that pass the filter (FI=1) in both strains
 	if ($dual_hybrid){
 	    if ($strain_identity == 1){
@@ -902,8 +913,13 @@ sub filter_relevant_SNP_calls_from_VCF{
 	    }
 	}
 
-
-	if ($gt eq '1/1'){
+	# Filtering for genotype. If the genotype is the same as the reference we will move on to the next position
+	if ($gt eq '0/0'){
+	    ++$same;
+	    # warn "same as reference\n";
+	    next;
+	}
+	elsif ($gt eq '1/1'){
 	    ++$homozygous;
 	    if ($alt =~ /[^ATCG]/){ 	 
 		# warn "homozygous alternative allele: >$alt<\n";
