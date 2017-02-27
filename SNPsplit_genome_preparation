@@ -898,21 +898,23 @@ sub filter_relevant_SNP_calls_from_VCF{
 	
 	### For dual hybrids we will store all positions so we can add an additional filter later for positions that pass the filter (FI=1) in both strains
 	if ($dual_hybrid){
-	    if ($strain_identity == 1){
-		# warn "Strain 1. Adding $location, $fi and $gt\n"; sleep(1);
-		$homozygous_SNPs{$location}->{strain1_filter} = $fi;  
-		$homozygous_SNPs{$location}->{strain1_genotype} = $gt;  
-	    }
-	    elsif($strain_identity == 2){
-		# warn "Strain 2. Adding $location, $fi and $gt\n"; sleep(1);
-		$homozygous_SNPs{$location}->{strain2_filter} = $fi;      
-		$homozygous_SNPs{$location}->{strain2_genotype} = $gt; 
-	    }
-	    else{
-		die "Strain was lacking the strain identity flag\n\n";
+	    if ($fi ne 1){ # only adding this position if the FI is not a PASS
+		if ($strain_identity == 1){
+		    # warn "Strain 1. Adding $location, $fi and $gt\n"; sleep(1);
+		    $homozygous_SNPs{$location}->{strain1_filter} = $fi;  
+		    $homozygous_SNPs{$location}->{strain1_genotype} = $gt;  
+		}
+		elsif($strain_identity == 2){
+		    # warn "Strain 2. Adding $location, $fi and $gt\n"; sleep(1);
+		    $homozygous_SNPs{$location}->{strain2_filter} = $fi;      
+		    $homozygous_SNPs{$location}->{strain2_genotype} = $gt; 
+		}
+		else{
+		    die "Strain was lacking the strain identity flag\n\n";
+		}
 	    }
 	}
-
+	
 	# Filtering for genotype. If the genotype is the same as the reference we will move on to the next position
 	if ($gt eq '0/0'){
 	    ++$same;
