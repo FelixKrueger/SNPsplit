@@ -411,7 +411,7 @@ sub read_snp_files{
 		# warn "\n";
 	    }
 	    else{
-		warn "SNP did not exist in hash\n";
+		# warn "SNP did not exist in hash\n";
 	    }
 
 	    ++$unique_SNP; 
