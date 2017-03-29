@@ -25,7 +25,7 @@ use Cwd;
 
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.1_dev';
+my $pipeline_version = '0.3.2';
 my $parent_dir = getcwd();
 my ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
 my %snps; # storing SNP position and sequence information for all SNPs
