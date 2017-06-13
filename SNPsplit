@@ -744,7 +744,7 @@ sub determine_N_position{
 	
 	if ($verbose){	warn "base in read was: $read_base\n";}
 	if ($bisulfite){
-	  ($genome1,$genome2,$irrelevant) = score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant);
+	    ($genome1,$genome2,$irrelevant) = score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant);
 	}
 	### Non-bisulfite setting ( = DEFAULT)
 	else{
@@ -768,9 +768,6 @@ sub determine_N_position{
 	  warn "SNP was not present in the SNP list\n";
 	}
 	
-	### in a $bisulfite setting, if a read aligned to an N in the reference but the position is not present in the SNP list, the position is most likely a C>T or G>A SNP
-	### that was ignored in the SNP annotation process. It will simply not be scored as either genome 1 or genome 2 specific.
-
       }
 
       if ($verbose){  warn "now adjusting the position for the N itself\n";}
@@ -837,7 +834,7 @@ sub score_bisulfite_SNPs{
 
     ### if the SNP in question involves a genomic C position we potentially need to allow both C or T as C (G/A for the reverse strand)
 
-    if ($verbose){ warn "Reference base is C\tSNP base:\t$snps{$chr}->{$genomic_pos}->{snp}\tRead base:\t$read_base\n"; sleep(1);}
+    if ($verbose){ warn "Reference base is $snps{$chr}->{$genomic_pos}->{ref}\tSNP base:\t$snps{$chr}->{$genomic_pos}->{snp}\tRead base:\t$read_base\n"; sleep(1);}
 
     ### REFERENCE STRAIN = C
     if ( $snps{$chr}->{$genomic_pos}->{ref} eq 'C'){    # the position is a C in the reference genome
