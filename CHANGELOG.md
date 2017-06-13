@@ -1,3 +1,10 @@
+## v0.3.2_dev
+
+SNPsplit
+-----
+
+- Changed `FindBin qw($Bin)` to `FindBin qw($RealBin)` so that symlinks to `tag2sort` are resolved properly.
+
 ## v0.3.2
 
 SNPsplit
