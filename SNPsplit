@@ -2,8 +2,8 @@
 use warnings;
 use strict;
 use Getopt::Long;
-use FindBin qw($Bin);
-use lib "$Bin/../lib";
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
 use Cwd;
 
 
@@ -25,7 +25,7 @@ use Cwd;
 
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.2';
+my $pipeline_version = '0.3.2_dev';
 my $parent_dir = getcwd();
 my ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
 my %snps; # storing SNP position and sequence information for all SNPs
@@ -155,7 +155,7 @@ while (@ARGV){
     push @args, '--singletons';
   }
 
-  system ("$Bin/tag2sort @args $outfile");
+  system ("$RealBin/tag2sort @args $outfile");
 
   ####
 
@@ -194,6 +194,7 @@ sub process_masked_BAM_file{
 
   open (IN,"$samtools_path view -h $file |") or die "Failed to read from BAM file $file: $!\n";
   warn "Reading from sorted mapping file '$file'\n";
+
   ### READING FROM MAPPING BAM FILE
 
   ($no_snp,$genome1,$genome2,$bizarre,$unassigned,$ct_snp) = (0,0,0,0,0,0);
@@ -404,7 +405,6 @@ sub determine_N_position{
   my ($genome1,$genome2,$irrelevant) = (0,0,0); # determining number of SNPs that can be used to assign a certain allele
 
   if ($verbose){ warn "Now looking at the following read:\n$chr\t$start\t$cigar\t$sequence\t$md_tag\n";sleep(1);}
-
   # parsing CIGAR string
   my @len = split (/\D+/,$cigar); # storing the length per operation
   my @ops = split (/\d+/,$cigar); # storing the operation
@@ -465,7 +465,7 @@ sub determine_N_position{
 	if ($verbose) { warn "base in read was: $read_base\n";}
 
 	if ($bisulfite){
-	  ($genome1,$genome2,$irrelevant) = score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant);
+	    ($genome1,$genome2,$irrelevant) = score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant);
 	}
 	else{ ## DEFAULT
 
@@ -797,272 +797,318 @@ sub determine_N_position{
 
 
 sub score_bisulfite_SNPs{
-  my ($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant) = @_;
-  my $first_read_conversion;
-  my $genome_conversion;
-  # warn "$line\n"; sleep(1);
-	
-  my $strand;
-  while ( $line =~ /(XR|XG):Z:([^\t]+)/g ) {
-    my $tag = $1;
-    my $value = $2;
-    chomp $value;
+    my ($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant) = @_;
+    my $first_read_conversion;
+    my $genome_conversion;
+    # warn "$line\n"; sleep(1);
+    
+    my $strand;
+    while ( $line =~ /(XR|XG):Z:([^\t]+)/g ) {
+	my $tag = $1;
+	my $value = $2;
+	chomp $value;
 
-    if ($tag eq "XR") {
-      $first_read_conversion = $value;
-      $first_read_conversion =~ s/\r//;
+	if ($tag eq "XR") {
+	    $first_read_conversion = $value;
+	    $first_read_conversion =~ s/\r//;
+	}
+	elsif ($tag eq "XG") {
+	    $genome_conversion = $value;
+	    $genome_conversion =~ s/\r//;
+	}
     }
-    elsif ($tag eq "XG") {
-      $genome_conversion = $value;
-      $genome_conversion =~ s/\r//;
+    
+    if ($first_read_conversion eq 'CT' and $genome_conversion eq 'CT') {
+	$strand = 'OT';		## this is OT
     }
-  }
+    elsif ($first_read_conversion eq 'GA' and $genome_conversion eq 'CT') {
+	$strand = 'CTOT';		## this is CTOT
+    }
+    elsif ($first_read_conversion eq 'GA' and $genome_conversion eq 'GA') {
+	$strand = 'CTOB';		## this is CTOB
+    }
+    elsif ($first_read_conversion eq 'CT' and $genome_conversion eq 'GA') {
+	$strand = 'OB';		## this is OB
+    }
+    else {
+	die "Unexpected combination of read and genome conversion: $first_read_conversion / $genome_conversion\n";
+    }
+    if ($verbose){  warn "strand is $strand\n"};
+
+    ### if the SNP in question involves a genomic C position we potentially need to allow both C or T as C (G/A for the reverse strand)
+
+    if ($verbose){ warn "Reference base is C\tSNP base:\t$snps{$chr}->{$genomic_pos}->{snp}\tRead base:\t$read_base\n"; sleep(1);}
+
+    ### REFERENCE STRAIN = C
+    if ( $snps{$chr}->{$genomic_pos}->{ref} eq 'C'){    # the position is a C in the reference genome
+
+	### C>T SNP. Can't use the position for top strand alignments
+	if ($snps{$chr}->{$genomic_pos}->{snp} eq 'T'){
+	    
+	    if ($strand eq 'OT' or $strand eq 'CTOT'){
+		if ($verbose){ warn "This is a C>T SNP and can't be considered for OT or CTOT alignments!\n";}
+		++$ct_snp;
+		return ($genome1,$genome2,$irrelevant);
+	    }	    
+	}
 	
-  if ($first_read_conversion eq 'CT' and $genome_conversion eq 'CT') {
-    $strand = 'OT';		## this is OT
-  }
-  elsif ($first_read_conversion eq 'GA' and $genome_conversion eq 'CT') {
-    $strand = 'CTOT';		## this is CTOT
-  }
-  elsif ($first_read_conversion eq 'GA' and $genome_conversion eq 'GA') {
-    $strand = 'CTOB';		## this is CTOB
-  }
-  elsif ($first_read_conversion eq 'CT' and $genome_conversion eq 'GA') {
-    $strand = 'OB';		## this is OB
-  }
-  else {
-    die "Unexpected combination of read and genome conversion: $first_read_conversion / $genome_conversion\n";
-  }
+	# Top strand alignments with C>T SNPs should have been skipped already. For other SNPs we accept both C or T as C.
+	if ($strand eq 'OT' or $strand eq 'CTOT'){
+	    
+	    if ($read_base eq 'C' or $read_base eq 'T'){ # a bisulfite converted position may be a C or T (here we know that the ref base is C)
+		if ($verbose){ warn "genome 1 specific!\n";}
+		++$genome1;
+	    }
+	    elsif($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
+		if ($verbose){ warn "genome 2 specific!\n";}
+		++$genome2;
+	    }
+	    else{
+		if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		++$irrelevant;
+	    }
+
+	}
+	# Alignments to the bottom strand can still be assigned normally as they do not involve the C directly
+	elsif ($strand eq 'OB' or $strand eq 'CTOB'){
+    
+	    if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){ # == C
+		if ($verbose){ warn "genome 1 specific!\n";}
+		++$genome1;
+	    }
+	    # added this section 13 June 2017
+	    elsif ($snps{$chr}->{$genomic_pos}->{snp} eq 'G'){ # a bisulfite converted position on the bottom strand may be a G or A
+		if ($read_base eq 'G' or $read_base eq 'A'){
+		    if ($verbose){ warn "genome 2 specific!\n";}
+		    ++$genome2;	
+		}  
+		else{
+		    if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		    ++$irrelevant;
+		}
+	    }
+	    elsif($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){ # only A left...
+		if ($verbose){ warn "genome 2 specific!\n";}
+		++$genome2;
+	    }
+	    else{
+		if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		++$irrelevant;
+	    }
+
+	}
+	else{
+	    die "Unable to identify read alignment strand\n";
+	}
+    }
+
+    ### AlTERNATIVE STRAIN = C
+    elsif ( $snps{$chr}->{$genomic_pos}->{snp} eq 'C'){ # the position is a C in the alternative/SNP genome
 	
-  ### if the SNP in question involves a genomic C position we potentially need to allow both C or T as C (G/A for the reverse strand)
+	### C>T SNP. Can't use the position for top strand alignments
+	if ($snps{$chr}->{$genomic_pos}->{ref} eq 'T'){
+	    
+	    if ($strand eq 'OT' or $strand eq 'CTOT'){
+		if ($verbose){ warn "This is a C>T SNP between alternative and reference and can't be considered for OT or CTOT alignments!\n";}
+		++$ct_snp;
+		return ($genome1,$genome2,$irrelevant);
+	    }
 
-  ### REFERENCE STRAIN = C
-  if ( $snps{$chr}->{$genomic_pos}->{ref} eq 'C'){    # the position is a C in the reference genome
+	}
 
-    ### C>T SNP. Can't use the position for top strand alignments
-    if ($snps{$chr}->{$genomic_pos}->{snp} eq 'T'){
+	# Top strand alignments with C>T SNPs should have been skipped already. For other SNPs we accept both C or T as C.
+	if ($strand eq 'OT' or $strand eq 'CTOT'){
 
-      if ($strand eq 'OT' or $strand eq 'CTOT'){
-	if ($verbose){ warn "This is a C>T SNP and can't be considered for OT or CTOT alignments!\n";}
-	++$ct_snp;
-	return ($genome1,$genome2,$irrelevant);
-      }
+	    if ($read_base eq 'C' or $read_base eq 'T'){ # a bisulfite converted position may be a C or T
+		if ($verbose){ warn "genome 2 specific!\n";}
+		# warn "Alternative base is C\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
+		++$genome2;
+	    }
+	    elsif($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
+		if ($verbose){ warn "genome 1 specific!\n";}
+		++$genome1;
+	    }
+	    else{
+		if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		++$irrelevant;
+	    }
+	}
+	elsif ($strand eq 'OB' or $strand eq 'CTOB'){ # Reads to the bottom strand can still be assigned normally
+
+	    if ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){ # has to be C
+		if ($verbose){ warn "genome 2 specific!\n";}
+		# warn "Alternative base is C\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
+		++$genome2;
+	    }
+	    
+	    # added this section 13 June 2017
+	    elsif ($snps{$chr}->{$genomic_pos}->{ref} eq 'G'){ # a bisulfite converted position on the bottom strand may be a G or A
+		if ($read_base eq 'G' or $read_base eq 'A'){
+		    if ($verbose){ warn "genome 1 specific!\n";}
+		    ++$genome1;	
+		}  
+		else{
+		    if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		    ++$irrelevant;
+		}
+	    }
+	    elsif($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){ # only A left...
+		if ($verbose){ warn "genome 1 specific!\n";}
+		++$genome1;
+	    }
+	    else{
+		if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		++$irrelevant;
+	    }
+
+	}
+	else{
+	    die "Unable to identify read alignment strand\n";
+	}
+    }
+    ### REFERENCE STRAIN = G, i.e. bottom strand C might be affected
+    elsif ( $snps{$chr}->{$genomic_pos}->{ref} eq 'G'){    # the position is a G in the reference genome
+
+	if ($snps{$chr}->{$genomic_pos}->{snp} eq 'A'){
+	    
+	    if ($strand eq 'OB' or $strand eq 'CTOB'){
+		if ($verbose){ warn "This is a G>A SNP and can't be considered for OB or CTOB alignments!\n";}
+		++$ct_snp;
+		return ($genome1,$genome2,$irrelevant);
+	    }
+	}
+
+	# Bottom strand alignments with G>A SNPs should have been skipped already
+	if ($strand eq 'OT' or $strand eq 'CTOT'){  # Reads to the top strand can be assigned normally
+	    
+	    if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){ # eq G
+		if ($verbose){ warn "genome 1 specific!\n";}
+		# warn "Reference base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
+		++$genome1;
+	    }
+	    # added this section 13 June 2017
+	    elsif ($snps{$chr}->{$genomic_pos}->{snp} eq 'C'){ # a bisulfite converted position on the bottom strand may be a G or A
+		if ($read_base eq 'C' or $read_base eq 'T'){
+		    if ($verbose){ warn "genome 2 specific!\n";}
+		    ++$genome2;	
+		}  
+		else{
+		    if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		    ++$irrelevant;
+		}
+	    }
+	    elsif($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){ # has to be T
+		if ($verbose){ warn "genome 2 specific!\n";}
+		++$genome2;
+	    }
+	    else{
+		if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		++$irrelevant;
+	    }
+
+	}
+	elsif ($strand eq 'OB' or $strand eq 'CTOB'){ # Reads to the bottom strand might carry a bisulfite conversion
+	    
+	    if ($read_base eq 'G' or $read_base eq 'A'){ # a bisulfite converted position may be a G or A
+		if ($verbose){ warn "genome 1 specific!\n";}
+		# warn "Reference base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
+		++$genome1;
+	    }
+	    elsif($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
+		if ($verbose){ warn "genome 2 specific!\n";}
+		++$genome2;
+	    }
+	    else{
+		if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		++$irrelevant;
+	    }
+	    
+	}
+	else{
+	    die "Unable to identify read alignment strand\n";
+	}
 	
     }
-	
-    # Top strand alignments with C>T SNPs should have been skipped already. For other SNPs we accept both C or T as C.
-    if ($strand eq 'OT' or $strand eq 'CTOT'){
-	
-      if ($read_base eq 'C' or $read_base eq 'T'){ # a bisulfite converted position may be a C or T
-	if ($verbose){ warn "genome 1 specific!\n";}
-	# warn "Reference base is C\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
-	++$genome1;
-      }
-      elsif($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
-	if ($verbose){ warn "genome 2 specific!\n";}
-	++$genome2;
-      }
-      else{
-	if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-	++$irrelevant;
-      }
+    ### AlTERNATIVE STRAIN = G, i.e. bottom strand C might be affected
+    elsif ( $snps{$chr}->{$genomic_pos}->{snp} eq 'G'){ # the position is a G in the alternative/SNP genome
 
-    }
-    # Alignments to the bottom strand can still be assigned normally as they do not involve the C directly
-    elsif ($strand eq 'OB' or $strand eq 'CTOB'){
-	
-      if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){ # a bisulfite converted position may be a C or T
-	if ($verbose){ warn "genome 1 specific!\n";}
-	# warn "Reference base is C\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
-	++$genome1;
-      }
-      elsif($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
-	if ($verbose){ warn "genome 2 specific!\n";}
-	++$genome2;
-      }
-      else{
-	if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-	++$irrelevant;
-      }
+	if ($snps{$chr}->{$genomic_pos}->{ref} eq 'A'){
 
+	    if ($strand eq 'OB' or $strand eq 'CTOB'){
+		if ($verbose){ warn "This is a G>A SNP between alternative and reference genome and can't be considered for OB or CTOB alignments!\n"; }
+		++$ct_snp;	
+		return ($genome1,$genome2,$irrelevant);
+	    }
+
+	}
+	
+	# Bottom strand alignments with G>A SNPs should have been skipped already
+	if ($strand eq 'OT' or $strand eq 'CTOT'){  # Reads to the top strand can be assigned normally
+	    
+	    if ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){ # has to be G
+		if ($verbose){ warn "genome 2 specific!\n";}
+		# warn "Alternative base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
+		++$genome2;
+	    }
+	    # added this section 13 June 2017
+	    elsif ($snps{$chr}->{$genomic_pos}->{ref} eq 'C'){ # a bisulfite converted position on the bottom strand may be a G or A
+		if ($read_base eq 'C' or $read_base eq 'T'){
+		    if ($verbose){ warn "genome 1 specific!\n";}
+		    ++$genome1;	
+		}  
+		else{
+		    if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		    ++$irrelevant;
+		}
+	    }
+	    elsif($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){ # hast to be T
+		if ($verbose){ warn "genome 1 specific!\n";}
+		++$genome1;
+	    }
+	    else{
+		if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		++$irrelevant;
+	    }
+	}
+	elsif ($strand eq 'OB' or $strand eq 'CTOB'){ # Reads to the bottom strand might carry a bisulfite conversion
+	    
+	    if ($read_base eq 'G' or $read_base eq 'A'){ # a bisulfite converted position may be a G or A
+		if ($verbose){ warn "genome 2 specific!\n";}
+		# warn "Alternative base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
+		++$genome2;
+	    }
+	    elsif($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
+		if ($verbose){ warn "genome 1 specific!\n";}
+		++$genome1;
+	    }
+	    else{
+		if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		++$irrelevant;
+	    }
+	}
+	else{
+	    die "Unable to identify read alignment strand\n";
+	}
     }
+
+    ### The SNP did not affect a C or G position at all
     else{
-      die "Unable to identify read alignment strand\n";
-    }
-  }
-  ### AlTERNATIVE STRAIN = C
-  elsif ( $snps{$chr}->{$genomic_pos}->{snp} eq 'C'){ # the position is a C in the alternative/SNP genome
-
-    ### C>T SNP. Can't use the position for top strand alignments
-    if ($snps{$chr}->{$genomic_pos}->{ref} eq 'T'){
-	
-      if ($strand eq 'OT' or $strand eq 'CTOT'){
-	if ($verbose){ warn "This is a C>T SNP between alternative and reference and can't be considered for OT or CTOT alignments!\n";}
-	++$ct_snp;
-	return ($genome1,$genome2,$irrelevant);
-      }
-
+	# warn "they do exist! Ref base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
+	if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
+	    if ($verbose){ warn "genome 1 specific!\n";}
+	    ++$genome1;
+	}
+	elsif ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
+	    if ($verbose){ warn "genome 2 specific!\n";}
+	    ++$genome2;
+	}
+	else{
+	    if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+	    ++$irrelevant;
+	}
     }
 
-    # Top strand alignments with C>T SNPs should have been skipped already. For other SNPs we accept both C or T as C.
-    if ($strand eq 'OT' or $strand eq 'CTOT'){
-
-      if ($read_base eq 'C' or $read_base eq 'T'){ # a bisulfite converted position may be a C or T
-	if ($verbose){ warn "genome 2 specific!\n";}
-	# warn "Alternative base is C\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
-	++$genome2;
-      }
-      elsif($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
-	if ($verbose){ warn "genome 1 specific!\n";}
-	++$genome1;
-      }
-      else{
-	if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-	++$irrelevant;
-      }
-    }
-    elsif ($strand eq 'OB' or $strand eq 'CTOB'){ # Reads to the bottom strand can still be assigned normally
-
-      if ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
-	if ($verbose){ warn "genome 2 specific!\n";}
-	# warn "Alternative base is C\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
-	++$genome2;
-      }
-      elsif($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
-	if ($verbose){ warn "genome 1 specific!\n";}
-	++$genome1;
-      }
-      else{
-	if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-	++$irrelevant;
-      }
-
-    }
-    else{
-      die "Unable to identify read alignment strand\n";
-    }
-  }
-  ### REFERENCE STRAIN = G, i.e. bottom strand C might be affected
-  elsif ( $snps{$chr}->{$genomic_pos}->{ref} eq 'G'){    # the position is a G in the reference genome
-
-    if ($snps{$chr}->{$genomic_pos}->{snp} eq 'A'){
-	
-      if ($strand eq 'OB' or $strand eq 'CTOB'){
-	if ($verbose){ warn "This is a G>A SNP and can't be considered for OB or CTOB alignments!\n";}
-	++$ct_snp;
-	return ($genome1,$genome2,$irrelevant);
-      }
-    }
-
-    # Bottom strand alignments with G>A SNPs should have been skipped already
-    if ($strand eq 'OT' or $strand eq 'CTOT'){  # Reads to the top strand can be assigned normally
-	
-      if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
-	if ($verbose){ warn "genome 1 specific!\n";}
-	# warn "Reference base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
-	++$genome1;
-      }
-      elsif($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
-	if ($verbose){ warn "genome 2 specific!\n";}
-	++$genome2;
-      }
-      else{
-	if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-	++$irrelevant;
-      }
-
-    }
-    elsif ($strand eq 'OB' or $strand eq 'CTOB'){ # Reads to the bottom strand might carry a bisulfite conversion
-	
-      if ($read_base eq 'G' or $read_base eq 'A'){ # a bisulfite converted position may be a G or A
-	if ($verbose){ warn "genome 1 specific!\n";}
-	# warn "Reference base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
-	++$genome1;
-      }
-      elsif($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
-	if ($verbose){ warn "genome 2 specific!\n";}
-	++$genome2;
-      }
-      else{
-	if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-	++$irrelevant;
-      }
-	
-    }
-    else{
-      die "Unable to identify read alignment strand\n";
-    }
-	
-  }
-  ### AlTERNATIVE STRAIN = G, i.e. bottom strand C might be affected
-  elsif ( $snps{$chr}->{$genomic_pos}->{snp} eq 'G'){ # the position is a G in the alternative/SNP genome
-
-    if ($snps{$chr}->{$genomic_pos}->{ref} eq 'A'){
-
-      if ($strand eq 'OB' or $strand eq 'CTOB'){
-	if ($verbose){ warn "This is a G>A SNP between alternative and reference genome and can't be considered for OB or CTOB alignments!\n"; }
-	++$ct_snp;	
-	return ($genome1,$genome2,$irrelevant);
-      }
-
-    }
-	
-    # Bottom strand alignments with G>A SNPs should have been skipped already
-    if ($strand eq 'OT' or $strand eq 'CTOT'){  # Reads to the top strand can be assigned normally
-	
-      if ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
-	if ($verbose){ warn "genome 2 specific!\n";}
-	# warn "Alternative base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
-	++$genome2;
-      }
-      elsif($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
-	if ($verbose){ warn "genome 1 specific!\n";}
-	++$genome1;
-      }
-      else{
-	if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-	++$irrelevant;
-      }
-    }
-    elsif ($strand eq 'OB' or $strand eq 'CTOB'){ # Reads to the bottom strand might carry a bisulfite conversion
-
-      if ($read_base eq 'G' or $read_base eq 'A'){ # a bisulfite converted position may be a G or A
-	if ($verbose){ warn "genome 2 specific!\n";}
-	# warn "Alternative base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
-	++$genome2;
-      }
-      elsif($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
-	if ($verbose){ warn "genome 1 specific!\n";}
-	++$genome1;
-      }
-      else{
-	if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-	++$irrelevant;
-      }
-    }
-    else{
-      die "Unable to identify read alignment strand\n";
-    }
-  }
-
-  ### The SNP did not affect a C or G position at all
-  else{
-    # warn "they do exist! Ref base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
-    if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
-      if ($verbose){ warn "genome 1 specific!\n";}
-      ++$genome1;
-    }
-    elsif ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
-      if ($verbose){ warn "genome 2 specific!\n";}
-      ++$genome2;
-    }
-    else{
-      if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-      ++$irrelevant;
-    }
-  }
-
-  return ($genome1,$genome2,$irrelevant);
+    return ($genome1,$genome2,$irrelevant);
 
 }
 
@@ -1669,7 +1715,7 @@ SNPsplit-sort specific options (tag2sort):
 --version              Displays version information and exits.
 
 
-                                   Script last modified: 09 January 2017
+                                   Script last modified: 13 June 2017
 EOF
     ;
   exit 1;
