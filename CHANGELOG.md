@@ -1,9 +1,18 @@
-## v0.3.2_dev
+## v0.3.3
 
 SNPsplit
 -----
 
 - Changed `FindBin qw($Bin)` to `FindBin qw($RealBin)` so that symlinks to `tag2sort` are resolved properly.
+
+- in certain cases, some specific SNPs were only used for the allele assignment if they were methylated. In more detail: In cases where the SNP was either C/G (REF/ALT) or G/C (REF/ALT), and the read was on the opposing strand, only the methylated form of the C on the reverse strand had previously been allowed as a valid expected base. This has now been changed so that both G and A are considered valid for the strain containing a G at the SNP position (see also this [issue](https://github.com/FelixKrueger/SNPsplit/issues/11)).
+
+- Changed the way in which C>T SNPs are handled in the allele-tagging report (note that this was merely a report/interpretation thing and did not have any effect the on the actual results). Previously, reads without a call for genome 1 or genome 2 had been listed as: 
+_reads did not contain one of the expected bases at known SNP positions_. 
+In a bisulfite setting this also included C>T SNPs however, and hence the number could have been rather high (>10%). I have now changed this so that reads which had at least one C>T SNP and were unassignable at the same time are scored differently:
+_reads that were unassignable contained C>T SNPs preventing the assignment_
+
+
 
 ## v0.3.2
 
