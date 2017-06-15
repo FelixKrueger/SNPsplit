@@ -27,7 +27,7 @@ my %counting;
 my %fhs;
 
 my $parent_dir = getcwd();
-my $SNPsplit_version = '0.3.2';
+my $SNPsplit_version = '0.3.3';
 
 my ($paired,$hic,$verbose,$samtools_path,$bam,$output_dir,$conflict,$singletons) = process_commandline();
 
@@ -1030,8 +1030,11 @@ sub process_commandline{
 
                          SNPsplit Sorting Module - tag2sort
                               SNPsplit version: $SNPsplit_version
-                 Copyright 2014 Felix Krueger, Babraham Bioinformatics
-                  www.bioinformatics.babraham.ac.uk/projects/bismark/
+                          Copyright 2014-17, Felix Krueger
+                              Babraham Bioinformatics
+                  www.bioinformatics.babraham.ac.uk/projects/SNPsplit/
+                      https://github.com/FelixKrueger/SNPsplit
+
 
 
 VERSION

@@ -27,7 +27,7 @@ use Cwd;
 ### it will work with any other supplied VCF file.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.2_dev';
+my $pipeline_version = '0.3.3';
 my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build) = process_commandline ();
 
@@ -1250,8 +1250,10 @@ sub process_commandline{
 	print << "VERSION";
 	
                                SNPsplit Genome Preparation
-				 version: $pipeline_version
-                 Copyright 2014-16 Felix Krueger, Babraham Bioinformatics
+			           version: $pipeline_version
+                             Copyright 2014-17, Felix Krueger
+                                 Babraham Bioinformatics
+                        https://github.com/FelixKrueger/SNPsplit
 
 
 VERSION
