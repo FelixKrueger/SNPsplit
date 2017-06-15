@@ -1149,7 +1149,7 @@ sub sort_by_name_paired_end{
 sub read_snps{
     
     if ($snp_file =~ /\.gz$/){
-    open (SNP,"zcat $snp_file |") or die "Failed to read from gzipped $snp_file: $!\n\n";
+    open (SNP,"gunzip -c $snp_file |") or die "Failed to read from gzipped $snp_file: $!\n\n";
   }
   else{
     open (SNP,$snp_file) or die "Failed to read from $snp_file: $!\n\n";
@@ -1183,7 +1183,7 @@ sub read_snps_bisulfite{
   warn "Processing SNPs provided in '$snp_file' in a bisulfite-aware fashion...\n";
 
   if ($snp_file =~ /\.gz$/){
-    open (SNP,"zcat $snp_file |") or die "Failed to read from zgipped $snp_file: $!\n\n";
+    open (SNP,"gunzip -c $snp_file |") or die "Failed to read from zgipped $snp_file: $!\n\n";
   }
   else{
     open (SNP,$snp_file) or die "Failed to read from $snp_file: $!\n\n";
@@ -1321,7 +1321,7 @@ sub check_for_bs{
 
   ### if the user did not specify whether the alignment file was single-end or paired-end we are trying to get this information from the @PG header line in the SAM/BAM file
   if ($file =~ /\.gz$/){
-    open (DETERMINE,"zcat $file |") or die "Unable to read from gzipped file $file: $!\n";
+    open (DETERMINE,"gunzip -c $file |") or die "Unable to read from gzipped file $file: $!\n";
   }
   elsif ($file =~ /\.bam$/ ){
       open (DETERMINE,"$samtools_path view -h $file |") or die "Unable to read from BAM file $file: $!\n";
@@ -1369,7 +1369,7 @@ sub test_positional_sorting{
   sleep(1);
 
   if ($filename =~ /\.gz$/) {
-    open (TEST,"zcat $filename |") or die "Can't open gzipped file $filename: $!\n";
+    open (TEST,"gunzip -c $filename |") or die "Can't open gzipped file $filename: $!\n";
   }
   elsif ($filename =~ /bam$/){ ### this would allow to read BAM files that do not end in *.bam
     if ($samtools_path){

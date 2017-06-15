@@ -27,7 +27,7 @@ use Cwd;
 ### it will work with any other supplied VCF file.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.2';
+my $pipeline_version = '0.3.2_dev';
 my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build) = process_commandline ();
 
@@ -223,7 +223,7 @@ sub read_new_snp_annotation {
     }
 
     if ($file =~ /gz$/){
-	open (IN, "zcat $file |") or die $!;
+	open (IN, "gunzip -c $file |") or die $!;
     }
     else{
 	open (IN,$file) or die $!;
@@ -305,14 +305,14 @@ sub read_snp_files{
 
     
     if ($snp_file_strain =~ /\.gz$/){
-	open (SNP_STRAIN,"zcat $snp_file_strain |") or die "Failed to read from gzipped file $snp_file_strain: $!\n\n";
+	open (SNP_STRAIN,"gunzip -c $snp_file_strain |") or die "Failed to read from gzipped file $snp_file_strain: $!\n\n";
     }
     else{
 	open (SNP_STRAIN,"$snp_file_strain") or die "Failed to read from $snp_file_strain: $!\n\n";
     }
     
     if ($snp_file_strain2 =~ /\.gz$/){
-	open (SNP_STRAIN2,"zcat $snp_file_strain2 |") or die "Failed to read from gzipped file $snp_file_strain2: $!\n\n";
+	open (SNP_STRAIN2,"gunzip -c $snp_file_strain2 |") or die "Failed to read from gzipped file $snp_file_strain2: $!\n\n";
     }
     else{
 	open (SNP_STRAIN2,"$snp_file_strain2") or die "Failed to read from file $snp_file_strain2: $!\n\n";
