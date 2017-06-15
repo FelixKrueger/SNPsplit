@@ -12,7 +12,7 @@ unless (-d $dir){
   mkdir $dir or die "Failed to create directory: $!\n\n";
 }
 
-my @files = ('RELEASE_NOTES.txt','SNPsplit','tag2sort','SNPsplit_User_Guide.pdf','license.txt','SNPsplit_genome_preparation');
+my @files = ('CHANGELOG.md','SNPsplit','tag2sort','SNPsplit_User_Guide.pdf','license.txt','SNPsplit_genome_preparation');
 
 foreach my $file (@files){
   copy_and_warn($file);
