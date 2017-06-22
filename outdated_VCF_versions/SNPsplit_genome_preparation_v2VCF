@@ -6,9 +6,16 @@ use FindBin qw($Bin);
 use lib "$Bin/../lib";
 use Cwd;
 
+####################
+###
+### IMPORTANT NOTE
+###
 ### This preparation script is supposed to work with the previous version of the VCF file "mgp.v2.snps.annot.reformat.vcf.gz".
+###
+### This script filters the v2 VCF file for various SNPs versus the NCBIM37 mouse genome build and writes high confidence SNPs into a folder called 'SNPs_Sanger';
 
-## This program is Copyright (C) 2014-16, Felix Krueger (felix.krueger@babraham.ac.uk)
+
+## This program is Copyright (C) 2014-17, Felix Krueger (felix.krueger@babraham.ac.uk)
 
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -24,15 +31,15 @@ use Cwd;
 ## along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 
-### This script filters the v2 VCF file for various SNPs versus the NCBIM37 mouse genome build and writes high confidence SNPs into a folder called 'SNPs_Sanger';
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.1_dev';
+my $pipeline_version = '0.3.3';
 my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build) = process_commandline ();
 
 my %snps; # storing all filtered SNPs
 my %snps_dual_genome; # storing all SNPs for dual genome
+my %homozygous_SNPs; # storing SNP genotypes and FILTER value for dual hybrids
 
 my $snp_file_strain =   "all_SNPs_${strain}_GRCm38.txt.gz";
 my $snp_file_strain2;
@@ -89,7 +96,7 @@ if ($skip_filtering){
     warn "Skipped reading the VCF file and filtering SNPs again (specified by user)\n\n";
 }
 else{
-    filter_relevant_SNP_calls_from_VCF($strain,$strain_index);
+    filter_relevant_SNP_calls_from_VCF($strain,$strain_index,'1'); # the last number is the strain identity, here the first strain
     warn "Finished filtering and writing out SNPs for strain $strain\n\n";
 }
 
@@ -134,7 +141,7 @@ if ($dual_hybrid){
 	warn "Skipped reading the VCF file and filtering SNPs again for strain 2 (specified by user)\n\n";                                                                               
     }                                                                                                                                                                            
     else{
-	filter_relevant_SNP_calls_from_VCF($strain2,$strain2_index);
+	filter_relevant_SNP_calls_from_VCF($strain2,$strain2_index,'2'); # the last number is the strain identity, here the second strain for dual hybrids
 	warn "Finished filtering and writing out SNPs for strain 2 [$strain2]\n\n";
     }                                                                                                                                                                          
     
@@ -222,7 +229,7 @@ sub read_new_snp_annotation {
     }
 
     if ($file =~ /gz$/){
-	open (IN, "zcat $file |") or die $!;
+	open (IN, "gunzip -c $file |") or die $!;
     }
     else{
 	open (IN,$file) or die $!;
@@ -304,20 +311,20 @@ sub read_snp_files{
 
     
     if ($snp_file_strain =~ /\.gz$/){
-	open (SNP_STRAIN,"zcat $snp_file_strain |") or die "Failed to read from gzipped file $snp_file_strain: $!\n\n";
+	open (SNP_STRAIN,"gunzip -c $snp_file_strain |") or die "Failed to read from gzipped file $snp_file_strain: $!\n\n";
     }
     else{
 	open (SNP_STRAIN,"$snp_file_strain") or die "Failed to read from $snp_file_strain: $!\n\n";
     }
     
     if ($snp_file_strain2 =~ /\.gz$/){
-	open (SNP_STRAIN2,"zcat $snp_file_strain2 |") or die "Failed to read from gzipped file $snp_file_strain2: $!\n\n";
+	open (SNP_STRAIN2,"gunzip -c $snp_file_strain2 |") or die "Failed to read from gzipped file $snp_file_strain2: $!\n\n";
     }
     else{
 	open (SNP_STRAIN2,"$snp_file_strain2") or die "Failed to read from file $snp_file_strain2: $!\n\n";
     }
     
-    ### READING FROM SNP FILE FOR STRAIN 1
+    ### READING FROM SNP FILE FOR STRAIN 1 (these are only high confidence SNPs)
     warn "Storing SNP positions for strain $strain provided in '$snp_file_strain'\n";
     sleep (1);
     
@@ -346,19 +353,22 @@ sub read_snp_files{
     my $different = 0;
     my $unique_ref = 0; # unique ref here means the new Reference, i.e. Strain
     my $unique_SNP = 0; # unique SNP here means the new SNP genome, i.e. Strain2
-    
+    my $confidence_discrepancy = 0; # a measure for how many times a SNP was found as homozygous in both strains but with low confidence in one of them
+
     while (<SNP_STRAIN2>){
 	
 	++$snp_count_strain2;
 	chomp;
-
+	
 	my ($chr,$pos,$diff)  = (split /\t/)[1,2,4];
+	my $location = join (':',$chr,$pos);
+	
 	my ($ref,$snp) = (split /\//,$diff);
 	# warn "$chr\t$pos\tRef: $ref\tSNP: $snp\n"; sleep(1);
 	
 	if (exists $snps{$chr}->{$pos} ){
 	    
-	    $snps{$chr}->{$pos}->{read}++; # SNP is present in both genomes
+	    $snps{$chr}->{$pos}->{read}++; # SNP is present in both genomes as high confidence SNP.
 	    
 	    unless ($ref eq $snps{$chr}->{$pos}->{ref}){
 		warn "reference was different for the same position!!!\n";
@@ -390,8 +400,28 @@ sub read_snp_files{
 	    }
 	}
 	else{
-	    ++$unique_SNP;
-	    # warn "SNP is unique to SNP (Strain2). Printing...\n";
+	    # Now we need to check whether the SNP was also present but failing the filter in Strain 1
+	    if (exists $homozygous_SNPs{$location}->{strain1_filter}){
+		# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+		# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+		if ($homozygous_SNPs{$location}->{strain1_filter} eq 1){
+		    # warn "Fine, positions was high confidence\n";
+		}
+		else{ # if the position failed the filter we move on irrespective of what the genotype was
+		    ++$confidence_discrepancy;
+		    # warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+		    # warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+		    # warn "Confidence in Strain 1 SNP call was low, skipping this position irrespective of genotype\n\n";
+		    next;
+		}
+		# warn "\n";
+	    }
+	    else{
+		# warn "SNP did not exist in hash\n";
+	    }
+
+	    ++$unique_SNP; 
+	    # warn "SNP is unique to Strain2. Printing...\n";
 	    # warn "$genome_strain sequence: $ref\n";
 	    # warn "SNP (=Strain2) sequence: $snp\n"; sleep(1);
 	    print OUT_STRAIN2 "$_\n"; # Strain has the same sequence as Black6 ($genome_build)
@@ -409,7 +439,26 @@ sub read_snp_files{
     
     foreach my $chr (keys %snps){
 	foreach my $pos (keys %{$snps{$chr}}){
-	    if ($snps{$chr}->{$pos}->{read} == 0){
+	    my $location = join (':',$chr,$pos);
+	    
+	    if ($snps{$chr}->{$pos}->{read} == 0){ # present only for Strain 1
+		
+		# Now we need to check whether the SNP was also present but failing the filter in Strain 2
+		if (exists $homozygous_SNPs{$location}->{strain2_filter}){
+		    if ($homozygous_SNPs{$location}->{strain2_filter} eq 1){    
+			# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+			# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+			# warn "Fine, genotype call was good in both strains\n";
+		    }
+		    else{
+			# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
+			# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
+			# warn "Confidence in Strain 2 SNP call was low, skipping this position irrespective of genotype\n\n";   
+			++$confidence_discrepancy;
+			next;
+		    }
+		}
+		
 		++$unique_ref;
 		
 		### here we need to use the SNP position (i.e. Strain sequence) as new reference and the GRCm38 sequence as the SNP (i.e. where Strain2 is the same as GRCm38)
@@ -430,6 +479,7 @@ sub read_snp_files{
     warn "======================================================\n";
     warn "SNPs were the same in Ref and SNP genome (not written out):\t$same\n";
     warn "SNPs were present in both Ref and SNP genome but had a different sequence:\t$different\n";
+    warn "SNPs were low confidence in one strain and thus ignored:\t$confidence_discrepancy\n";
     warn "SNPs were unique to Ref [$strain]:\t\t\t\t$unique_ref\n";
     warn "SNPs were unique to SNP [$strain2]:\t\t\t\t$unique_SNP\n\n";
 
@@ -438,6 +488,7 @@ sub read_snp_files{
     print REPORT "======================================================\n";
     print REPORT "SNPs were the same in Ref and SNP genome (not written out):\t$same\n";
     print REPORT "SNPs were present in both Ref and SNP genome but had a different sequence:\t$different\n";
+    print REPORT "SNPs were low confidence in one strain and thus ignored:\t$confidence_discrepancy\n";
     print REPORT "SNPs were unique to Ref [$strain]:\t\t\t\t$unique_ref\n";
     print REPORT "SNPs were unique to SNP [$strain2]:\t\t\t\t$unique_SNP\n\n";
 
@@ -445,7 +496,7 @@ sub read_snp_files{
     close OUT_STRAIN2;
     close OUT_COMMON;
     close ALL_STRAIN_STRAIN2;
-
+ 
 }
 
 sub create_modified_chromosome {
@@ -762,10 +813,9 @@ sub read_snps {
 ###
 
 sub filter_relevant_SNP_calls_from_VCF{
-
-    my $strain = shift;
-    my $strain_index = shift;
-
+    
+    my ($strain, $strain_index, $strain_identity) = @_;    
+    
     if ($vcf_file =~ /gz$/){
 	open (IN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
     } 
@@ -814,37 +864,37 @@ sub filter_relevant_SNP_calls_from_VCF{
 	if ($count%1000000 ==0){
 	    warn "processed $count lines\n";
 	}
-	# last if ($count == 1000);
+	# last if ($count == 10000);
 	
 	my ($chr,$pos,$ref,$alt,$strain) = (split /\t/)[0,1,3,4,$strain_index];
 	# warn "$chr , $pos , $ref , $alt , $strain\n"; sleep(1);
 	
+	##### This is the specification for the v5 file
 	# $strain is in the form: GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI
 	# my ($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi) = split/:/,$strain;
-
+	# warn "genotype: $gt\nfilter:   $fi\n";
+	# warn "$fi\n"; sleep(1);
+	
 	######
 	###  V2 difference!
 	#  $strain for the v2 file is in the form: GT:GQ:DP:SP:PL:FI
 	my ($gt,$gq,$dp,$sp,$pl,$fi) = split/:/,$strain;
-	
 	######
 	unless ($fi){
-	    # warn "genotype: $gt\nfilter:   $fi\n\n";
+	    # warn "Strain: $strain\nchr: $chr\npos: $pos\ngenotype: $gt\nfilter:   $fi\n\n"; sleep(1);
+	    $fi = 0; # manually setting this position to fail, because in the V2 file some strains can simply have a `.` for some cell types, here is an example:
+	    # 1       3004123 .       T       C       31.45   Qual;MinAB;MinDP        AC1=1;AC=2;AF1=1;AN=14;DP4=1,0,1,0;DP=9;MQ=39;VDB=0.0178        GT:GQ:DP:SP:PL:FI       .       .       0/0:.:0:0:0,.,.:0       .       .       .       .       .   0/0:.:0:0:0,.,.:0        1/1:4:1:0:16,3,0:0      0/0:.:0:0:0,.,.:0       0/0:.:0:0:0,.,.:0       0/0:.:1:0:0,.,.:0       .       0/0:.:0:0:0,.,.:0       .
 	}
 
-	# warn "genotype: $gt\nfilter:   $fi\n\n";
-	# warn "$fi\n"; sleep(1);
-	# $gt is the Genotype:
-	
 	# '.'   = no genotype call was made
 	# '0/0' = genotype is the same as the reference genome
 	# '1/1' = homozygous alternative allele; can also be '2/2',
 	# '3/3', etc. if more than one alternative allele is present.
 	# '0/1' = heterozygous genotype; can also be '1/2', '0/2', etc.
 	
-	# $fi is filter, 1 for high confidence SNP, or 0 for low confidence
+	# $fi is FILTER, 1 for high confidence SNP, or 0 for low confidence
 	
-	### We are only looking for 1/1 calls, and filter for high confidence as well
+	### We are only looking for 1/1, 2/2 or 3/3 calls, and filter for high confidence as well
 	
 	# skipping if the reference base is not well defined in Black6
 	if ($ref =~ /[^ATCG]/){ # reference base contained any non A, C, T, G characters or more than one base
@@ -853,13 +903,35 @@ sub filter_relevant_SNP_calls_from_VCF{
 	}
 	
 	# skipping if the SNP is not well defined in the strain of interest
-	if ($alt =~ /[^ATCG]/){ # Alt base contained any non A, C, T, G characters or more than one base
-	    # warn "SNP was: $alt; skipping\n";
+	if ($alt =~ /[^ATCG,]/){ # Alt base contained any non A, C, T, G characters or commas which separate several different variants
+	    # warn "SNP was: $alt; GT was $gt; FI was: $fi; skipping\n";
 	    ++$too_many;
 	    next;
 	}
 	
-	# Filtering for genotype
+	my $location = join (':',$chr,$pos);
+	# warn "$location\n";   
+	
+	### For dual hybrids we will store all positions so we can add an additional filter later for positions that pass the filter (FI=1) in both strains
+	if ($dual_hybrid){
+	    if ($fi ne 1){ # only adding this position if the FI is not a PASS
+		if ($strain_identity == 1){
+		    # warn "Strain 1. Adding $location, $fi and $gt\n"; sleep(1);
+		    $homozygous_SNPs{$location}->{strain1_filter} = $fi;  
+		    $homozygous_SNPs{$location}->{strain1_genotype} = $gt;  
+		}
+		elsif($strain_identity == 2){
+		    # warn "Strain 2. Adding $location, $fi and $gt\n"; sleep(1);
+		    $homozygous_SNPs{$location}->{strain2_filter} = $fi;      
+		    $homozygous_SNPs{$location}->{strain2_genotype} = $gt; 
+		}
+		else{
+		    die "Strain was lacking the strain identity flag\n\n";
+		}
+	    }
+	}
+	
+	# Filtering for genotype. If the genotype is the same as the reference we will move on to the next position
 	if ($gt eq '0/0'){
 	    ++$same;
 	    # warn "same as reference\n";
@@ -867,20 +939,49 @@ sub filter_relevant_SNP_calls_from_VCF{
 	}
 	elsif ($gt eq '1/1'){
 	    ++$homozygous;
-	    # warn "homozygous alternative allele\n";
+	    if ($alt =~ /[^ATCG]/){ 	 
+		# warn "homozygous alternative allele: >$alt<\n";
+		my ($new_alt) = (split (/,/,$alt))[0];
+		# warn "New ALT is $new_alt\n";
+		# warn "genotype: $gt\nfilter:   $fi\n\n"; sleep(1);
+		$alt = $new_alt;  
+	    }
+	}
+	elsif ($gt eq '2/2'){
+	    # warn "$gt\n";
+	    ++$homozygous;
+	    if ($alt =~ /[^ATCG]/){ 	 
+		# warn "homozygous alternative allele: >$alt<\n";
+		my ($new_alt) = (split (/,/,$alt))[1];
+		# warn "New ALT is $new_alt\n\n"; sleep(1);
+		$alt = $new_alt;    
+	    }
+	}
+	elsif ($gt eq '3/3'){
+	    # warn "$gt\n";
+	    ++$homozygous;
+	    if ($alt =~ /[^ATCG]/){
+		# warn "homozygous alternative allele: >$alt<\n";
+		my ($new_alt) = (split (/,/,$alt))[2];                                                                                                        
+ 		# warn "New ALT is $new_alt\n\n"; sleep(1);                                                                             
+		$alt = $new_alt;   
+	    }
 	}
 	else{
+	    # this could be positions without genotype call ./. or any form of heterozygous call. In any case we will blacklist these positions and not use them for dual genomes
+	    # we do skip these positions but keep them on the 'blacklist' for dual genomes
 	    ++$other;
+	    #  warn "$gt\n"; 
 	    next;
 	}
+
+	### If we made it this far the SNP is a homozygous substitution in the current strain
 	
-	# Looking at the Filtering tag
+	# Looking at the Filtering tag now
 	# warn "$fi\n"; sleep(1);
 	if ($fi == 1){
 	    ++$hcg_count;
-	    
-	    my $location = join (':',$chr,$pos);
-	    # warn "$location\n";
+	   
 	    my $SNP = join ("\t",$count,$chr,$pos,'1',join ("\/",$ref,$alt));
 	    # field 4: 1 means top strand, -1 means reverse strand
 	    # warn "$SNP\n";sleep(1);
@@ -894,6 +995,7 @@ sub filter_relevant_SNP_calls_from_VCF{
 	}
 	else{
 	    ++$low_confidence;
+	    # warn "FI was $fi\n";
 	    next;
 	}
 	
@@ -917,7 +1019,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     warn "\nNot included into $strain genome:\n";
     warn "$same\thad the same sequence as the reference\n";
     warn "$too_many\t\thad no clearly defined alternative base\n";
-    warn "$other\t\tCalls were neither 0/0 (same as reference) or 1/1 (homozygous SNP)\n";
+    warn "$other\t\tCalls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)\n";
     warn "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
 
     print REPORT "SNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
@@ -928,7 +1030,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     print REPORT "\nNot included into $strain genome:\n";
     print REPORT "$same\thad the same sequence as the reference\n";
     print REPORT "$too_many\t\thad no clearly defined alternative base\n";
-    print REPORT "$other\t\tCalls were neither 0/0 (same as reference) or 1/1 (homozygous SNP)\n";
+    print REPORT "$other\t\tCalls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)\n";
     print REPORT "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
     
   
@@ -1164,8 +1266,10 @@ sub process_commandline{
 	print << "VERSION";
 	
                                SNPsplit Genome Preparation
-				 version: $pipeline_version
-                 Copyright 2014-16 Felix Krueger, Babraham Bioinformatics
+			           version: $pipeline_version
+                             Copyright 2014-17, Felix Krueger
+                                 Babraham Bioinformatics
+                        https://github.com/FelixKrueger/SNPsplit
 
 
 VERSION
@@ -1423,7 +1527,7 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 --version                     Displays version information and exits.
 
 
-                                                             Last modified: 03 November 2016
+                                                             Last modified: 22 June 2017
 
 EOF
     ;
