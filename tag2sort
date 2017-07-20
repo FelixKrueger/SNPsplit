@@ -27,7 +27,7 @@ my %counting;
 my %fhs;
 
 my $parent_dir = getcwd();
-my $SNPsplit_version = '0.3.3';
+my $SNPsplit_version = '0.3.3_dev';
 
 my ($paired,$hic,$verbose,$samtools_path,$bam,$output_dir,$conflict,$singletons) = process_commandline();
 
@@ -93,7 +93,7 @@ sub process_single_end{
 
   my $file = shift;
 
-  open (IN,"samtools view -h $file |") or die "Failed to read from BAM file $file: $!\n";
+  open (IN,"samtools view -h ${output_dir}$file |") or die "Failed to read from BAM file ${output_dir}$file: $!\n";
   warn "Now processing input file <<< $file >>>\n\n";
 
   my $outfile = open_output_filehandles($file);
@@ -731,7 +731,7 @@ sub open_output_filehandles{
 
     $conflicting_file =~ s/bam$/conflicting.sam/;
 
-    # ... unless someone want singletons to be treated differently to paired-end alignments...
+    # ... unless someone wants singletons to be treated differently to paired-end alignments...
     if ($singletons){
       $genome1_file_st     =~ s/bam$/genome1_st.sam/;
       $genome2_file_st     =~ s/bam$/genome2_st.sam/;
@@ -754,15 +754,15 @@ sub open_output_filehandles{
       $g1_g2_file       =~ s/sam$/bam/;
 
 
-      open (G1,"| $samtools_path view -bS 2>/dev/null - > $genome1_file") or die "Unable to write to BAM file '$genome1_file': $!\n";
-      open (G2,"| $samtools_path view -bS 2>/dev/null - > $genome2_file") or die "Unable to write to BAM file '$genome2_file': $!\n";
-      open (UNASSIGNED,"| $samtools_path view -bS 2>/dev/null - > $unassigned_file") or die "Unable to write to BAM file '$unassigned_file': $!\n";
+      open (G1,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$genome1_file") or die "Unable to write to BAM file '$genome1_file': $!\n";
+      open (G2,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$genome2_file") or die "Unable to write to BAM file '$genome2_file': $!\n";
+      open (UNASSIGNED,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$unassigned_file") or die "Unable to write to BAM file '$unassigned_file': $!\n";
       if ($conflict){
-	open (CONFLICT,"| $samtools_path view -bS 2>/dev/null - > $conflicting_file") or die "Unable to write to BAM file '$conflicting_file': $!\n";
+	open (CONFLICT,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$conflicting_file") or die "Unable to write to BAM file '$conflicting_file': $!\n";
       }
-      open (G1UA,"| $samtools_path view -bS 2>/dev/null - > $g1_ua_file") or die "Unable to write to BAM file '$g1_ua_file': $!\n";
-      open (G2UA,"| $samtools_path view -bS 2>/dev/null - > $g2_ua_file") or die "Unable to write to BAM file '$g2_ua_file': $!\n";
-      open (G1G2,"| $samtools_path view -bS 2>/dev/null - > $g1_g2_file") or die "Unable to write to BAM file '$g1_g2_file': $!\n";
+      open (G1UA,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$g1_ua_file") or die "Unable to write to BAM file '$g1_ua_file': $!\n";
+      open (G2UA,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$g2_ua_file") or die "Unable to write to BAM file '$g2_ua_file': $!\n";
+      open (G1G2,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$g1_g2_file") or die "Unable to write to BAM file '$g1_g2_file': $!\n";
     }
     else{
       $genome1_file     =~ s/sam$/bam/;
@@ -777,43 +777,43 @@ sub open_output_filehandles{
 	$conflicting_file_st =~ s/sam$/bam/;
       }
 
-      open (G1,"| $samtools_path view -bSh 2>/dev/null - > $genome1_file") or die "Unable to write to BAM file '$genome1_file': $!\n";
-      open (G2,"| $samtools_path view -bSh 2>/dev/null - > $genome2_file") or die "Unable to write to BAM file '$genome2_file': $!\n";
-      open (UNASSIGNED,"| $samtools_path view -bSh 2>/dev/null - > $unassigned_file") or die "Unable to write to BAM file '$unassigned_file': $!\n";
+      open (G1,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$genome1_file") or die "Unable to write to BAM file '$genome1_file': $!\n";
+      open (G2,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$genome2_file") or die "Unable to write to BAM file '$genome2_file': $!\n";
+      open (UNASSIGNED,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$unassigned_file") or die "Unable to write to BAM file '$unassigned_file': $!\n";
       if ($conflict){
-	open (CONFLICT,"| $samtools_path view -bSh 2>/dev/null - > $conflicting_file") or die "Unable to write to BAM file '$conflicting_file': $!\n";
+	open (CONFLICT,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$conflicting_file") or die "Unable to write to BAM file '$conflicting_file': $!\n";
       }
 
       if ($singletons){
-	open (G1_ST,"| $samtools_path view -bSh 2>/dev/null - > $genome1_file_st") or die "Unable to write to BAM file '$genome1_file_st': $!\n";
-	open (G2_ST,"| $samtools_path view -bSh 2>/dev/null - > $genome2_file_st") or die "Unable to write to BAM file '$genome2_file_st': $!\n";
-	open (UNASSIGNED_ST,"| $samtools_path view -bSh 2>/dev/null - > $unassigned_file_st") or die "Unable to write to BAM file '$unassigned_file_st': $!\n";
+	open (G1_ST,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$genome1_file_st") or die "Unable to write to BAM file '$genome1_file_st': $!\n";
+	open (G2_ST,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$genome2_file_st") or die "Unable to write to BAM file '$genome2_file_st': $!\n";
+	open (UNASSIGNED_ST,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$unassigned_file_st") or die "Unable to write to BAM file '$unassigned_file_st': $!\n";
 	if ($conflict){
-	  open (CONFLICT_ST,"| $samtools_path view -bSh 2>/dev/null - > $conflicting_file_st") or die "Unable to write to BAM file '$conflicting_file_st': $!\n";
+	  open (CONFLICT_ST,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$conflicting_file_st") or die "Unable to write to BAM file '$conflicting_file_st': $!\n";
 	}
       }
 
     }
   }
   else{ # writing out to a SAM file
-    open (G1,'>',$genome1_file) or die "Unable to write to file '$genome1_file': $!\n";
-    open (G2,'>',$genome2_file) or die "Unable to write to file '$genome2_file': $!\n";
-    open (UNASSIGNED,'>',$unassigned_file) or die "Unable to write to file '$unassigned_file': $!\n";
+    open (G1,'>',"${output_dir}$genome1_file") or die "Unable to write to file '$genome1_file': $!\n";
+    open (G2,'>',"${output_dir}$genome2_file") or die "Unable to write to file '$genome2_file': $!\n";
+    open (UNASSIGNED,'>',"${output_dir}$unassigned_file") or die "Unable to write to file '$unassigned_file': $!\n";
     if ($conflict){
-      open (CONFLICT,'>',$conflicting_file) or die "Unable to write to file '$conflicting_file': $!\n";
+      open (CONFLICT,'>',"${output_dir}$conflicting_file") or die "Unable to write to file '$conflicting_file': $!\n";
     }
 
     if ($singletons){
-      open (G1_ST,'>',$genome1_file_st) or die "Unable to write to file '$genome1_file_st': $!\n";
-      open (G2_ST,'>',$genome2_file_st) or die "Unable to write to file '$genome2_file_st': $!\n";
-      open (UNASSIGNED_ST,'>',$unassigned_file_st) or die "Unable to write to file '$unassigned_file_st': $!\n";
+      open (G1_ST,'>',"${output_dir}$genome1_file_st") or die "Unable to write to file '$genome1_file_st': $!\n";
+      open (G2_ST,'>',"${output_dir}$genome2_file_st") or die "Unable to write to file '$genome2_file_st': $!\n";
+      open (UNASSIGNED_ST,'>',"${output_dir}$unassigned_file_st") or die "Unable to write to file '$unassigned_file_st': $!\n";
       if ($conflict){
-	open (CONFLICT_ST,'>',$conflicting_file_st) or die "Unable to write to file '$conflicting_file_st': $!\n";
+	open (CONFLICT_ST,'>',"${output_dir}$conflicting_file_st") or die "Unable to write to file '$conflicting_file_st': $!\n";
       }
     }
   }
 
-  open (REPORT,'>',$report_file) or die "Unable to write to file '$report_file': $!\n";
+  open (REPORT,'>',"${output_dir}$report_file") or die "Unable to write to file '$report_file': $!\n";
 
   if ($hic){
     warn "Input file:\t\t\t\t\t\t'$infile'\n";
@@ -940,7 +940,16 @@ sub print_helpfile{
 
   SYNOPSIS:
 
-  This script ...
+  This script processes allele tagged input files produced by SNPsplit and sorts the 'allele_tagged.bam'
+  file into several sub-files, depending on the experiment type and options selected. By default reads are
+  written to the following files:  
+
+   ... _genome1.bam 
+   ... _genome2.bam
+   ... _unassigned.bam
+
+  For more information on sorting options pelase refer to the SNPsplit documentation.
+
 
   USAGE: tag2sort [options] [SNPsplit tagged input file(s)]
 
@@ -955,6 +964,9 @@ be assigned to a specific allele, and they are one of the following:
 
 --paired               Paired-end mode. (Default: OFF).
 
+-o/--outdir <dir>      Write all output files into this directory. By default the output files will be written into
+                       the same folder as the input file(s).
+    
 --singletons           If the allele-tagged paired-end file also contains singleton alignments (which is the
                        default for e.g. TopHat), these will be written out to extra files (ending in _st.bam)
                        instead of writing everything to combined paired-end and singleton files. Default: OFF.
@@ -980,7 +992,7 @@ be assigned to a specific allele, and they are one of the following:
 
 
 
-                          Script last modified: 24 April 2016
+                          Script last modified: 20 July 2017
 
 EOF
     ;
@@ -1001,16 +1013,16 @@ sub process_commandline{
   my $conflict;
   my $singletons;
 
-  my $command_line = GetOptions ('help|man' => \$help,
-				 'output_dir=s' => \$output_dir,
-				 'paired' => \$paired,
-				 'verbose' => \$verbose,
-				 'version' => \$version,
-				 'hic' => \$hic,
-				 'samtools_path=s' => \$samtools_path,
-				 'sam' => \$sam,
-				 'conflicting|weird' => \$conflict,
-				 'singletons' => \$singletons,
+  my $command_line = GetOptions ('help|man'           => \$help,
+				 'output_dir=s'       => \$output_dir,
+				 'paired'             => \$paired,
+				 'verbose'            => \$verbose,
+				 'version'            => \$version,
+				 'hic'                => \$hic,
+				 'samtools_path=s'    => \$samtools_path,
+				 'sam'                => \$sam,
+				 'conflicting|weird'  => \$conflict,
+				 'singletons'         => \$singletons,
 				);
 
   ### EXIT ON ERROR if there were errors with any of the supplied options
@@ -1043,10 +1055,32 @@ VERSION
 
   # print join ("\t", @ARGV),"\n";
 
+
+  ### no files provided
+  unless (@ARGV){
+    warn "You need to provide one or more allele-tagged SNPsplit files to start sorting them allele-specifically. Please respecify!\n\n";
+    sleep(2);
+
+    print_helpfile();
+    exit;
+  }
+
+  ### OUTPUT DIR PATH
+  if (defined $output_dir){
+      unless ($output_dir eq ''){ # if the output dir has been passed on by SNPsplit and is an empty string we don't want to change it
+	  unless ($output_dir =~ /\/$/){
+	      $output_dir =~ s/$/\//;
+	  }
+      }
+  }
+  else{
+      $output_dir = '';
+  }
+  
   ### checking to see if all files are indeed present in the folder
   foreach my $file (@ARGV){
-    unless(-e $file){
-      die "Input file '$file' doesn't exist in the input folder. Please check filenames and try again!\n\n";
+      unless(-e "$output_dir$file"){
+	  die "Input file '$output_dir$file' doesn't exist in the input folder. Please check filenames and try again!\n\n";
     }
     unless ($file =~ /\.bam$/){
       die "Supplied file needs to be a SNPsplit tagged BAM file (ending in .bam). Please respecify!\n";
@@ -1109,20 +1143,10 @@ VERSION
   }
 
   unless (defined $samtools_path){
-    die "Could not find an installation of Samtools on your system. Please either install Samtools first or provide the path to an existing installation\n\n";
+      die "Could not find an installation of Samtools on your system. Please either install Samtools first or provide the path to an existing installation\n\n";
   }
 
-  ### OUTPUT DIR PATH
-  if (defined $output_dir){
-    unless ($output_dir eq ''){ # if the output dir has been passed on by the methylation extractor and is an empty string we don't want to change it
-      unless ($output_dir =~ /\/$/){
-	$output_dir =~ s/$/\//;
-      }
-    }
-  }
-  else{
-    $output_dir = '';
-  }
+
   my $bam;
   if ($sam){
     $bam = 0;

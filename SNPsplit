@@ -25,7 +25,7 @@ use Cwd;
 
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.3';
+my $pipeline_version = '0.3.3_dev';
 my $parent_dir = getcwd();
 my ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
 my %snps; # storing SNP position and sequence information for all SNPs
@@ -148,24 +148,27 @@ while (@ARGV){
     if ($verbose){
 	push @args, '--verbose';
     }
+    if (defined $output_dir){
+	push @args, "--output_dir $output_dir";
+    }  
     if ($conflict){
 	push @args, '--conflicting';
     }
     if ($singletons){
 	push @args, '--singletons';
     }
-
+    
     system ("$RealBin/tag2sort @args $outfile");
 
     ####
-
+    
     my $sortfile = $outfile;
-
+    
     if ($sortfile =~ s/allele_flagged\.bam$/bam/){
 	if ($sortfile =~ s/bam$/SNPsplit_sort.txt/){
 	    if (-e $sortfile){
 		
-		open (SORT,$sortfile) or die "Failed to read sorting report from '$sortfile'\n";
+		open (SORT,"${output_dir}$sortfile") or die "Failed to read sorting report from '${output_dir}$sortfile': $!\n";
 		my $doc;
 		while(<SORT>){
 		    chomp;
@@ -183,7 +186,6 @@ while (@ARGV){
 	}
     }
     warn "SNPsplit processing finished...\n\n";
-
 }
 
 ###
@@ -1306,13 +1308,13 @@ sub open_output_filehandles{
 
     if ($bam){
 	$outfile =~ s/sam$/bam/;
-	open (OUT,"| $samtools_path view -bS 2> /dev/null - > $outfile") or die "Unable to write to BAM file '$outfile': $!\n";
+	open (OUT,"| $samtools_path view -bS 2> /dev/null - > ${output_dir}$outfile") or die "Unable to write to BAM file '$outfile': $!\n";
     }
     else{ # writing out to a SAM file
-	open (OUT,'>',$outfile) or die "Unable to write to file '$outfile': $!\n";
+	open (OUT,'>',"${output_dir}$outfile") or die "Unable to write to file '${output_dir}$outfile': $!\n";
     }
 
-    open (REPORT,'>',$report_file) or die "Unable to write to file '$report_file': $!\n";
+    open (REPORT,'>',"${output_dir}$report_file") or die "Unable to write to file '${output_dir}$report_file': $!\n";
 
     warn "Input file:\t\t\t\t\t'$file'\n";
     print REPORT "Input file:\t\t\t\t\t'$file'\n";
@@ -1468,19 +1470,19 @@ sub process_commandline{
     my $singletons;
     my $bisulfite;
 
-    my $command_line = GetOptions ('help|man' => \$help,
-				   'versions' => \$version,
-				   'output_dir=s' => \$output_dir,
-				   'SNP_file=s' => \$snp_file,
-				   'no_sorting'=> \$no_sort,
-				   'verbose'=> \$verbose,
-				   'samtools_path=s' => \$samtools_path,
-				   'sam' => \$sam,
-				   'paired' => \$paired,
-				   'hic' => \$hic_data,
-				   'conflicting|weird' => \$conflict,
-				   'singletons' => \$singletons,
-				   'bisulfite' => \$bisulfite,
+    my $command_line = GetOptions ('help|man'                => \$help,
+				   'versions'                => \$version,
+				   'output_dir=s'            => \$output_dir,
+				   'SNP_file=s'              => \$snp_file,
+				   'no_sorting'              => \$no_sort,
+				   'verbose'                 => \$verbose,
+				   'samtools_path=s'         => \$samtools_path,
+				   'sam'                     => \$sam,
+				   'paired'                  => \$paired,
+				   'hic'                     => \$hic_data,
+				   'conflicting|weird'       => \$conflict,
+				   'singletons'              => \$singletons,
+				   'bisulfite'               => \$bisulfite,
 	);
 
     ### EXIT ON ERROR if there were errors with any of the supplied options
@@ -1590,17 +1592,36 @@ VERSION
 	sleep(1);
     }
 
-    ### OUTPUT DIR PATH
+    ### OUTPUT DIRECTORY PATH
+    chdir $parent_dir or die "Failed to move back to current working directory\n";
     if (defined $output_dir){
 	unless ($output_dir eq ''){
 	    unless ($output_dir =~ /\/$/){
 		$output_dir =~ s/$/\//;
 	    }
+	} 
+
+	if (chdir $output_dir){
+	    $output_dir = getcwd; #  making the path absolute
+	    unless ($output_dir =~ /\/$/){
+		$output_dir =~ s/$/\//;
+	    }
 	}
+	else{
+	    mkdir $output_dir or die "Unable to create directory $output_dir $!\n";
+	    warn "Created output directory $output_dir!\n\n";
+	    chdir $output_dir or die "Failed to move to $output_dir\n";
+	    $output_dir = getcwd; #  making the path absolute
+	    unless ($output_dir =~ /\/$/){
+		$output_dir =~ s/$/\//;
+	    }
+	}
+	warn "Output will be written into the directory: $output_dir\n";
     }
     else{
 	$output_dir = '';
     }
+    chdir $parent_dir or die "Failed to move back to current working directory\n";
 
     if ($sam){
 	$bam = 0;
@@ -1652,64 +1673,68 @@ sub print_helpfile{
 	SNPsplit operates in two stages:
 
 	I) SNPsplit-tag: SNPsplit analyses reads (single-end mode) or read pairs (paired-end mode) for overlaps 
-    with known SNP positions, and writes out a tagged BAM file in the same order as the original file.
+        with known SNP positions, and writes out a tagged BAM file in the same order as the original file.
 
-    II) SNPsplit-sort: the tagged BAM file is read in and is being sorted into allele-specific files. This process
-    may also be run as a stand-alone module (tag2sort).
-
-
-    The SNPsplit-tag module determines whether a read can be assigned to a certain allele and appends an additional
-    optional field 'XX:Z:' to each read. The tag can be one of the following:
-
-  XX:Z:UA - Unassigned
-  XX:Z:G1 - Genome 1-specific
-  XX:Z:G2 - Genome 2-specific
-  XX:Z:CF - Conflicting
+        II) SNPsplit-sort: the tagged BAM file is read in and is being sorted into allele-specific files. This process
+        may also be run as a stand-alone module (tag2sort).
 
 
-    The SNPsplit-sort module reads in the tagged BAM file and sorts the reads (or read pairs) according to their XX:Z:
-    tag (or the combination of tags for paired-end or Hi-C reads) into subfiles.
+        The SNPsplit-tag module determines whether a read can be assigned to a certain allele and appends an additional
+        optional field 'XX:Z:' to each read. The tag can be one of the following:
+
+        XX:Z:UA - Unassigned
+        XX:Z:G1 - Genome 1-specific
+        XX:Z:G2 - Genome 2-specific
+        XX:Z:CF - Conflicting
 
 
-  USAGE:      SNPsplit  [options] --snp_file <SNP.file.gz> [input file(s)]
+        The SNPsplit-sort module reads in the tagged BAM file and sorts the reads (or read pairs) according to their XX:Z:
+        tag (or the combination of tags for paired-end or Hi-C reads) into subfiles.
+
+
+      USAGE:      SNPsplit  [options] --snp_file <SNP.file.gz> [input file(s)]
 
 
     input file(s)          Mapping output file in SAM or BAM format. SAM files (ending in .sam) will first be
     converted to BAM using Samtools.
 
     --snp_file <file>      Mandatory file specifying SNP positions to be considered; may be a plain text file or
-    gzip compressed. Currently, the SNP file is expected to be in the following format:
+                           gzip compressed. Currently, the SNP file is expected to be in the following format:
 
-    SNP-ID     Chromosome  Position    Strand   Ref/SNP
-  example:   33941939        9       68878541       1       T/G
+                                       SNP-ID     Chromosome  Position    Strand   Ref/SNP
+                           example:   33941939        9       68878541       1       T/G
 
-    Only the information contained in fields 'Chromosome', 'Position' and 'Reference/SNP base'
-    are being used for analysis. The genome referred to as 'Ref' will be used as genome 1,
-    the genome containing the 'SNP' base as genome 2.
+                           Only the information contained in fields 'Chromosome', 'Position' and 'Reference/SNP base'
+                           are being used for analysis. The genome referred to as 'Ref' will be used as genome 1,
+                           the genome containing the 'SNP' base as genome 2.
 
     --paired               Paired-end mode. (Default: OFF).
 
+    -o/--outdir <dir>      Write all output files into this directory. By default the output files will be written into
+                           the same folder as the input file(s). If the specified folder does not exist, SNPsplit will attempt
+                           to create it first. The path to the output folder can be either relative or absolute.
+
     --singletons           If the allele-tagged paired-end file also contains singleton alignments (which is the
-    default for e.g. TopHat), these will be written out to extra files (ending in _st.bam)
-    instead of writing everything to combined paired-end and singleton files. Default: OFF.
+                           default for e.g. TopHat), these will be written out to extra files (ending in _st.bam)
+                           instead of writing everything to combined paired-end and singleton files. Default: OFF.
 
     --no_sort              This option skips the sorting step if BAM files are already sorted by read name (e.g.
-    Hi-C files generated by HiCUP). Please note that setting --no_sort for unsorted paired-end
-    files will break the tagging process!
+                           Hi-C files generated by HiCUP). Please note that setting --no_sort for unsorted paired-end
+                           files will break the tagging process!
 
     --hic                  Assumes Hi-C data processed with HiCUP (www.bioinformatics.babraham.ac.uk/projects/hicup/)
-    as input, i.e. the input BAM file is paired-end and Reads 1 and 2 follow each other. Thus,
-    this option also sets the flags --paired and --no_sort. Default: OFF.
+                           as input, i.e. the input BAM file is paired-end and Reads 1 and 2 follow each other. Thus,
+                           this option also sets the flags --paired and --no_sort. Default: OFF.
 
     --bisulfite            Assumes Bisulfite-Seq data processed with Bismark (www.bioinformatics.babraham.ac.uk/projects/bismark/)
-    as input. In paired-end mode (--paired), Read 1 and Read 2 of a pair are expected to follow
-    each other in consecutive lines. SNPsplit will run a quick check at the start of a run to see if the
-    file provided appears to be a Bismark file, and set the flags --bisulfite and/or --paired
-                       automatically. In addition it will perform a quick check to see if a paired-end file appears
-                       to have been positionally sorted, and if not will set the --no_sort flag.
+                           as input. In paired-end mode (--paired), Read 1 and Read 2 of a pair are expected to follow
+                           each other in consecutive lines. SNPsplit will run a quick check at the start of a run to see if the
+                           file provided appears to be a Bismark file, and set the flags --bisulfite and/or --paired
+                           automatically. In addition it will perform a quick check to see if a paired-end file appears
+                           to have been positionally sorted, and if not will set the --no_sort flag.
 
---samtools_path        The path to your Samtools installation, e.g. /home/user/samtools/. Does not need to
-    be specified explicitly if Samtools is in the PATH already.
+    --samtools_path        The path to your Samtools installation, e.g. /home/user/samtools/. Does not need to
+                           be specified explicitly if Samtools is in the PATH already.
 
     --verbose              Verbose output (for debugging).
 
@@ -1717,26 +1742,26 @@ sub print_helpfile{
 
 
     SNPsplit-sort specific options (tag2sort):
-
+    ==========================================
 
     --conflicting/--weird  Reads or read pairs that were classified as 'Conflicting' (XX:Z:CF) will be written to
-    an extra file (ending in .conflicting.bam) instead of being simply skipped. Reads may be
-    classified as 'Conflicting' if a single read contains SNP information for both genomes at
-    the same time, or if the SNP position was deleted from the read. Read-pairs are considered
-    'Conflicting' if either read is was tagged with the XX:Z:CF flag. Default: OFF.
+                           an extra file (ending in .conflicting.bam) instead of being simply skipped. Reads may be
+                           classified as 'Conflicting' if a single read contains SNP information for both genomes at
+                           the same time, or if the SNP position was deleted from the read. Read-pairs are considered
+                           'Conflicting' if either read is was tagged with the XX:Z:CF flag. Default: OFF.
 
     --sam                  The output will be written out in SAM format instead of BAM (default). SNPsplit will attempt to use
-    the path to Samtools that was specified with --samtools_path, or, if it hasn't been
-                       specified, attempt to find Samtools in the PATH environment. If no installation of
-                       Samtools can be found, the SAM output will be compressed with GZIP instead (yielding a
-                       .sam.gz output file).
+                           the path to Samtools that was specified with --samtools_path, or, if it hasn't been
+                           specified, attempt to find Samtools in the PATH environment. If no installation of
+                           Samtools can be found, the SAM output will be compressed with GZIP instead (yielding a
+                           .sam.gz output file).
 
---help                 Displays this help information and exits.
+    --help                 Displays this help information and exits.
 
---version              Displays version information and exits.
+    --version              Displays version information and exits.
 
 
-                                   Script last modified: 15 June 2017
+                                   Script last modified: 20 July 2017
 EOF
     ;
   exit 1;
