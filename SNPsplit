@@ -148,7 +148,7 @@ while (@ARGV){
     if ($verbose){
 	push @args, '--verbose';
     }
-    if (defined $output_dir){
+    if ($output_dir){ # not passing on empty strings
 	push @args, "--output_dir $output_dir";
     }  
     if ($conflict){
