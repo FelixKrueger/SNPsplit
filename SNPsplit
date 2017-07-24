@@ -1283,10 +1283,14 @@ sub sort_snps{
 }
 
 sub open_output_filehandles{
-
-    my $file = my $infile = shift;
+  
+    my $file = shift;  
+  
+    # replacing folder information before creating output file names 24 07 2017
+    $file =~ s/.*\///;
+    
     my $outfile = my $genome1_file = my $genome2_file = my $unassigned_file = my $impossible_to_distinguish_file = my $report_file = $file;
-
+    
     # if files were sorted they look like this
     $genome1_file =~ s/sorted\.//;
     $genome2_file =~ s/sorted\.//;
