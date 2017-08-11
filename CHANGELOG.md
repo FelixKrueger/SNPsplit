@@ -1,4 +1,4 @@
-## v0.3.3
+## v0.3.3 (15 June 2017)
 
 #### SNPsplit
 -----
@@ -15,7 +15,7 @@ _reads that were unassignable contained C>T SNPs preventing the assignment_
 - Changed all instances of `zcat` to `gunzip -c` in `SNPsplit` and `SNPsplit_genome_preparation` to prevent errors on certain OSX platforms
 
 
-## v0.3.2
+## v0.3.2 (29 March 2017)
 
 #### SNPsplit
 -----
@@ -36,7 +36,7 @@ _reads that were unassignable contained C>T SNPs preventing the assignment_
 - Added a new version of the genome preparation script that can deal with the latest version of the VCF file for the old NCBIM37 genome build ("mgp.v2.snps.annot.reformat.vcf.gz"). The script is called "SNPsplit_genome_preparation_v2VCF" and may be found in the folder "outdated_VCF_versions" on Github. Please note that this does not include the changes to we made the current version (see above).
 
 
-## v0.3.1 (18-07-2016)
+## v0.3.1 (18 July 2016)
 
 - Manual: Added a fairly detailed section about how SNPs are filtered and processed during the SNPsplit genome preparation so it can be adapted more easily for different VCF files
 
@@ -95,12 +95,12 @@ SNPsplit_genome_preparation may be run in two different modes:
 - The VCF file is read one more time and filtered for high-confidence SNPs in strain 2 specified with `--strain2 <name>`
 - The filtered high-confidence SNP positions of strain 2 are incorporated as full sequence and optionally as N-masking
 - The SNP information of strain and strain 2 relative to the reference genome build are compared, and a new Ref/SNP annotation is constructed whereby the new Ref/SNP information will be Strain/Strain2 (and no longer the standard reference genome strain Black6 (C57BL/6J)).The full genome sequence given with `--strain <name>` is read into memory, and the high-confidence SNP positions between Strain and Strain2 are incorporated as full sequence and optionally as N-masking
-- The resulting `.fa` files are ready to be indexed with your favourite aligner. Proved and tested aligners include Bowtie2, Tophat, STAR, Hisat2, HiCUP and Bismark. Please note that STAR and HISAT2 may require you to disable soft-clipping, please see the SNPsplit manual more details
+- The resulting `.fa` files are ready to be indexed with your favourite aligner. Proved and tested aligners include Bowtie2, Tophat, STAR, HISAT2, HiCUP and Bismark. Please note that STAR and HISAT2 may require you to disable soft-clipping, please see the SNPsplit manual more details
 - Both the SNP filtering and the genome preparation write out little report files for record keeping
 
 
 
-## v0.2.0 (19 08 2015)
+## v0.2.0 (19 August 2015)
 
 - The name of the SNP annotation file is now displayed on screen and written to the report files.
 
@@ -113,7 +113,7 @@ SNPsplit_genome_preparation may be run in two different modes:
 
 
 
-## SNPsplit v0.1.3 (04 Nov 2014)
+## v0.1.3 (04 November 2014)
 
 - SNPsplit v0.1.3 is an initial beta release and as such is still a work in progress. All basic functions are working.
 
