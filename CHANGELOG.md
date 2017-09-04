@@ -1,3 +1,9 @@
+## v0.3.3_dev (04 Sept 2017)]
+
+- Fixed output-path handling for paired-end and Hi-C mode (was only working for single-end files).
+
+- Added option `-o/--output_dir` to specify an output directory.
+
 ## v0.3.3 (15 June 2017)
 
 #### SNPsplit
