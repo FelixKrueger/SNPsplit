@@ -47,7 +47,10 @@ my $new_ref_snp_annoations; # this will store the new Ref/SNP annotations for du
 
 warn "Summarising SNPsplit Genome Preparation Parameters\n";
 warn "="x50,"\n";
-warn "Processing SNPs from VCF file:\t\t$vcf_file\n";
+unless ($skip_filtering){
+    warn "Processing SNPs from VCF file:\t\t$vcf_file\n";
+}
+
 if ($skip_filtering){
     warn "Reading/filtering VCF file:\t\tNo (skipped by user)\n";
 }
@@ -81,8 +84,21 @@ if ($dual_hybrid){
 warn "\n";
 
 ### Dealing with chromosomes
-my @chroms = detect_chroms();
-print "Using the following chromosomes (detected from VCF file >>$vcf_file<<):\n";
+my @chroms;
+
+if ($skip_filtering){
+    @chroms = (1..22,'X','Y','MT'); # this is currently using chromosomes for the human genome
+}
+else{ # default
+    @chroms = detect_chroms();
+}
+
+if ($skip_filtering){
+    print "Using the following chromosomes (HARCODED IN!!!):\n";
+}
+else{
+    print "Using the following chromosomes (detected from VCF file >>$vcf_file<<):\n";
+}
 print join ("\t",@chroms),"\n\n";
 
 ### Determining and Filtering homozygous high-confidence SNPs for the strain in question
@@ -766,10 +782,13 @@ sub read_snps {
     open (IN,$file) or die $!;
 
     while (<IN>) {
+	$_ =~ s/\r//; # Windows line endings...
 	chomp;
+	# warn "$_\n"; sleep(1);
 	next unless ($_);
 	
 	my (undef,undef,$pos,$strand,$allele) = split(/\t/);
+	# warn "$pos , $strand , $allele\n";
 	next unless ($allele);
 	
 	my ($ref_allele,$snp_allele);
@@ -779,7 +798,7 @@ sub read_snps {
 	    $snp_allele = $2;
 	}
 	else {
-	    warn "Skipping allele $allele\n";
+	    warn "Skipping allele '$allele' as it appears to contain non DNA bases (only G,A,T,C allowed)\n";
 	    next;
 	}
 	
@@ -788,12 +807,13 @@ sub read_snps {
 	    $snp_allele =~ tr/GATC/CTAG/;
 	}
 	
+	# warn  "$pos , $ref_allele , $snp_allele\n"; sleep(1);
 	push @snps,[$pos,$ref_allele,$snp_allele];
     }
 
     # sorting snps
     @snps = sort {$a->[0] <=> $b->[0]} @snps;
-    
+
     return \@snps;
     
     close IN or warn "Failed to close filehandle IN for file $file: $!\n\n";
@@ -865,7 +885,7 @@ sub filter_relevant_SNP_calls_from_VCF{
 	
 	# $strain is in the form: GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI
 	my ($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi) = split/:/,$strain;
-		
+	
 	# warn "genotype: $gt\nfilter:   $fi\n";
 	# warn "$fi\n"; sleep(1);
 	# $gt is the Genotype:
@@ -1038,10 +1058,10 @@ sub filter_relevant_SNP_calls_from_VCF{
 
 
 sub detect_chroms{
-
+    
     my %chrom; # detecting the chromosomes from the VCF file
     my @chrom;
-
+    
     if ($vcf_file =~ /gz$/){
 	open (DETECT,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
     }
@@ -1064,7 +1084,7 @@ sub detect_chroms{
 	    }
 	}
     }
-
+    
     foreach my $chr(keys %chrom){
 	# warn "$chr\n";	
 	push @chrom, $chr;
@@ -1251,7 +1271,7 @@ sub process_commandline{
 	
                                SNPsplit Genome Preparation
 			           version: $pipeline_version
-                             Copyright 2014-17, Felix Krueger
+                             Copyright 2014-18, Felix Krueger
                                  Babraham Bioinformatics
                         https://github.com/FelixKrueger/SNPsplit
 
@@ -1267,97 +1287,103 @@ VERSION
 	}
     }
     else{
-	die "\nYou need to provide a VCF file detailing SNPs positions with '--vcf_file your.file' (e.g.: --vcf mgp.v5.merged.snps_all.dbSNP142.vcf.gz). Please respecify!\n\n";
-    }
-
-    my %strains = detect_strains($vcf_file);
-
-    if ($list_strains){
-	warn "\nAvailable genomes to choose from are:\n";
-	warn "="x37,"\n";
-	foreach my $strain(keys %strains){
-	    print "$strain\n";
+	unless($skip_filtering){
+	    die "\nYou need to provide a VCF file detailing SNPs positions with '--vcf_file your.file' (e.g.: --vcf mgp.v5.merged.snps_all.dbSNP142.vcf.gz). Please respecify!\n\n";
 	}
-	warn "="x37,"\n";
-	warn "\nPlease choose a strain using '--strain NAME' to continue.\n\n";
-	exit;
     }
 
     my $strain_index;
     my $strain2_index;
+    unless($skip_filtering){
+	my %strains = detect_strains($vcf_file);
 
-    ### Strain 1 (required)
-    if (defined $strain){
-	if (exists $strains{$strain}){
-	    $strain_index = $strains{$strain};
-	    warn "Strain defined as '$strain' (strain index: $strain_index)\n";
-	}
-	else{
-	    warn "Strain name specified [$strain] does not match any of the available strain names!\n";
+	if ($list_strains){
 	    warn "\nAvailable genomes to choose from are:\n";
-	    warn "="x37,"\n";	
+	    warn "="x37,"\n";
 	    foreach my $strain(keys %strains){
 		print "$strain\n";
 	    }
 	    warn "="x37,"\n";
-	    die "\nPlease double check the name and try again (using '--strain NAME')\n\n";
+	    warn "\nPlease choose a strain using '--strain NAME' to continue.\n\n";
+	    exit;
 	}
-    }
-    else{
-	warn "No strain specified!\n";
-	warn "\nAvailable genomes to choose from are:\n";
-	warn "="x37,"\n";	
-	foreach my $strain(keys %strains){
-	    print "$strain\n";
-	}
-	warn "="x37,"\n";
-	die "\nPlease choose one of the available strains using '--strain NAME' and try again\n\n";
-    }
-    
-    ### Strain 2 (optional)
-    if (defined $strain2){
-	unless ($dual_hybrid){
-	    warn "Strain 2 specified, setting option '--dual_hybrid'\n";
-	    $dual_hybrid = 1;
-	}
-    }
-    if ($dual_hybrid){
-	warn "Dual Hybrid strain selected\n";
 
-	# this automatically sets the full_sequence option
-	$full_sequence = 1;
 
-	if (defined $strain2){
-	    if (exists $strains{$strain2}){
-		$strain2_index = $strains{$strain2};
-		warn "Strain2 defined as '$strain2' (strain2 index: $strain2_index)\n";
+
+	### Strain 1 (required)
+	if (defined $strain){
+	    if (exists $strains{$strain}){
+		$strain_index = $strains{$strain};
+		warn "Strain defined as '$strain' (strain index: $strain_index)\n";
 	    }
 	    else{
-		warn "Strain2 name specified [$strain2] does not match any of the available strain names!\n";
+		warn "Strain name specified [$strain] does not match any of the available strain names!\n";
 		warn "\nAvailable genomes to choose from are:\n";
 		warn "="x37,"\n";	
 		foreach my $strain(keys %strains){
 		    print "$strain\n";
 		}
 		warn "="x37,"\n";
-		die "\nPlease double check the name and try again (using '--strain2 NAME')\n\n";
+		die "\nPlease double check the name and try again (using '--strain NAME')\n\n";
 	    }
 	}
 	else{
-	    warn "No strain 2 specified!\n";
+	    warn "No strain specified!\n";
 	    warn "\nAvailable genomes to choose from are:\n";
 	    warn "="x37,"\n";	
 	    foreach my $strain(keys %strains){
 		print "$strain\n";
 	    }
 	    warn "="x37,"\n";
-	    die "\nPlease choose one of the available strains using '--strain2 NAME' and try again\n\n";
+	    die "\nPlease choose one of the available strains using '--strain NAME' and try again\n\n";
 	}
 	
-	# make sure that Strain 1 and Strain 2 are different from each other
-	if ($strain eq $strain2){
-	    die "Strain 1 [$strain] and Strain 2 [$strain2] must be different from each other. Please respecify!\n\n"; 
+	### Strain 2 (optional)
+	if (defined $strain2){
+	    unless ($dual_hybrid){
+		warn "Strain 2 specified, setting option '--dual_hybrid'\n";
+		$dual_hybrid = 1;
+	    }
 	}
+	if ($dual_hybrid){
+	    warn "Dual Hybrid strain selected\n";
+
+	    # this automatically sets the full_sequence option
+	    $full_sequence = 1;
+
+	    if (defined $strain2){
+		if (exists $strains{$strain2}){
+		    $strain2_index = $strains{$strain2};
+		    warn "Strain2 defined as '$strain2' (strain2 index: $strain2_index)\n";
+		}
+		else{
+		    warn "Strain2 name specified [$strain2] does not match any of the available strain names!\n";
+		    warn "\nAvailable genomes to choose from are:\n";
+		    warn "="x37,"\n";	
+		    foreach my $strain(keys %strains){
+			print "$strain\n";
+		    }
+		    warn "="x37,"\n";
+		    die "\nPlease double check the name and try again (using '--strain2 NAME')\n\n";
+		}
+	    }
+	    else{
+		warn "No strain 2 specified!\n";
+		warn "\nAvailable genomes to choose from are:\n";
+		warn "="x37,"\n";	
+		foreach my $strain(keys %strains){
+		    print "$strain\n";
+		}
+		warn "="x37,"\n";
+		die "\nPlease choose one of the available strains using '--strain2 NAME' and try again\n\n";
+	    }
+	    
+	    # make sure that Strain 1 and Strain 2 are different from each other
+	    if ($strain eq $strain2){
+		die "Strain 1 [$strain] and Strain 2 [$strain2] must be different from each other. Please respecify!\n\n"; 
+	    }
+	}
+
     }
 
     ### GENOME FOLDER
