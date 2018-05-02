@@ -1,5 +1,7 @@
-# SNPsplit
-Allele-specific alignment sorting
+
+<p align="center"> <img title="SNPsplit" id="logo_img" src="Images/SNPsplit.png" width=300></p>
+
+## Allele-specific alignment sorting
 
 
 ### Note for using a UCSC/NCBI genome in conjunction with the VCF file from the Mouse Genomes Project 
@@ -35,4 +37,4 @@ The SNPsplit documentation can be found here: [SNPsplit User Guide](./SNPsplit_U
 
 SNPsplit was written by Felix Krueger, part of the [Babraham Bioinformatics](https://www.bioinformatics.babraham.ac.uk) group.
 
-<img title="Babraham Bioinformatics" id="logo_img" src="Images/bioinformatics_logo.png" width=300>
+<p align="center"> <img title="Babraham Bioinformatics" id="logo_img" src="Images/bioinformatics_logo.png" width=300></p>
