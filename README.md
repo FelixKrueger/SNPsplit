@@ -34,3 +34,5 @@ The SNPsplit documentation can be found here: [SNPsplit User Guide](./SNPsplit_U
 ## Credits
 
 SNPsplit was written by Felix Krueger, part of the [Babraham Bioinformatics](https://www.bioinformatics.babraham.ac.uk) group.
+
+<img title="Babraham Bioinformatics" id="logo_img" src="Images/bioinformatics_logo.png" width=300>
