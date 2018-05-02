@@ -17,13 +17,13 @@ awk '{if($1 ~ "^#") {gsub("contig=<ID=", "contig=<ID=chr"); gsub("contig=<ID=chr
 
 ## Installation
 
-SNPsplit is written in Perl and is executed from the command line. To install SNPsplit simply download the latest release of the code from the Releases page(./releases) and extract the files into a SNPsplit installation folder.
+SNPsplit is written in Perl and is executed from the command line. To install SNPsplit simply download the latest release of the code from the [Releases page](./releases) and extract the files into a SNPsplit installation folder.
 
 SNPsplit requires the following tools installed and ideally available in the `PATH`:
 - [Samtools](http://samtools.sourceforge.net/)
 
 ## Documentation
-The SNPsplit documentation can be found here: [SNPsplit User Guide](./SNSplit_User_Guide.md)
+The SNPsplit documentation can be found here: [SNPsplit User Guide](./SNPsplit_User_Guide.md)
 
 ## Links
 - SNPsplit publication at F1000 Research:
@@ -33,4 +33,4 @@ The SNPsplit documentation can be found here: [SNPsplit User Guide](./SNSplit_Us
 
 ## Credits
 
-SNPsplit was written by Felix Kruege, part of the [Babraham Bioinformatics](www.bioinformatics.babraham.ac.uk) group.
+SNPsplit was written by Felix Krueger, part of the [Babraham Bioinformatics](https://www.bioinformatics.babraham.ac.uk) group.
