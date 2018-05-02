@@ -14,3 +14,23 @@ Here is a one line `awk` script that does an Ensembl=>UCSC conversion, but you c
 ```
 awk '{if($1 ~ "^#") {gsub("contig=<ID=", "contig=<ID=chr"); gsub("contig=<ID=chrMT", "contig=<ID=chrM"); print} else {gsub("^MT", "M"); print "chr"$0}}' mgp.v5.merged.snps_all.dbSNP142.vcf
 ```
+
+## Installation
+
+SNPsplit is written in Perl and is executed from the command line. To install SNPsplit simply download the latest release of the code from the [Releases page](https://github.com/FelixKrueger/SNPsplit/releases) and extract the files into a SNPsplit installation folder.
+
+SNPsplit requires the following tools installed and ideally available in the `PATH`:
+- [Samtools](http://samtools.sourceforge.net/)
+
+## Documentation
+The SNPsplit documentation can be found here: [SNPsplit User Guide](./SNPsplit_User_Guide.md)
+
+## Links
+- SNPsplit publication at F1000 Research:
+  * https://f1000research.com/articles/5-1479/v2
+  
+- Here is a link to the [SNPsplit project site](https://www.bioinformatics.babraham.ac.uk/projects/SNPsplit/) at the Babraham Institute.
+
+## Credits
+
+SNPsplit was written by Felix Krueger, part of the [Babraham Bioinformatics](https://www.bioinformatics.babraham.ac.uk) group.
