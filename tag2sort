@@ -26,7 +26,7 @@ use lib "$Bin/../lib";
 my %counting;
 my %fhs;
 
-my $SNPsplit_version = '0.3.3_dev';
+my $SNPsplit_version = '0.3.4';
 
 my ($paired,$hic,$verbose,$samtools_path,$bam,$output_dir,$conflict,$singletons,$parent_dir) = process_commandline();
 
