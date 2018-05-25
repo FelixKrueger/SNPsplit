@@ -53,7 +53,7 @@ foreach my $file (@ARGV){
     if ($paired){
       if ($singletons){
 	warn "Input format:\t\t\tPaired-end (Singleton alignments will written to extra files)\n";
-      }	
+      }
       else{
 	warn "Input format:\t\t\tPaired-end\n";
       }
@@ -311,7 +311,7 @@ sub process_HiC_paired_end{
       $last_id = $last_line = undef; # resetting the last id and alignment
     }
     else{
-      die "Hi-C data has to be paired-end by definition, however the reads did not have the same read ID:\nRead 1: $last_line\nRead 2: $_\n\n";	
+      die "Hi-C data has to be paired-end by definition, however the reads did not have the same read ID:\nRead 1: $last_line\nRead 2: $_\n\n";
     }
 
     if ($count%1000000 == 0){
@@ -533,7 +533,7 @@ sub princess_paired_end{
       elsif($XX_tag eq 'G1'){
 	$genome1++;          # genome 1-specific
 	$g1_singletons++;
-	
+
 	if ($singletons){
 	  print G1_ST $last_line;
 	}
@@ -544,7 +544,7 @@ sub princess_paired_end{
       elsif($XX_tag eq 'G2'){
 	$genome2++;          # genome 2-specific
 	$g2_singletons++;
-	
+
 	if ($singletons){
 	  print G2_ST $last_line;
 	}
@@ -941,9 +941,9 @@ sub print_helpfile{
 
   This script processes allele tagged input files produced by SNPsplit and sorts the 'allele_tagged.bam'
   file into several sub-files, depending on the experiment type and options selected. By default reads are
-  written to the following files:  
+  written to the following files:
 
-   ... _genome1.bam 
+   ... _genome1.bam
    ... _genome2.bam
    ... _unassigned.bam
 
@@ -965,7 +965,7 @@ be assigned to a specific allele, and they are one of the following:
 
 -o/--outdir <dir>      Write all output files into this directory. By default the output files will be written into
                        the same folder as the input file(s).
-    
+
 --singletons           If the allele-tagged paired-end file also contains singleton alignments (which is the
                        default for e.g. TopHat), these will be written out to extra files (ending in _st.bam)
                        instead of writing everything to combined paired-end and singleton files. Default: OFF.
@@ -982,8 +982,6 @@ be assigned to a specific allele, and they are one of the following:
                        classified as 'Conflicting' if a single read contains SNP information for both genomes at
                        the same time, or if the SNP position was deleted from the read. Read-pairs are considered
                        'Conflicting' if either read is was tagged with the XX:Z:CF flag. Default: OFF.
-
---dir                  Output directory. Output is written to the current directory if not specified explicitly.
 
 --help                 Displays this help information and exits.
 
@@ -1077,7 +1075,7 @@ VERSION
   else{
       $output_dir = '';
   }
-  
+
   ### checking to see if all files are indeed present in the folder
   foreach my $file (@ARGV){
       unless(-e "$output_dir$file"){
@@ -1092,7 +1090,7 @@ VERSION
   unless (@ARGV){
       warn "You need to provide one or more allele-tagged SNPsplit files to start sorting them allele-specifically. Please respecify!\n\n";
       sleep(2);
-      
+
       print_helpfile();
       exit;
   }
@@ -1134,7 +1132,7 @@ VERSION
 	}
     }
   }
-  
+
   # Check whether Samtools is in the PATH if no path was supplied by the user
   else{
       if (!system "which samtools >/dev/null 2>&1"){ # STDOUT is binned, STDERR is redirected to STDOUT. Returns 0 if samtools is in the PATH
@@ -1142,11 +1140,11 @@ VERSION
 	  chomp $samtools_path;
     }
   }
-  
+
   unless (defined $samtools_path){
       die "Could not find an installation of Samtools on your system. Please either install Samtools first or provide the path to an existing installation\n\n";
   }
-  
+
 
   my $bam;
   if ($sam){
@@ -1155,9 +1153,9 @@ VERSION
   else{
       $bam = 1;
   }
-  
+
   $parent_dir = getcwd();
-  
+
   return ($paired,$hic,$verbose,$samtools_path,$bam,$output_dir,$conflict,$singletons,$parent_dir);
-  
+
 }
