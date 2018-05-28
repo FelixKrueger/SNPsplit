@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 use warnings;
 use strict;
 use Getopt::Long;
@@ -25,8 +25,8 @@ use Cwd;
 
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.3_dev';
-my $parent_dir = getcwd();
+my $pipeline_version = '0.3.4';
+my $parent_dir = getcwd;
 my ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
 my %snps; # storing SNP position and sequence information for all SNPs
 
@@ -107,7 +107,7 @@ while (@ARGV){
     else{ ### single-end
 	warn "File specified as single-end BAM file\n";
     }
-    
+
     if (%snps){ # not necessary to read SNPs a second time
 	warn "Using already stored SNP information\n";
 	sleep (1);
@@ -150,24 +150,24 @@ while (@ARGV){
     }
     if ($output_dir){ # not passing on empty strings
 	push @args, "--output_dir $output_dir";
-    }  
+    }
     if ($conflict){
 	push @args, '--conflicting';
     }
     if ($singletons){
 	push @args, '--singletons';
     }
-    
+
     system ("$RealBin/tag2sort @args $outfile");
 
     ####
-    
+
     my $sortfile = $outfile;
-    
+
     if ($sortfile =~ s/allele_flagged\.bam$/bam/){
 	if ($sortfile =~ s/bam$/SNPsplit_sort.txt/){
 	    if (-e $sortfile){
-		
+
 		open (SORT,"${output_dir}$sortfile") or die "Failed to read sorting report from '${output_dir}$sortfile': $!\n";
 		my $doc;
 		while(<SORT>){
@@ -271,7 +271,7 @@ sub process_masked_BAM_file{
 		++$count_N_containing;
 		### Determine whether the N was a known SNP and whether we can assign an allele
 		($genome1_count,$genome2_count,$ct_unassigned) = determine_N_position ($chr,$start,$cigar,$sequence,$md_tag,$_);
-		
+
 		if ($genome1_count > 0 and $genome2_count > 0){
 		    ++$bizarre;
 		    $XX_tag = 'XX:Z:CF'; #  read contained one or more SNPs for both genomes -> dodgy
@@ -348,10 +348,10 @@ sub process_masked_BAM_file{
     warn "$genome2 reads were specific for genome 2 ($perc_genome2%)\n";
     if ($bisulfite){
 	warn "$unassigned_but_ct reads that were unassignable contained C>T SNPs preventing the assignment\n"
-    }    
+    }
     warn "$no_snp reads did not contain one of the expected bases at known SNP positions ($perc_no_snp%)\n";
     warn "$bizarre contained conflicting allele-specific SNPs ($perc_bizarre%)\n\n\n";
-    
+
     print REPORT "\nAllele-tagging report\n",'='x21,"\n";
     print REPORT "Processed $count read alignments in total\n";
     print REPORT "Reads were unaligned and hence skipped: $unmapped ($perc_unmapped%)\n";
@@ -453,11 +453,11 @@ sub determine_N_position{
 		if ($ns[$index] =~/\W/){
 		    if ($verbose){ warn "Element contains a Non-Word character: $ns[$index]\n~~~~~~~~!!!\n"};
 		}
-		
+
 		if ($verbose){ warn "element contains a Non-DIGIT: $ns[$index]\n"};
 		my @array = split /[ATCG]/,$ns[$index];
 		if ($verbose){ warn "Elements in the array: ",scalar @array,"\n"};
-		
+
 		foreach my $element(@array){
 		    if ($verbose){ warn "Adding $element to pos\n"};
 		    $pos += $element;
@@ -478,7 +478,7 @@ sub determine_N_position{
 	    ### seeing if the SNP is present in the SNP position list
 	    if (exists $snps{$chr}->{$genomic_pos}){
 		++$snp_found;
-		
+
 		if ($verbose) { warn "SNP was present: ref: $snps{$chr}->{$genomic_pos}->{ref}\tsnp: $snps{$chr}->{$genomic_pos}->{snp}\n";}
 		if ($verbose){ warn "pos: $pos\n$sequence\n";}
 		my $read_base = substr($sequence,$pos,1); # The N position has not been adjusted for the N yet so can be used as index
@@ -532,18 +532,18 @@ sub determine_N_position{
 	foreach my $index (0..($#ns-1)){ # the last index of @ns is the number of matching strings after the last N, so is not relevant
 
 	    if ($ns[$index] =~/\D/){ # non-digit
-		
+
 		if ($ns[$index] =~/\W/){ # non-word character, e.g. ^ for deletions
 		    if ($verbose) { warn "element contains a Non-Word character: $ns[$index]\n";}
 		    if ($ns[$index] =~ /\^/){ # contains deletion
 			if ($verbose){  warn "This was a deletion\n";}
-			
+
 			# split into single characters
 			my @string = split //,$ns[$index];
 			if ($verbose){  warn "before starting, \$pos was $pos\n";}
 			my $operation; # will store the operation, either a number for matches or a variable number of letters for deletions
 			foreach my $char (@string){
-			    
+
 			    # setting first element
 			    unless (defined $operation){ # can be 0
 				if ($verbose){	warn "Setting \$operation to $char\n";}
@@ -551,7 +551,7 @@ sub determine_N_position{
 				next;
 			    }
 			    if ($verbose){   warn "$char\n";}
-			    
+
 			    if ($operation =~ /\d+/){
 				if ($verbose){ warn "$operation is a digit\n";}
 				if ($char =~ /\d+/){
@@ -571,10 +571,10 @@ sub determine_N_position{
 			    }
 			    else{ # $operation is a non-digit character
 				if ($verbose){ 	warn "$operation is a non-digit character\n";}
-				
+
 				if ($char =~ /\d+/){
 				    if ($verbose){ 	warn "\$char is now a digit, so need to process \$operation: $operation\n";}
-				    
+
 				    if ($operation =~ /^\^/){ #  if the string starts with a ^ symbol is was a deletion
 					if ($verbose){ 	 warn "Deletions do not count towards the position within a read -> skipping...\n";}
 				    }
@@ -582,8 +582,8 @@ sub determine_N_position{
 					if ($verbose){ warn "Now adding length of \$operation (just a mismatch)\n";}
 					$pos += (length $operation);
 				    }
-				    if ($verbose){ warn "\$pos is now $pos\n";}		
-				    
+				    if ($verbose){ warn "\$pos is now $pos\n";}
+
 				    # setting $operation as the new character
 				    $operation = $char;
 				    if ($verbose){ warn "Setting \$operation to: $operation\n";}
@@ -608,12 +608,12 @@ sub determine_N_position{
 		else{
 		    if ($verbose){ warn "Element contains a Non-DIGIT word character(s), but is no deletion: $ns[$index]\n";}
 		    my @array = split /[ATCG]/,$ns[$index];
-		    
+
 		    if ($verbose){
 			warn "Elements in the array: ",scalar @array,"\n";
 			print join ("\t",@array),"\n";
 		    }
-		    
+
 		    foreach my $element(@array){
 			if ($verbose){  warn "Adding $element to pos\n";}
 			$pos += $element;
@@ -693,7 +693,7 @@ sub determine_N_position{
 	    foreach my $index(0..$#len){
 
 		$operation_length = $len[$index];
-		
+
 		if ($ops[$index] eq 'M'){  # standard matching bases
 		    $endpos += $len[$index];
 		    if ($verbose){
@@ -747,7 +747,7 @@ sub determine_N_position{
 		    if ($verbose){	  warn "Operation is 'N', adding $len[$index] bp to the genomic position\n";}
 		    $genomic_pos += $len[$index];
 		    if ($verbose){  warn "Endpos is now: $endpos\n";}
-		}	
+		}
 		else{
 		    die "Found CIGAR operations other than M, I, D or N: '$ops[$index]'. Not allowed at the moment\n";
 		}
@@ -757,11 +757,11 @@ sub determine_N_position{
 	    if ($verbose){   warn "Found a match, genomic position should be: $genomic_pos\n~~~~~~~~~~~~~~\n\n"; sleep(1);}
 	    if (exists $snps{$chr}->{$genomic_pos}){
 		++$snp_found;
-		
+
 		if ($verbose){	warn "SNP was present: ref: $snps{$chr}->{$genomic_pos}->{ref}\tsnp: $snps{$chr}->{$genomic_pos}->{snp}\n";}
 		if ($verbose){	warn "pos: $pos\n$sequence\n";}
 		my $read_base = substr($sequence,$pos,1); # The N position has not been adjusted for the N yet so can be used as index
-		
+
 		if ($verbose){	warn "base in read was: $read_base\n";}
 		if ($bisulfite){
 		    ($genome1,$genome2,$irrelevant,$ct_unassigned) = score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant,$ct_unassigned);
@@ -787,7 +787,7 @@ sub determine_N_position{
 		if ($verbose){
 		    warn "SNP was not present in the SNP list\n";
 		}
-		
+
 	    }
 
 	    if ($verbose){  warn "now adjusting the position for the N itself\n";}
@@ -818,7 +818,7 @@ sub score_bisulfite_SNPs{
     my $first_read_conversion;
     my $genome_conversion;
     # warn "$line\n"; sleep(1);
-    
+
     my $strand;
     while ( $line =~ /(XR|XG):Z:([^\t]+)/g ) {
 	my $tag = $1;
@@ -834,7 +834,7 @@ sub score_bisulfite_SNPs{
 	    $genome_conversion =~ s/\r//;
 	}
     }
-    
+
     if ($first_read_conversion eq 'CT' and $genome_conversion eq 'CT') {
 	$strand = 'OT';		## this is OT
     }
@@ -861,18 +861,18 @@ sub score_bisulfite_SNPs{
 
 	### C>T SNP. Can't use the position for top strand alignments
 	if ($snps{$chr}->{$genomic_pos}->{snp} eq 'T'){
-	    
+
 	    if ($strand eq 'OT' or $strand eq 'CTOT'){
 		if ($verbose){ warn "This is a C>T SNP and can't be considered for OT or CTOT alignments!\n";}
 		++$ct_snp;
 		++$ct_unassigned;
 		return ($genome1,$genome2,$irrelevant,$ct_unassigned);
-	    }	    
+	    }
 	}
-	
+
 	# Top strand alignments with C>T SNPs should have been skipped already. For other SNPs we accept both C or T as C.
 	if ($strand eq 'OT' or $strand eq 'CTOT'){
-	    
+
 	    if ($read_base eq 'C' or $read_base eq 'T'){ # a bisulfite converted position may be a C or T (here we know that the ref base is C)
 		if ($verbose){ warn "genome 1 specific!\n";}
 		++$genome1;
@@ -889,7 +889,7 @@ sub score_bisulfite_SNPs{
 	}
 	# Alignments to the bottom strand can still be assigned normally as they do not involve the C directly
 	elsif ($strand eq 'OB' or $strand eq 'CTOB'){
-	    
+
 	    if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){ # == C
 		if ($verbose){ warn "genome 1 specific!\n";}
 		++$genome1;
@@ -898,8 +898,8 @@ sub score_bisulfite_SNPs{
 	    elsif ($snps{$chr}->{$genomic_pos}->{snp} eq 'G'){ # a bisulfite converted position on the bottom strand may be a G or A
 		if ($read_base eq 'G' or $read_base eq 'A'){
 		    if ($verbose){ warn "genome 2 specific!\n";}
-		    ++$genome2;	
-		}  
+		    ++$genome2;
+		}
 		else{
 		    if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
 		    ++$irrelevant;
@@ -922,10 +922,10 @@ sub score_bisulfite_SNPs{
 
     ### AlTERNATIVE STRAIN = C
     elsif ( $snps{$chr}->{$genomic_pos}->{snp} eq 'C'){ # the position is a C in the alternative/SNP genome
-	
+
 	### C>T SNP. Can't use the position for top strand alignments
 	if ($snps{$chr}->{$genomic_pos}->{ref} eq 'T'){
-	    
+
 	    if ($strand eq 'OT' or $strand eq 'CTOT'){
 		if ($verbose){ warn "This is a C>T SNP between alternative and reference and can't be considered for OT or CTOT alignments!\n";}
 		++$ct_snp;
@@ -959,13 +959,13 @@ sub score_bisulfite_SNPs{
 		# warn "Alternative base is C\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
 		++$genome2;
 	    }
-	    
+
 	    # added this section 13 June 2017
 	    elsif ($snps{$chr}->{$genomic_pos}->{ref} eq 'G'){ # a bisulfite converted position on the bottom strand may be a G or A
 		if ($read_base eq 'G' or $read_base eq 'A'){
 		    if ($verbose){ warn "genome 1 specific!\n";}
-		    ++$genome1;	
-		}  
+		    ++$genome1;
+		}
 		else{
 		    if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
 		    ++$irrelevant;
@@ -989,7 +989,7 @@ sub score_bisulfite_SNPs{
     elsif ( $snps{$chr}->{$genomic_pos}->{ref} eq 'G'){    # the position is a G in the reference genome
 
 	if ($snps{$chr}->{$genomic_pos}->{snp} eq 'A'){
-	    
+
 	    if ($strand eq 'OB' or $strand eq 'CTOB'){
 		if ($verbose){ warn "This is a G>A SNP and can't be considered for OB or CTOB alignments!\n";}
 		++$ct_snp;
@@ -1000,7 +1000,7 @@ sub score_bisulfite_SNPs{
 
 	# Bottom strand alignments with G>A SNPs should have been skipped already
 	if ($strand eq 'OT' or $strand eq 'CTOT'){  # Reads to the top strand can be assigned normally
-	    
+
 	    if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){ # eq G
 		if ($verbose){ warn "genome 1 specific!\n";}
 		# warn "Reference base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
@@ -1010,8 +1010,8 @@ sub score_bisulfite_SNPs{
 	    elsif ($snps{$chr}->{$genomic_pos}->{snp} eq 'C'){ # a bisulfite converted position on the bottom strand may be a G or A
 		if ($read_base eq 'C' or $read_base eq 'T'){
 		    if ($verbose){ warn "genome 2 specific!\n";}
-		    ++$genome2;	
-		}  
+		    ++$genome2;
+		}
 		else{
 		    if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
 		    ++$irrelevant;
@@ -1028,7 +1028,7 @@ sub score_bisulfite_SNPs{
 
 	}
 	elsif ($strand eq 'OB' or $strand eq 'CTOB'){ # Reads to the bottom strand might carry a bisulfite conversion
-	    
+
 	    if ($read_base eq 'G' or $read_base eq 'A'){ # a bisulfite converted position may be a G or A
 		if ($verbose){ warn "genome 1 specific!\n";}
 		# warn "Reference base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
@@ -1042,12 +1042,12 @@ sub score_bisulfite_SNPs{
 		if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
 		++$irrelevant;
 	    }
-	    
+
 	}
 	else{
 	    die "Unable to identify read alignment strand\n";
 	}
-	
+
     }
     ### AlTERNATIVE STRAIN = G, i.e. bottom strand C might be affected
     elsif ( $snps{$chr}->{$genomic_pos}->{snp} eq 'G'){ # the position is a G in the alternative/SNP genome
@@ -1056,16 +1056,16 @@ sub score_bisulfite_SNPs{
 
 	    if ($strand eq 'OB' or $strand eq 'CTOB'){
 		if ($verbose){ warn "This is a G>A SNP between alternative and reference genome and can't be considered for OB or CTOB alignments!\n"; }
-		++$ct_snp;	
+		++$ct_snp;
 		++$ct_unassigned;
 		return ($genome1,$genome2,$irrelevant,$ct_unassigned); # we are also returning 1 so we can discriminate between un-assignable and rejected C>T SNPs
 	    }
 
 	}
-	
+
 	# Bottom strand alignments with G>A SNPs should have been skipped already
 	if ($strand eq 'OT' or $strand eq 'CTOT'){  # Reads to the top strand can be assigned normally
-	    
+
 	    if ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){ # has to be G
 		if ($verbose){ warn "genome 2 specific!\n";}
 		# warn "Alternative base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
@@ -1075,8 +1075,8 @@ sub score_bisulfite_SNPs{
 	    elsif ($snps{$chr}->{$genomic_pos}->{ref} eq 'C'){ # a bisulfite converted position on the bottom strand may be a G or A
 		if ($read_base eq 'C' or $read_base eq 'T'){
 		    if ($verbose){ warn "genome 1 specific!\n";}
-		    ++$genome1;	
-		}  
+		    ++$genome1;
+		}
 		else{
 		    if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
 		    ++$irrelevant;
@@ -1092,7 +1092,7 @@ sub score_bisulfite_SNPs{
 	    }
 	}
 	elsif ($strand eq 'OB' or $strand eq 'CTOB'){ # Reads to the bottom strand might carry a bisulfite conversion
-	    
+
 	    if ($read_base eq 'G' or $read_base eq 'A'){ # a bisulfite converted position may be a G or A
 		if ($verbose){ warn "genome 2 specific!\n";}
 		# warn "Alternative base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
@@ -1171,7 +1171,7 @@ sub sort_by_name_paired_end{
 }
 
 sub read_snps{
-    
+
     if ($snp_file =~ /\.gz$/){
 	open (SNP,"gunzip -c $snp_file |") or die "Failed to read from gzipped $snp_file: $!\n\n";
     }
@@ -1192,7 +1192,7 @@ sub read_snps{
 	my ($chr,$pos,$diff)  = (split /\t/)[1,2,4];
 	my ($ref,$snp) = (split /\//,$diff);
 	# print "$chr\t$pos\t$ref\t$snp\n";
-	
+
 	### for N-masked genomes the SNPs are stored in an. hashes
 	$snps{$chr}->{$pos}->{ref} = $ref;
 	$snps{$chr}->{$pos}->{snp} = $snp;
@@ -1283,14 +1283,14 @@ sub sort_snps{
 }
 
 sub open_output_filehandles{
-  
-    my $file = shift;  
-  
+
+    my $file = shift;
+
     # replacing folder information before creating output file names 24 07 2017
     $file =~ s/.*\///;
-    
+
     my $outfile = my $genome1_file = my $genome2_file = my $unassigned_file = my $impossible_to_distinguish_file = my $report_file = $file;
-    
+
     # if files were sorted they look like this
     $genome1_file =~ s/sorted\.//;
     $genome2_file =~ s/sorted\.//;
@@ -1342,7 +1342,7 @@ sub check_for_bs{
 
     my ($paired_end,$samtools_path) = @_;
     my $isBismark;
-    
+
     # SAM/BAM format, checking the first file supplied
 
     my $file = $ARGV[0];
@@ -1365,11 +1365,11 @@ sub check_for_bs{
 	    # warn "$_";
 
 	    if ($_ =~ /Bismark/){
-		
+
 		$isBismark = 1;
-		
+
 		unless ($paired_end){ # unless the user specified --paired we try to extract this information from the @PG line
-		    
+
 		    if ($_ =~ /\s+-1\s+/ and $_ =~ /\s+-2\s+/){
 			warn "Treating file(s) as paired-end data (as extracted from \@PG line)\n\n";
 			$paired_end = 1;
@@ -1380,7 +1380,7 @@ sub check_for_bs{
 		    }
 		}
 	    }
-	    else{	
+	    else{
 		$isBismark = 0;
 	    }
 	}
@@ -1603,10 +1603,10 @@ VERSION
 	    unless ($output_dir =~ /\/$/){
 		$output_dir =~ s/$/\//;
 	    }
-	} 
+	}
 
 	if (chdir $output_dir){
-	    $output_dir = getcwd; #  making the path absolute
+	    $output_dir = getcwd(); #  making the path absolute
 	    unless ($output_dir =~ /\/$/){
 		$output_dir =~ s/$/\//;
 	    }
@@ -1643,7 +1643,7 @@ VERSION
 	    $bisulfite++;
 	    if ($paired){
 		warn "File looks like a Bismark paired-end file. Setting '--bisulfite' and '--paired'...\n";
-		
+
 		my ($skip_sorting_by_name) = test_positional_sorting($ARGV[0],$samtools_path);
 		if ($skip_sorting_by_name){
 		    warn "File appears to be in the right format (Read1 and Read2 following each other), setting '--no_sort'...\n";
@@ -1670,13 +1670,13 @@ sub print_helpfile{
       SYNOPSIS:
 
 	SNPsplit is designed to read in alignment files in SAM/BAM format and determine the allelic origin of reads
-	that cover known SNP positions. For this to work the alignment step must have been carried out against a 
+	that cover known SNP positions. For this to work the alignment step must have been carried out against a
 	genome that had all SNP positions replaced by Ns, and a list of SNP positions between the two different genomes
 	has to be provided using the option --snp_file.
 
 	SNPsplit operates in two stages:
 
-	I) SNPsplit-tag: SNPsplit analyses reads (single-end mode) or read pairs (paired-end mode) for overlaps 
+	I) SNPsplit-tag: SNPsplit analyses reads (single-end mode) or read pairs (paired-end mode) for overlaps
         with known SNP positions, and writes out a tagged BAM file in the same order as the original file.
 
         II) SNPsplit-sort: the tagged BAM file is read in and is being sorted into allele-specific files. This process
@@ -1770,7 +1770,3 @@ EOF
     ;
   exit 1;
 }
-
-
-
-

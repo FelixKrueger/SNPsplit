@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 use warnings;
 use strict;
 use Getopt::Long;
@@ -33,7 +33,7 @@ use Cwd;
 
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.3';
+my $pipeline_version = '0.3.4';
 my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build) = process_commandline ();
 
@@ -136,24 +136,24 @@ if ($dual_hybrid){
 
     warn "Now starting to work on strain 2 [$strain2]\n";
     # Need to read and filter the SNP file once more for Strain 2
-    ### Determining and Filtering homozygous high-confidence SNPs for the strain in question                                                                             
-    if ($skip_filtering){                                                                                                                                            
-	warn "Skipped reading the VCF file and filtering SNPs again for strain 2 (specified by user)\n\n";                                                                               
-    }                                                                                                                                                                            
+    ### Determining and Filtering homozygous high-confidence SNPs for the strain in question
+    if ($skip_filtering){
+	warn "Skipped reading the VCF file and filtering SNPs again for strain 2 (specified by user)\n\n";
+    }
     else{
 	filter_relevant_SNP_calls_from_VCF($strain2,$strain2_index,'2'); # the last number is the strain identity, here the second strain for dual hybrids
 	warn "Finished filtering and writing out SNPs for strain 2 [$strain2]\n\n";
-    }                                                                                                                                                                          
-    
-    $new_n_total = 0;                                                                                      
+    }
+
+    $new_n_total = 0;
     $new_snp_total = 0;
     $already_total = 0;
     $low_confidence = 0;
-    
-    # Writing a genome generation report file for Strain 2                                                                                                                   
+
+    # Writing a genome generation report file for Strain 2
     my $report = "${strain2}_genome_preparation_report.txt";
 
-    open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";    
+    open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";
     for my $chr (@chroms){
 	create_modified_chromosome($chr,$strain2);
     }
@@ -171,27 +171,27 @@ if ($dual_hybrid){
     ### Final dual genome contruction report
     $report = "${strain}_${strain2}_dual_hybrid.genome_preparation_report.txt";
     open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";
-    
+
     ### Now just need to construct the dual hybrid genome
     determine_SNPs_between_strain_and_strain2();
     warn "done...\n";
-  
+
     ### Resetting the genomic reference sequence
     %chromosomes = (); # genomic sequence
     warn "Changing the genomic reference sequence to the full sequence of strain $strain\n\n";
     print REPORT "Changing the genomic reference sequence to the full sequence of strain $strain\n\n";
-    
+
     $genome_folder = "${parent_dir}/${strain}_full_sequence/";
     read_genome_into_memory("${parent_dir}");
-    
+
     warn "Reading and storing all new SNPs with Ref/SNP: $strain/$strain2 from '$new_ref_snp_annoations'\n";
     print REPORT "Reading and storing all new SNPs with Ref/SNP: $strain/$strain2 from '$new_ref_snp_annoations'\n";
     read_new_snp_annotation($new_ref_snp_annoations,$strain,$strain2);
 
-    $new_n_total = 0;                                                                                      
+    $new_n_total = 0;
     $new_snp_total = 0;
     $already_total = 0;
-    $low_confidence = 0; 
+    $low_confidence = 0;
 
     for my $chr (@chroms) {
 	create_modified_chromosome_dual_hybrid($chr,$strain,$strain2);
@@ -208,10 +208,10 @@ if ($dual_hybrid){
     }
     close REPORT;
 
-    
+
 
 }
-warn "All done. Genome(s) are now ready to be indexed with your favourite aligner!\nFYI, aligners shown to work with SNPsplit are Bowtie2, Tophat, STAR, Hisat2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)\n\n";      
+warn "All done. Genome(s) are now ready to be indexed with your favourite aligner!\nFYI, aligners shown to work with SNPsplit are Bowtie2, Tophat, STAR, Hisat2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)\n\n";
 
 
 
@@ -220,10 +220,10 @@ warn "All done. Genome(s) are now ready to be indexed with your favourite aligne
 #############################################################
 
 sub read_new_snp_annotation {
-    
+
     my ($file,$strain,$strain2) = @_;
     warn "Reading $strain/$strain2 SNPs from file '$file'\n"; sleep(1);
-    
+
     unless (-e $file) {
 	die "Couldn't find SNP file '$file'\n";
     }
@@ -252,7 +252,7 @@ sub read_new_snp_annotation {
 	# warn "$allele\n";
 	# ref here is the $strain sequence, SNP is the $strain2 sequence
 	my ($ref,$snp);
-	
+
 	if ($allele =~ /^([GATC])\/([GATC])$/) {
 	    $ref = $1;
 	    $snp = $2;
@@ -261,7 +261,7 @@ sub read_new_snp_annotation {
 	    warn "Skipping allele '$allele'\n";
 	    next;
 	}
-	
+
     if ($strand == -1) {
 	$ref =~ tr/GATC/CTAG/;
 	$snp =~ tr/GATC/CTAG/;
@@ -270,7 +270,7 @@ sub read_new_snp_annotation {
 	$snps_dual_genome{$chr} -> {$pos}-> {ref} = $ref;
 	$snps_dual_genome{$chr} -> {$pos}-> {snp} = $snp;
     }
-    
+
   close IN or die;
 
 }
@@ -286,22 +286,22 @@ sub determine_SNPs_between_strain_and_strain2{
     my $out_strain2 = "${strain2}_specific_SNPs.${genome_build}.txt";
     open (OUT_STRAIN2,'>',$out_strain2) or die $!;
     warn "Writing $strain2 specific SNPs (relative to the $genome_build reference) to >>$out_strain2<<\n";
-    
+
     my $out_common = "${strain}_${strain2}_SNPs_in_common.${genome_build}.txt";
     open (OUT_COMMON,'>',$out_common) or die $!;
     warn "Writing SNPs in common between $strain and $strain2 (relative to the $genome_build reference) to >>$out_common<<\n";
-    
+
     my $all_strain_strain2 = "all_${strain2}_SNPs_${strain}_reference.based_on_${genome_build}.txt";
     open (ALL_STRAIN_STRAIN2,'>',$all_strain_strain2) or die $!;
     warn "Writing all new SNPs >>$strain/$strain2 to >>$all_strain_strain2<<\n\n";
     $new_ref_snp_annoations = $all_strain_strain2; # required for N-masking etc.
 
     read_snp_files();
-    
+
 }
 
 sub read_snp_files{
-    
+
     unless (-e "$snp_file_strain"){
 	die "Expected SNP file [$snp_file_strain] for strain $strain did not exist! Please make sure that it is present in the current working directory\n\n";
     }
@@ -309,25 +309,25 @@ sub read_snp_files{
 	die "Expected SNP file 2 [$snp_file_strain2}] for strain $strain2 did not exist! Please make sure that it is present in the current working directory\n\n";
     }
 
-    
+
     if ($snp_file_strain =~ /\.gz$/){
 	open (SNP_STRAIN,"gunzip -c $snp_file_strain |") or die "Failed to read from gzipped file $snp_file_strain: $!\n\n";
     }
     else{
 	open (SNP_STRAIN,"$snp_file_strain") or die "Failed to read from $snp_file_strain: $!\n\n";
     }
-    
+
     if ($snp_file_strain2 =~ /\.gz$/){
 	open (SNP_STRAIN2,"gunzip -c $snp_file_strain2 |") or die "Failed to read from gzipped file $snp_file_strain2: $!\n\n";
     }
     else{
 	open (SNP_STRAIN2,"$snp_file_strain2") or die "Failed to read from file $snp_file_strain2: $!\n\n";
     }
-    
+
     ### READING FROM SNP FILE FOR STRAIN 1 (these are only high confidence SNPs)
     warn "Storing SNP positions for strain $strain provided in '$snp_file_strain'\n";
     sleep (1);
-    
+
     my $snp_count_strain = 0;
 
     while (<SNP_STRAIN>){
@@ -336,18 +336,18 @@ sub read_snp_files{
 	my ($chr,$pos,$diff)  = (split /\t/)[1,2,4];
 	my ($ref,$snp) = (split /\//,$diff);
 	# warn "$chr\t$pos\tRef: $ref\tSNP: $snp\n"; sleep(1);
-	
+
 	$snps{$chr}->{$pos}->{ref} = $ref;
 	$snps{$chr}->{$pos}->{snp} = $snp;
 	$snps{$chr}->{$pos}->{read} = 0;
-	
+
     }
     warn "Stored $snp_count_strain positions in total\n\n";
 
     ### READING FROM SNP FILE FOR STRAIN 2
 
     warn "Now reading and comparing SNP positions for strain $strain2 provided in '$snp_file_strain2'\n";
-    
+
     my $snp_count_strain2 = 0;
     my $same = 0;
     my $different = 0;
@@ -356,20 +356,20 @@ sub read_snp_files{
     my $confidence_discrepancy = 0; # a measure for how many times a SNP was found as homozygous in both strains but with low confidence in one of them
 
     while (<SNP_STRAIN2>){
-	
+
 	++$snp_count_strain2;
 	chomp;
-	
+
 	my ($chr,$pos,$diff)  = (split /\t/)[1,2,4];
 	my $location = join (':',$chr,$pos);
-	
+
 	my ($ref,$snp) = (split /\//,$diff);
 	# warn "$chr\t$pos\tRef: $ref\tSNP: $snp\n"; sleep(1);
-	
+
 	if (exists $snps{$chr}->{$pos} ){
-	    
+
 	    $snps{$chr}->{$pos}->{read}++; # SNP is present in both genomes as high confidence SNP.
-	    
+
 	    unless ($ref eq $snps{$chr}->{$pos}->{ref}){
 		warn "reference was different for the same position!!!\n";
 	    }
@@ -386,7 +386,7 @@ sub read_snp_files{
 		# warn "Strain (=new Ref) sequence:\t$snps{$chr}->{$pos}->{snp}\n";
 		# warn "SNP (=new SNP) sequence:\t\t$snp\n";
 		# sleep(1);
-		
+
 		### we need a new SNP format where Ref/SNP is now Strain/Strain2
 		my $new_snp = "$snps{$chr}->{$pos}->{snp}/$snp";
 		# warn "New $strain/$strain2 SNP is: $new_snp\n";
@@ -420,7 +420,7 @@ sub read_snp_files{
 		# warn "SNP did not exist in hash\n";
 	    }
 
-	    ++$unique_SNP; 
+	    ++$unique_SNP;
 	    # warn "SNP is unique to Strain2. Printing...\n";
 	    # warn "$genome_strain sequence: $ref\n";
 	    # warn "SNP (=Strain2) sequence: $snp\n"; sleep(1);
@@ -434,18 +434,18 @@ sub read_snp_files{
 	}
 	# last if ($snp_count_strain2 == 10000);
     }
-    
+
     warn "Finally, looking at new reference [$strain] specific reads...\n"; sleep (1);
-    
+
     foreach my $chr (keys %snps){
 	foreach my $pos (keys %{$snps{$chr}}){
 	    my $location = join (':',$chr,$pos);
-	    
+
 	    if ($snps{$chr}->{$pos}->{read} == 0){ # present only for Strain 1
-		
+
 		# Now we need to check whether the SNP was also present but failing the filter in Strain 2
 		if (exists $homozygous_SNPs{$location}->{strain2_filter}){
-		    if ($homozygous_SNPs{$location}->{strain2_filter} eq 1){    
+		    if ($homozygous_SNPs{$location}->{strain2_filter} eq 1){
 			# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
 			# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
 			# warn "Fine, genotype call was good in both strains\n";
@@ -453,27 +453,27 @@ sub read_snp_files{
 		    else{
 			# warn "Strain 1: $location\t$homozygous_SNPs{$location}->{strain1_genotype}\t$homozygous_SNPs{$location}->{strain1_filter}\n";
 			# warn "Strain 2: $location\t$homozygous_SNPs{$location}->{strain2_genotype}\t$homozygous_SNPs{$location}->{strain2_filter}\n";
-			# warn "Confidence in Strain 2 SNP call was low, skipping this position irrespective of genotype\n\n";   
+			# warn "Confidence in Strain 2 SNP call was low, skipping this position irrespective of genotype\n\n";
 			++$confidence_discrepancy;
 			next;
 		    }
 		}
-		
+
 		++$unique_ref;
-		
+
 		### here we need to use the SNP position (i.e. Strain sequence) as new reference and the GRCm38 sequence as the SNP (i.e. where Strain2 is the same as GRCm38)
 		print OUT_STRAIN "$chr\t$pos\t$snps{$chr}->{$pos}->{snp}/$snps{$chr}->{$pos}->{ref}\n"; # writing out an annotation track Strain vs GRCm38
-		
+
 		### here we need to use the SNP position (i.e. Strain sequence) as new reference and the GRCm38 sequence as the SNP (i.e. where Strain2 is the same as GRCm38)
 		print ALL_STRAIN_STRAIN2  "${strain}_${unique_ref}\t$chr\t$pos\t1\t$snps{$chr}->{$pos}->{snp}/$snps{$chr}->{$pos}->{ref}\n";
 	    }
-	    
+
 	    if ($snps{$chr}->{$pos}->{read} >= 2){
 		die "SNP was present at least twice: $chr\t$pos\tcount: $snps{$chr}->{$pos}->{snp}\n\n";
 	    }
 	}
     }
-    
+
     warn "\nLooked at positions from new Reference strain [$strain]:\t\t$snp_count_strain\n";
     warn "Compared positions from new SNP strain [$strain2]:\t\t$snp_count_strain2\n";
     warn "======================================================\n";
@@ -496,11 +496,11 @@ sub read_snp_files{
     close OUT_STRAIN2;
     close OUT_COMMON;
     close ALL_STRAIN_STRAIN2;
- 
+
 }
 
 sub create_modified_chromosome {
-    
+
     my ($chr,$strain) = @_; # $strain may be strain 1 or 2
     warn "Processing chromosome $chr (for strain $strain)\n";
     unless ($chromosomes{$chr}){
@@ -514,7 +514,7 @@ sub create_modified_chromosome {
 
     my $sequence = $chromosomes{$chr};
     my $n_sequence;
-    
+
     if ($nmasking){
 	$n_sequence = $sequence;
     }
@@ -524,7 +524,7 @@ sub create_modified_chromosome {
 	@snps = ();
 	warn "Clearing SNP array...\n"
     }
-    
+
     my $count = 0;
 
     my $lastPos = 0;
@@ -542,26 +542,26 @@ sub create_modified_chromosome {
 	    # Duplicate SNP
 	    next;
 	}
-      
+
 	$lastPos = $snp->[0];
-	
+
 	# Check if the reference base is the same as the SNP base
 	if (substr ($sequence,$snp->[0]-1,1) eq $snp->[2]) {
 	    # warn "Skipping $snp->[0] $snp->[1]/$snp->[2] since the ref and SNP base are the same\n";
 	    ++$already;
 	    next;
 	}
-      
+
 	# Check the reference base is correct
 	if (substr ($sequence,$snp->[0]-1,1) ne $snp->[1]) {
 	    # warn "Skipping $snp->[0] $snp->[1]/$snp->[2] since the reference base didn't match\n";
 	    $warn++;
 	    next;
 	}
-      
+
 	### Ref/Alt bases are matching, so we can proceed to changing the ref base for the SNP base or Ns (N-masking)
-	
-	### N-masking 
+
+	### N-masking
 	if ($nmasking){ # default
 	    my $return =  substr($n_sequence,($snp->[0])-1,1,'N');  # Replacing the base with 'N'
 	    unless ($return){
@@ -569,7 +569,7 @@ sub create_modified_chromosome {
 	    }
 	    ++$new_n;
 	}
-	
+
 	if ($full_sequence){
 	    my $return = substr($sequence,$snp->[0]-1,1,$snp->[2]); # Replacing the reference with the SNP base
 	    unless ($return){
@@ -578,18 +578,18 @@ sub create_modified_chromosome {
 	    ++$new_snp;
 	}
     }
-  
+
     $new_n_total += $new_n;
     $new_snp_total += $new_snp;
-    
+
     $already_total += $already;
-    if ($nmasking){ 
+    if ($nmasking){
 	write_SNP_chromosome($chr,$n_sequence,1,$strain);
     }
     if ($full_sequence){
 	write_SNP_chromosome($chr,$sequence,0,$strain);
     }
-    
+
     warn "$count SNPs total for chromosome $chr\n";
     if ($nmasking){ # default
 	warn "$new_n positions on chromosome $chr were changed to 'N'\n";
@@ -604,13 +604,13 @@ sub create_modified_chromosome {
 }
 
 sub create_modified_chromosome_dual_hybrid {
-    
+
     my ($chr,$strain,$strain2) = @_;
     warn "Processing chr$chr (to create new genome for $strain/$strain2)\n";
-    
+
     my $sequence = $chromosomes{$chr};
     my $n_sequence;
-    
+
     if ($nmasking){
 	$n_sequence = $sequence;
     }
@@ -633,26 +633,26 @@ sub create_modified_chromosome_dual_hybrid {
 	   # Duplicate SNP
 	   next;
        }
-    
+
        $lastPos = $pos;
-	
+
        # Check if the reference base is the same as the SNP base
        if (substr ($sequence,$pos-1,1) eq $snps_dual_genome{$chr}->{$pos}->{snp}) {
 	   # warn "Skipping $pos $snps_dual_genome{$chr}->{$pos}->{ref}/$snps_dual_genome{$chr}->{$pos}->{snp} since the ref and SNP base are the same\n";
 	   ++$already;
 	   next;
        }
-      
+
        # Check the reference base is correct
        if (substr ($sequence,$pos-1,1) ne $snps_dual_genome{$chr}->{$pos}->{ref}) {
 	   # warn "Skipping $pos $snps_dual_genome{$chr}->{$pos}->{ref}/$snps_dual_genome{$chr}->{$pos}->{snp} since the reference base didn't match\n";
 	   $warn++;
 	   next;
        }
-       
+
        ### Ref/Alt bases are matching, so we can proceed to changing the ref base for the SNP base or Ns (N-masking)
-	
-       ### N-masking 
+
+       ### N-masking
        if ($nmasking){ # default
 	   my $return =  substr($n_sequence,$pos-1,1,'N');  # Replacing the base with 'N'
 	   unless ($return){
@@ -660,7 +660,7 @@ sub create_modified_chromosome_dual_hybrid {
 	   }
 	   ++$new_n;
        }
-       
+
        if ($full_sequence){
 	   my $return = substr($sequence,$pos-1,1,$snps_dual_genome{$chr}->{$pos}->{snp}); # Replacing the reference with the SNP base
 	   unless ($return){
@@ -669,18 +669,18 @@ sub create_modified_chromosome_dual_hybrid {
 	   ++$new_snp;
        }
    }
-  
+
     $new_n_total += $new_n;
     $new_snp_total += $new_snp;
-    
+
     $already_total += $already;
-    if ($nmasking){ 
+    if ($nmasking){
 	write_SNP_chromosome($chr,$n_sequence,1,"${strain}_${strain2}_dual_hybrid.based_on_${genome_build}");
     }
     if ($full_sequence){
 	write_SNP_chromosome($chr,$sequence,0,"${strain}_${strain2}_dual_hybrid.based_on_${genome_build}");
     }
-    
+
     warn "$count SNPs total for chromosome $chr\n";
     if ($nmasking){ # default
 	warn "$new_n positions on chromosome $chr were changed to 'N'\n";
@@ -704,10 +704,10 @@ sub write_SNP_chromosome {
     else{
 	warn "Writing modified chromosome (incorporating SNPs)\n";
     }
-    
+
     my $type;
     my $outfile;
-    
+
     if ($nm){
 	$type = 'N-masked';
 	$outfile = "chr${chr}.N-masked.fa";
@@ -716,13 +716,13 @@ sub write_SNP_chromosome {
 	$type = 'full_sequence';
 	$outfile = "chr${chr}.SNPs_introduced.fa";
     }
-    
+
     # warn "Starting sequence is ".length($sequence)." bp\n";
     if ($nm){
 	warn "Writing N-masked output to: ${parent_dir}/${strain}_${type}/$outfile\n";
 	unless (-d "${parent_dir}/${strain}_${type}/"){ # creating the output directory if required
 	    mkdir "${parent_dir}/${strain}_${type}/";
-	}      
+	}
 	open (OUT,'>',"${parent_dir}/${strain}_${type}/${outfile}") or die "Failed to write to file ${parent_dir}/${strain}_${type}/${outfile}: $!\n\n";
 	print OUT ">$chr\n";
     }
@@ -730,14 +730,14 @@ sub write_SNP_chromosome {
 	warn "Writing full sequence output to: ${parent_dir}/${strain}_${type}/$outfile\n";
 	unless (-d "${parent_dir}/${strain}_${type}/"){ # creating the output directory if required
 	    mkdir "${parent_dir}/${strain}_${type}/";
-	}      
+	}
  	open (OUT,'>',"${parent_dir}/${strain}_${type}/${outfile}") or die "Failed to write to file ${parent_dir}/${strain}_${type}/${outfile}: $!\n\n";
 	print OUT ">$chr\n";
     }
     else{
 	warn "Running out of options...\n\n";
     }
-    
+
     my $pos = 0;
 
     # Writing out chromosome files with 100 characters per line
@@ -747,12 +747,12 @@ sub write_SNP_chromosome {
     }
     print OUT substr($sequence,$pos),"\n"; # rest
     close OUT or die $!;
-   
+
 }
 
 
 sub read_snps {
-    
+
     my ($chr,$strain) = @_;
     my @snps = ();
     my $file = "${parent_dir}/SNPs_${strain}/chr$chr.txt";
@@ -768,16 +768,16 @@ sub read_snps {
 	return \@snps;
     }
     warn "Reading SNPs from file $file\n";
-    
+
     open (IN,$file) or die $!;
 
     while (<IN>) {
 	chomp;
 	next unless ($_);
-	
+
 	my (undef,undef,$pos,$strand,$allele) = split(/\t/);
 	next unless ($allele);
-	
+
 	my ($ref_allele,$snp_allele);
 
 	if ($allele =~ /^([GATC])\/([GATC])$/) {
@@ -788,20 +788,20 @@ sub read_snps {
 	    warn "Skipping allele $allele\n";
 	    next;
 	}
-	
+
 	if ($strand == -1) { # if the strand is given as -1 it means that the SNP is on the reverse strand and thus needs reverse-coplementing
 	    $ref_allele =~ tr/GATC/CTAG/;
 	    $snp_allele =~ tr/GATC/CTAG/;
 	}
-	
+
 	push @snps,[$pos,$ref_allele,$snp_allele];
     }
 
     # sorting snps
     @snps = sort {$a->[0] <=> $b->[0]} @snps;
-    
+
     return \@snps;
-    
+
     close IN or warn "Failed to close filehandle IN for file $file: $!\n\n";
 
 }
@@ -813,35 +813,35 @@ sub read_snps {
 ###
 
 sub filter_relevant_SNP_calls_from_VCF{
-    
-    my ($strain, $strain_index, $strain_identity) = @_;    
-    
+
+    my ($strain, $strain_index, $strain_identity) = @_;
+
     if ($vcf_file =~ /gz$/){
 	open (IN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
-    } 
+    }
     else{
 	open (IN, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
     }
-    
+
     my %all_SNPs; # storing filtered SNPs
     my $count = 0;
 
     my $other = 0;
     my $too_many = 0;
-    
+
     my %fhs;
     my $hcg_count = 0;
     my $low_confidence = 0;
     my $same = 0;
     my $homozygous = 0;
-  
-  
+
+
     my $dir = "SNPs_$strain";
     unless (-d $dir){
 	warn "Folder '$dir' doesn't exist. Creating it for you...\n\n";
 	mkdir $dir or die "Failed to created directory $dir\n: $!\n\n";
     }
-    
+
     # Opening filehandles for the SNP files
     for my $chr (@chroms) {
 	my $filename = "SNPs_$strain/chr".$chr.'.txt';
@@ -849,7 +849,7 @@ sub filter_relevant_SNP_calls_from_VCF{
 	$fhs{$chr} = $fh;
 	print {$fhs{$chr}} ">$chr\n";
     }
-    
+
     while (<IN>){
 	$_ =~ s/(\r|\n)//g; # removing end of line characters
 
@@ -858,23 +858,23 @@ sub filter_relevant_SNP_calls_from_VCF{
 	if ($_ =~ /^\#CHROM/){ # Table Header
 	    my ($name) = (split /\t/)[$strain_index];
 	    warn "Analysing SNP fields for name >$name<\n";
-	    next;	
+	    next;
 	}
 	$count++;
 	if ($count%1000000 ==0){
 	    warn "processed $count lines\n";
 	}
 	# last if ($count == 10000);
-	
+
 	my ($chr,$pos,$ref,$alt,$strain) = (split /\t/)[0,1,3,4,$strain_index];
 	# warn "$chr , $pos , $ref , $alt , $strain\n"; sleep(1);
-	
+
 	##### This is the specification for the v5 file
 	# $strain is in the form: GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI
 	# my ($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi) = split/:/,$strain;
 	# warn "genotype: $gt\nfilter:   $fi\n";
 	# warn "$fi\n"; sleep(1);
-	
+
 	######
 	###  V2 difference!
 	#  $strain for the v2 file is in the form: GT:GQ:DP:SP:PL:FI
@@ -891,46 +891,46 @@ sub filter_relevant_SNP_calls_from_VCF{
 	# '1/1' = homozygous alternative allele; can also be '2/2',
 	# '3/3', etc. if more than one alternative allele is present.
 	# '0/1' = heterozygous genotype; can also be '1/2', '0/2', etc.
-	
+
 	# $fi is FILTER, 1 for high confidence SNP, or 0 for low confidence
-	
+
 	### We are only looking for 1/1, 2/2 or 3/3 calls, and filter for high confidence as well
-	
+
 	# skipping if the reference base is not well defined in Black6
 	if ($ref =~ /[^ATCG]/){ # reference base contained any non A, C, T, G characters or more than one base
 	    warn "ref was: $ref; skipping\n";
 	    next;
 	}
-	
+
 	# skipping if the SNP is not well defined in the strain of interest
 	if ($alt =~ /[^ATCG,]/){ # Alt base contained any non A, C, T, G characters or commas which separate several different variants
 	    # warn "SNP was: $alt; GT was $gt; FI was: $fi; skipping\n";
 	    ++$too_many;
 	    next;
 	}
-	
+
 	my $location = join (':',$chr,$pos);
-	# warn "$location\n";   
-	
+	# warn "$location\n";
+
 	### For dual hybrids we will store all positions so we can add an additional filter later for positions that pass the filter (FI=1) in both strains
 	if ($dual_hybrid){
 	    if ($fi ne 1){ # only adding this position if the FI is not a PASS
 		if ($strain_identity == 1){
 		    # warn "Strain 1. Adding $location, $fi and $gt\n"; sleep(1);
-		    $homozygous_SNPs{$location}->{strain1_filter} = $fi;  
-		    $homozygous_SNPs{$location}->{strain1_genotype} = $gt;  
+		    $homozygous_SNPs{$location}->{strain1_filter} = $fi;
+		    $homozygous_SNPs{$location}->{strain1_genotype} = $gt;
 		}
 		elsif($strain_identity == 2){
 		    # warn "Strain 2. Adding $location, $fi and $gt\n"; sleep(1);
-		    $homozygous_SNPs{$location}->{strain2_filter} = $fi;      
-		    $homozygous_SNPs{$location}->{strain2_genotype} = $gt; 
+		    $homozygous_SNPs{$location}->{strain2_filter} = $fi;
+		    $homozygous_SNPs{$location}->{strain2_genotype} = $gt;
 		}
 		else{
 		    die "Strain was lacking the strain identity flag\n\n";
 		}
 	    }
 	}
-	
+
 	# Filtering for genotype. If the genotype is the same as the reference we will move on to the next position
 	if ($gt eq '0/0'){
 	    ++$same;
@@ -939,22 +939,22 @@ sub filter_relevant_SNP_calls_from_VCF{
 	}
 	elsif ($gt eq '1/1'){
 	    ++$homozygous;
-	    if ($alt =~ /[^ATCG]/){ 	 
+	    if ($alt =~ /[^ATCG]/){
 		# warn "homozygous alternative allele: >$alt<\n";
 		my ($new_alt) = (split (/,/,$alt))[0];
 		# warn "New ALT is $new_alt\n";
 		# warn "genotype: $gt\nfilter:   $fi\n\n"; sleep(1);
-		$alt = $new_alt;  
+		$alt = $new_alt;
 	    }
 	}
 	elsif ($gt eq '2/2'){
 	    # warn "$gt\n";
 	    ++$homozygous;
-	    if ($alt =~ /[^ATCG]/){ 	 
+	    if ($alt =~ /[^ATCG]/){
 		# warn "homozygous alternative allele: >$alt<\n";
 		my ($new_alt) = (split (/,/,$alt))[1];
 		# warn "New ALT is $new_alt\n\n"; sleep(1);
-		$alt = $new_alt;    
+		$alt = $new_alt;
 	    }
 	}
 	elsif ($gt eq '3/3'){
@@ -962,30 +962,30 @@ sub filter_relevant_SNP_calls_from_VCF{
 	    ++$homozygous;
 	    if ($alt =~ /[^ATCG]/){
 		# warn "homozygous alternative allele: >$alt<\n";
-		my ($new_alt) = (split (/,/,$alt))[2];                                                                                                        
- 		# warn "New ALT is $new_alt\n\n"; sleep(1);                                                                             
-		$alt = $new_alt;   
+		my ($new_alt) = (split (/,/,$alt))[2];
+ 		# warn "New ALT is $new_alt\n\n"; sleep(1);
+		$alt = $new_alt;
 	    }
 	}
 	else{
 	    # this could be positions without genotype call ./. or any form of heterozygous call. In any case we will blacklist these positions and not use them for dual genomes
 	    # we do skip these positions but keep them on the 'blacklist' for dual genomes
 	    ++$other;
-	    #  warn "$gt\n"; 
+	    #  warn "$gt\n";
 	    next;
 	}
 
 	### If we made it this far the SNP is a homozygous substitution in the current strain
-	
+
 	# Looking at the Filtering tag now
 	# warn "$fi\n"; sleep(1);
 	if ($fi == 1){
 	    ++$hcg_count;
-	   
+
 	    my $SNP = join ("\t",$count,$chr,$pos,'1',join ("\/",$ref,$alt));
 	    # field 4: 1 means top strand, -1 means reverse strand
 	    # warn "$SNP\n";sleep(1);
-	    
+
 	    if (exists $all_SNPs{$location} ){
 		# warn "SNP $all_SNPs{$location} position was present already\n";
 	    }
@@ -998,19 +998,19 @@ sub filter_relevant_SNP_calls_from_VCF{
 	    # warn "FI was $fi\n";
 	    next;
 	}
-	
+
 	# Output example
 	# Variation ID    Chromosome name Position on Chromosome (bp)     Strand  Allele
 	# rs2020560       10      98212004        1       A/T
-	
+
 	print {$fhs{$chr}} join ("\t",$count,$chr,$pos,'1',join ("\/",$ref,$alt),$strain),"\n";
-	
+
     }
-    
+
     # Writing a report file
     my $report = "${strain}_SNP_filtering_report.txt"; # $strain here may be strain 1 or strain 2
     open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";
-    
+
     warn "\nSNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
     warn "="x75,"\n\n";
     warn "Positions read in total:\t$count\n\n";
@@ -1032,8 +1032,8 @@ sub filter_relevant_SNP_calls_from_VCF{
     print REPORT "$too_many\t\thad no clearly defined alternative base\n";
     print REPORT "$other\t\tCalls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)\n";
     print REPORT "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
-    
-  
+
+
     # Also writing all SNP calls out to an all-SNP file
     my $all_SNPs = "all_SNPs_${strain}_GRCm38.txt.gz";
     warn "Now printing a single list of all SNPs to >$all_SNPs<...\n";
@@ -1044,12 +1044,12 @@ sub filter_relevant_SNP_calls_from_VCF{
 	warn "File '$all_SNPs' existed in the folder already, overwriting it...\n\n";
     }
     open (ALLSNP,"| gzip -c - > $all_SNPs") or die "Failed to write to file $all_SNPs: $!\n";
-    
+
     foreach my $location (keys %all_SNPs){
 	print ALLSNP "$all_SNPs{$location}\n";
     }
     warn "complete\n\n";
-    close ALLSNP;   
+    close ALLSNP;
 }
 
 
@@ -1064,12 +1064,12 @@ sub detect_chroms{
     else{
 	open (DETECT, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
     }
-    
+
     # warn "Detecting chromosomes from file '$vcf_file'\n\n";
     while (<DETECT>){
 	$_ =~ s/(\r|\n)//g; # removing end of line characters
 	last unless ($_ =~ /^\#/);
-	
+
 	if ($_ =~ /^\#\#contig/){ # filters header lines
 	    # warn "$_\n"; # sleep(1);
 	    $_ =~ /ID=(.+),/;
@@ -1082,54 +1082,54 @@ sub detect_chroms{
     }
 
     foreach my $chr(keys %chrom){
-	# warn "$chr\n";	
+	# warn "$chr\n";
 	push @chrom, $chr;
     }
     # close DETECT or warn "Failed to close filehandle DETECT: $!\n";
     return @chrom;
-    
+
 }
 
 sub detect_strains{
-    
+
     my $vcf_file = shift;
     my %strains; # detecting the available strains from the VCF file
-    
+
     if ($vcf_file =~ /gz$/){
 	open (STRAIN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
     }
     else{
 	open (STRAIN, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
     }
-    
+
     # warn "Detecting strains from file '$vcf_file'\n\n";
     while (<STRAIN>){
 	$_ =~ s/(\r|\n)//g; # removing end of line characters
-	next if ($_ =~ /^\#\#/);	
+	next if ($_ =~ /^\#\#/);
 	if ($_ =~ /^\#CHROM/){ # header line listing all different strains
 	    # warn "$_\n"; sleep(1);
 	}
 	last unless ($_ =~ /^\#/); # everything from now on are the SNPs themselves
-	
+
 	my @strains = split (/\t/);
-	
+
 	foreach my $index(0..$#strains){
-	    next if ($index <= 8); # The first 8 fields are irrelevant: #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  
-	    $strains{$strains[$index]} = $index; 
+	    next if ($index <= 8); # The first 8 fields are irrelevant: #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT
+	    $strains{$strains[$index]} = $index;
 	    # warn "$index\t$strains[$index]\n";
 	}
     }
-    
+
     # close STRAIN or warn "Failed to close filehandle STRAIN: $!\n";
     return %strains;
 
 }
 
 sub read_genome_into_memory{
-    
+
     ## working directoy
     my $cwd = shift;
-    
+
     ## reading in and storing the specified genome in the %chromosomes hash
     chdir ($genome_folder) or die "Can't move to $genome_folder: $!";
     warn "Now reading in and storing sequence information of the genome specified in: $genome_folder\n\n";
@@ -1162,7 +1162,7 @@ sub read_genome_into_memory{
 	  chomp;
 	  $_ =~ s/\r//; # removing carriage returns if present
 	  if ($_ =~ /^>/){
-	
+
 	    ### storing the previous chromosome in the %chromosomes hash, only relevant for Multi-Fasta-Files (MFA)
 	    if (exists $chromosomes{$chromosome_name}){
 	      print "chr $chromosome_name (",length $sequence ," bp)\n";
@@ -1184,7 +1184,7 @@ sub read_genome_into_memory{
 	    $sequence .= uc$_;
 	  }
 	}
-	
+
  	### Processing last chromosome of a multi Fasta File or the only entry in case of single entry FastA files
 
 	if (exists $chromosomes{$chromosome_name}){
@@ -1235,10 +1235,10 @@ sub process_commandline{
     my $dual_hybrid;
     my $no_nmasking;
     my $genome_build;
-    
+
     my $command_line = GetOptions ('help|man'             => \$help,
 				   'versions'             => \$version,
-				   'strain=s'             => \$strain, 
+				   'strain=s'             => \$strain,
 				   'strain2=s'            => \$strain2,
 				   'list_strains'         => \$list_strains,
 				   'skip_filtering'       => \$skip_filtering,
@@ -1250,21 +1250,21 @@ sub process_commandline{
 				   'reference_genome=s'   => \$genome_folder,
 				   'genome_build=s'       => \$genome_build,
 	);
-  
+
     ### EXIT ON ERROR if there were errors with any of the supplied options
     unless ($command_line){
 	die "Please respecify command line options\n";
     }
-    
+
     ### HELPFILE
     if ($help){
 	print_helpfile();
 	exit;
     }
-    
+
     if ($version){
 	print << "VERSION";
-	
+
                                SNPsplit Genome Preparation
 			           version: $pipeline_version
                              Copyright 2014-17, Felix Krueger
@@ -1311,7 +1311,7 @@ VERSION
 	else{
 	    warn "Strain name specified [$strain] does not match any of the available strain names!\n";
 	    warn "\nAvailable genomes to choose from are:\n";
-	    warn "="x37,"\n";	
+	    warn "="x37,"\n";
 	    foreach my $strain(keys %strains){
 		print "$strain\n";
 	    }
@@ -1322,14 +1322,14 @@ VERSION
     else{
 	warn "No strain specified!\n";
 	warn "\nAvailable genomes to choose from are:\n";
-	warn "="x37,"\n";	
+	warn "="x37,"\n";
 	foreach my $strain(keys %strains){
 	    print "$strain\n";
 	}
 	warn "="x37,"\n";
 	die "\nPlease choose one of the available strains using '--strain NAME' and try again\n\n";
     }
-    
+
     ### Strain 2 (optional)
     if (defined $strain2){
 	unless ($dual_hybrid){
@@ -1351,7 +1351,7 @@ VERSION
 	    else{
 		warn "Strain2 name specified [$strain2] does not match any of the available strain names!\n";
 		warn "\nAvailable genomes to choose from are:\n";
-		warn "="x37,"\n";	
+		warn "="x37,"\n";
 		foreach my $strain(keys %strains){
 		    print "$strain\n";
 		}
@@ -1362,34 +1362,34 @@ VERSION
 	else{
 	    warn "No strain 2 specified!\n";
 	    warn "\nAvailable genomes to choose from are:\n";
-	    warn "="x37,"\n";	
+	    warn "="x37,"\n";
 	    foreach my $strain(keys %strains){
 		print "$strain\n";
 	    }
 	    warn "="x37,"\n";
 	    die "\nPlease choose one of the available strains using '--strain2 NAME' and try again\n\n";
 	}
-	
+
 	# make sure that Strain 1 and Strain 2 are different from each other
 	if ($strain eq $strain2){
-	    die "Strain 1 [$strain] and Strain 2 [$strain2] must be different from each other. Please respecify!\n\n"; 
+	    die "Strain 1 [$strain] and Strain 2 [$strain2] must be different from each other. Please respecify!\n\n";
 	}
     }
 
     ### GENOME FOLDER
-    
+
     unless ($genome_folder){
 	warn "Reference genome folder was not specified! Please use --reference_genome </genome/folder/>\n";
 	# print_helpfile();
 	exit;
     }
-    my $parent_dir = getcwd();    
+    my $parent_dir = getcwd();
 
     ### checking that the genome folder, all subfolders and the required bowtie index files exist
     unless ($genome_folder =~/\/$/){
 	$genome_folder =~ s/$/\//;
     }
-    
+
     if (chdir $genome_folder){
 	my $absolute_genome_folder = getcwd; ## making the genome folder path absolute
 	unless ($absolute_genome_folder =~/\/$/){
@@ -1464,7 +1464,7 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 
 
 --vcf_file <file>             Mandatory file specifying SNP information for mouse strains from the Mouse Genomes Project
-                              (http://www.sanger.ac.uk/science/data/mouse-genomes-project). The file used and approved is 
+                              (http://www.sanger.ac.uk/science/data/mouse-genomes-project). The file used and approved is
                               called 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz'. Please note that future versions
                               of this file or entirely different VCF files might not work out-of-the-box but may require some
                               tweaking. SNP calls are read from the VCF files, and high confidence SNPs are written into
@@ -1490,9 +1490,9 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
                                  3) Read/filter SNPs for second strain (specified with '--strain2 <strain_name>')
                                  4) Write full SNP incorporated (and optionally N-masked) genome sequence for second strain
                                  5) Generate new Ref/Alt SNP annotations for Strain1/Strain2
-                                 6) Set first strain as new reference genome and construct full SNP incorporated (and optionally 
+                                 6) Set first strain as new reference genome and construct full SNP incorporated (and optionally
                                     N-masked) genome sequences for Strain1/Strain2
-                                                            
+
 
 --strain2 <strain_name>       Optional for constructing dual hybrid genomes (see '--dual_hybrid' for more information). For an
                               overview of strain names just run SNPsplit_genome_preparation selecting '--list_strains'.
@@ -1515,7 +1515,7 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 --full_sequence               Write out a genome version for the strain specified where Ref bases are replaced with the SNP base.
                               In the Ref/SNP example T/G the full sequence genome would now carry a G instead of the T. The full
                               sequence genome is written out to folder called '<strain_name>_full_sequence/'. May be set in
-                              addition to '--nmasking'. Default: OFF. 
+                              addition to '--nmasking'. Default: OFF.
 
 --no_nmasking                 Disable N-masking if it is not desirable. Will automatically set '--full_sequence' instead.
 
@@ -1533,4 +1533,3 @@ EOF
     ;
   exit 1;
 }
-

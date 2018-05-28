@@ -1,6 +1,6 @@
 02 May, 2018
 
-# SNPsplit [v0.3.3_dev]
+# SNPsplit [v0.3.4]
 ______
 
 ## General
