@@ -35,10 +35,10 @@ my %snps; # storing all filtered SNPs
 my %snps_dual_genome; # storing all SNPs for dual genome
 my %homozygous_SNPs; # storing SNP genotypes and FILTER value for dual hybrids
 
-my $snp_file_strain =   "all_SNPs_${strain}_GRCm38.txt.gz";
+my $snp_file_strain =   "all_SNPs_${strain}_${genome_build}.txt.gz";
 my $snp_file_strain2;
 if ($strain2){
-    $snp_file_strain2 = "all_SNPs_${strain2}_GRCm38.txt.gz";
+    $snp_file_strain2 = "all_SNPs_${strain2}_${genome_build}.txt.gz";
 }
 else{
     $snp_file_strain2 = 'irrelevant_for_single_hybrid_mode';
@@ -1015,7 +1015,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     my $report = "${strain}_SNP_filtering_report.txt"; # $strain here may be strain 1 or strain 2
     open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";
     
-    warn "\nSNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
+    warn "\nSNP position summary for strain $strain (based on genome build $genome_build)\n";
     warn "="x75,"\n\n";
     warn "Positions read in total:\t$count\n\n";
     warn "$homozygous\tSNP were homozygous. Of these:\n";
@@ -1026,7 +1026,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     warn "$other\t\tCalls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)\n";
     warn "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
 
-    print REPORT "SNP position summary for strain $strain (based on mouse genome build GRCm38)\n";
+    print REPORT "SNP position summary for strain $strain (based on genome build $genome_build)\n";
     print REPORT "="x75,"\n\n";
     print REPORT "Positions read in total:\t$count\n\n";
     print REPORT "$homozygous\tSNP were homozygous. Of these:\n";
@@ -1039,7 +1039,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     
   
     # Also writing all SNP calls out to an all-SNP file
-    my $all_SNPs = "all_SNPs_${strain}_GRCm38.txt.gz";
+    my $all_SNPs = "all_SNPs_${strain}_${genome_build}.txt.gz";
     warn "Now printing a single list of all SNPs to >$all_SNPs<...\n";
     print REPORT "Printed a single list of all SNPs to >$all_SNPs<...\n";
     close (REPORT) or warn "Failed to close filehandle REPORT\n";
