@@ -1,3 +1,4 @@
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/snpsplit/README.html)
 
 <p align="center"> <img title="SNPsplit" id="logo_img" src="Images/SNPsplit.png" width=300></p>
 
