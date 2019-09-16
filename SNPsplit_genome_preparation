@@ -87,14 +87,15 @@ warn "\n";
 my @chroms;
 
 if ($skip_filtering){
-    @chroms = (1..22,'X','Y','MT'); # this is currently using chromosomes for the human genome
+    # HUMAN GENOME @chroms = (1..22,'X','Y','MT'); # this is currently using chromosomes for the human genome
+    @chroms = (1..19,'X','Y','MT'); # MOUSE GENOME this is currently using chromosomes for the mouse genome
 }
 else{ # default
     @chroms = detect_chroms();
 }
 
 if ($skip_filtering){
-    print "Using the following chromosomes (HARCODED IN!!!):\n";
+    print "Using the following chromosomes (HARDCODED IN!!!):\n";
 }
 else{
     print "Using the following chromosomes (detected from VCF file >>$vcf_file<<):\n";
