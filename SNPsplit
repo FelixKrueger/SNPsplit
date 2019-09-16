@@ -25,7 +25,7 @@ use Cwd;
 
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.4';
+my $pipeline_version = '0.3.4_dev';
 my $parent_dir = getcwd;
 my ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
 my %snps; # storing SNP position and sequence information for all SNPs
@@ -1349,41 +1349,42 @@ sub check_for_bs{
 
     ### if the user did not specify whether the alignment file was single-end or paired-end we are trying to get this information from the @PG header line in the SAM/BAM file
     if ($file =~ /\.gz$/){
-	open (DETERMINE,"gunzip -c $file |") or die "Unable to read from gzipped file $file: $!\n";
+		open (DETERMINE,"gunzip -c $file |") or die "Unable to read from gzipped file $file: $!\n";
     }
     elsif ($file =~ /\.bam$/ ){
-	open (DETERMINE,"$samtools_path view -h $file |") or die "Unable to read from BAM file $file: $!\n";
+		open (DETERMINE,"$samtools_path view -h $file |") or die "Unable to read from BAM file $file: $!\n";
     }
     else{
-	open (DETERMINE,$file) or die "Unable to read from $file: $!\n";
+		open (DETERMINE,$file) or die "Unable to read from $file: $!\n";
     }
 
     while (<DETERMINE>){
-	last unless (/^\@/);
-	if ($_ =~ /^\@PG/){
-	    #  warn "found the \@PG line:\n";
-	    # warn "$_";
+		last unless (/^\@/);
+		if ($_ =~ /^\@PG/){
+			#  warn "found the \@PG line:\n";
+			# warn "$_";
 
-	    if ($_ =~ /Bismark/){
+			# Bismark bisulfite test
+			if ($_ =~ /Bismark/){
+				$isBismark = 1;
+			}
+			else{
+				$isBismark = 0;
+			}
+			
+			# Paired-end test
+			unless ($paired_end){ # unless the user specified --paired we try to extract this information from the @PG line
 
-		$isBismark = 1;
-
-		unless ($paired_end){ # unless the user specified --paired we try to extract this information from the @PG line
-
-		    if ($_ =~ /\s+-1\s+/ and $_ =~ /\s+-2\s+/){
-			warn "Treating file(s) as paired-end data (as extracted from \@PG line)\n\n";
-			$paired_end = 1;
-		    }
-		    else{
-			warn "Treating file(s) as single-end data (as extracted from \@PG line)\n\n";
-			$paired_end = 0;
-		    }
+				if ($_ =~ /\s+-1\s+/ and $_ =~ /\s+-2\s+/){
+					warn "Treating file(s) as paired-end data (as extracted from \@PG line)\n\n";
+					$paired_end = 1;
+				}
+				else{
+					warn "Treating file(s) as single-end data (as extracted from \@PG line)\n\n";
+					$paired_end = 0;
+				}
+			}
 		}
-	    }
-	    else{
-		$isBismark = 0;
-	    }
-	}
     }
     return ($isBismark,$paired_end);
 }
@@ -1567,33 +1568,33 @@ VERSION
     }
     # Check whether Samtools is in the PATH if no path was supplied by the user
     else{
-	if (!system "which samtools >/dev/null 2>&1"){ # STDOUT is binned, STDERR is redirected to STDOUT. Returns 0 if samtools is in the PATH
-	    $samtools_path = `which samtools`;
-	    chomp $samtools_path;
-	}
+		if (!system "which samtools >/dev/null 2>&1"){ # STDOUT is binned, STDERR is redirected to STDOUT. Returns 0 if samtools is in the PATH
+		    $samtools_path = `which samtools`;
+	    	chomp $samtools_path;
+		}
     }
 
     unless (defined $samtools_path){
-	die "Could not find an installation of Samtools on your system. Please either install Samtools first or provide the path to an existing installation\n\n";
+		die "Could not find an installation of Samtools on your system. Please either install Samtools first or provide the path to an existing installation\n\n";
     }
 
     ### --singletons only make sense for paired-end data
     if ($singletons){
-	if ($hic){
-	    die "The option --singletons can't be used in Hi-C mode since this expects paired-end data. Please respecify!\n\n";
-	}
+		if ($hic){
+			die "The option --singletons can't be used in Hi-C mode since this expects paired-end data. Please respecify!\n\n";
+		}
 
-	unless ($paired){
-	    warn "The option --singletons only makes sense for paired-end files. Simply ignoring it in single-end mode...\n"; sleep(1);
-	    $singletons = undef;
-	}
+		unless ($paired){
+			warn "The option --singletons only makes sense for paired-end files. Simply ignoring it in single-end mode...\n"; sleep(1);
+			$singletons = undef;
+		}
     }
 
     if ($hic_data){
-	warn "Hi-C data specified. This assumes that the data has been processed with HiCUP, is paired-end and does not require positional sorting.\nSetting '--paired' and '--no_sort'...\n\n";
-	$paired = 1;
-	$no_sort = 1;
-	sleep(1);
+		warn "Hi-C data specified. This assumes that the data has been processed with HiCUP, is paired-end and does not require positional sorting.\nSetting '--paired' and '--no_sort'...\n\n";
+		$paired = 1;
+		$no_sort = 1;
+		sleep(1);
     }
 
     ### OUTPUT DIRECTORY PATH
@@ -1628,10 +1629,10 @@ VERSION
     chdir $parent_dir or die "Failed to move back to current working directory\n";
 
     if ($sam){
-	$bam = 0;
+		$bam = 0;
     }
     else{
-	$bam = 1;
+		$bam = 1;
     }
 
     ### Checking to see if the input file is a Bismark processed Bisulfite-Seq file
@@ -1765,7 +1766,7 @@ sub print_helpfile{
     --version              Displays version information and exits.
 
 
-                                   Script last modified: 20 July 2017
+                                   Script last modified: 16 Sept 2019
 EOF
     ;
   exit 1;
