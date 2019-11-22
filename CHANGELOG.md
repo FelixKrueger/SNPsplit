@@ -1,8 +1,13 @@
-## v0.3.4 (25 May 2018)
- - made the installation changes for conda
- - fixed --dir name in tag2sort
+## v0.3.4_dev (22 11 2019)
 
-## v0.3.3_dev (04 Sept 2017)]
+- SNPsplit now writes important statistics out in YAML format to enable easier integration into `MultiQC`. If `tag2sort` is called via `SNPsplit` itself, the `...sort.yaml` file will be integrated into the main `...SNPsplit_report.yaml` file (and deleted afterwards).
+
+
+## v0.3.4 (25 May 2018)
+
+ - made the installation changes for conda
+ 
+ - fixed --dir name in tag2sort
 
 - Fixed output-path handling for paired-end and Hi-C mode (was only working for single-end files).
 
