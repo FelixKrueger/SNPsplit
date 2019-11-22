@@ -7,7 +7,7 @@ use Cwd;
 use FindBin qw($Bin);
 use lib "$Bin/../lib";
 
-## This program is Copyright (C) 2014-17, Felix Krueger (felix.krueger@babraham.ac.uk)
+## This program is Copyright (C) 2014-20, Felix Krueger (felix.krueger@babraham.ac.uk)
 
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -26,7 +26,9 @@ use lib "$Bin/../lib";
 my %counting;
 my %fhs;
 
-my $SNPsplit_version = '0.3.4';
+my $SNPsplit_version = '0.3.4_dev';
+my %yaml;
+my $yaml_count = 0;
 
 my ($paired,$hic,$verbose,$samtools_path,$bam,$output_dir,$conflict,$singletons,$parent_dir) = process_commandline();
 
@@ -37,6 +39,9 @@ foreach my $file (@ARGV){
   warn "\nSummary of parameters for SNPsplit-sort:\n";
   warn '='x40,"\n";
   warn "SNPsplit tagged infile:\t\t$file\n";
+  $yaml{$yaml_count}->{tagged_infile} = $file;
+  ++$yaml_count;
+
   warn "Output directory:\t\t>$output_dir<\n";
   warn "Parent directory:\t\t>$parent_dir<\n";
   warn "Samtools path:\t\t\t$samtools_path\n";
@@ -86,6 +91,19 @@ foreach my $file (@ARGV){
   # returning to SNPsplit-tag, or end otherwise
   warn "Sorting finished successfully\n\n";
 
+  # Print YAML report
+  print_YAML();
+  close YAML or warn "Had trouble closing YAML filehandle: $!\n";
+}
+
+sub print_YAML{
+  # warn "-Sorting:\n"; 
+  foreach my $entry (sort {$a<=>$b} keys %yaml){
+    foreach my $stat(keys %{$yaml{$entry}}){ # should only be 1 stat per entry
+      # warn "Entry: $entry\t$stat: $yaml{$entry}->{$stat}\n";
+      print YAML "$stat: $yaml{$entry}->{$stat}\n";
+    }
+  }
 }
 
 sub process_single_end{
@@ -109,7 +127,7 @@ sub process_single_end{
       print G1;
       print G2;
       if ($conflict){
-	print CONFLICT;
+	       print CONFLICT;
       }
       next;
     }
@@ -182,7 +200,33 @@ sub process_single_end{
   print REPORT "Reads were specific for genome 2:\t\t$genome2 ($perc_genome2%)\n";
   print REPORT "Reads contained conflicting SNP information:\t$conflicting ($perc_conflicting)\n\n\n";
 
+  # total reads
+  $yaml{$yaml_count}->{SE_total_reads} = $count;
+  $yaml_count++;
 
+  # unassignable
+  $yaml{$yaml_count}->{SE_unassignable} = $unassigned;
+  $yaml_count++;
+  $yaml{$yaml_count}->{SE_percent_unassignable} = $perc_unassigned;
+  $yaml_count++;
+
+  # genome 1
+  $yaml{$yaml_count}->{SE_genome1} = $genome1;
+  $yaml_count++;
+  $yaml{$yaml_count}->{SE_percent_genome1} = $perc_genome1;
+  $yaml_count++;
+
+  # genome 2
+  $yaml{$yaml_count}->{SE_genome2} = $genome2;
+  $yaml_count++;
+  $yaml{$yaml_count}->{SE_percent_genome2} = $perc_genome2;
+  $yaml_count++;
+
+  # conflicting
+  $yaml{$yaml_count}->{SE_conflicting} = $conflicting;
+  $yaml_count++;
+  $yaml{$yaml_count}->{SE_percent_conflicting} = $perc_conflicting;
+  $yaml_count++;
 
 }
 
@@ -213,7 +257,7 @@ sub process_HiC_paired_end{
       print G1;
       print G2;
       if ($conflict){
-	print CONFLICT;
+	       print CONFLICT;
       }
       print G1UA;
       print G2UA;
@@ -363,7 +407,7 @@ sub process_HiC_paired_end{
   warn "\t\t\twere G2/G1: $g2_g1\n";
   warn "Read pairs contained conflicting SNP information:\t$conflicting ($perc_conflicting%)\n\n";
 
-  print REPORT "\n\nAllele-specific paired-end sorting report\n",'='x41,"\n";
+  print REPORT "\n\nAllele-specific Hi-C paired-end sorting report\n",'='x41,"\n";
   print REPORT "Read pairs processed in total:\t\t\t\t$count\n";
   print REPORT "Read pairs were unassignable (UA/UA):\t\t\t$unassigned ($perc_unassigned%)\n";
   print REPORT "Read pairs were specific for genome 1 (G1/G1):\t\t$genome1 ($perc_genome1%)\n";
@@ -379,6 +423,64 @@ sub process_HiC_paired_end{
   print REPORT "\t\t\twere G2/G1: $g2_g1\n";
   print REPORT "Read pairs contained conflicting SNP information:\t$conflicting ($perc_conflicting%)\n\n";
 
+  ### YAML
+  # total reads
+  $yaml{$yaml_count}->{HiC_total_pairs} = $count;
+  $yaml_count++;
+
+  # unassignable
+  $yaml{$yaml_count}->{HiC_unassignable_UA_UA} = $unassigned;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_percent_unassignable_UA_UA} = $perc_unassigned;
+  $yaml_count++;
+
+  # genome 1
+  $yaml{$yaml_count}->{HiC_genome1_G1_G1} = $genome1;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_percent_genome1_G1_G1} = $perc_genome1;
+  $yaml_count++;
+
+  # genome 2
+  $yaml{$yaml_count}->{HiC_genome2_G2_G2} = $genome2;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_percent_genome2_G2_G2} = $perc_genome2;
+  $yaml_count++;
+
+  # G1 / UA
+  $yaml{$yaml_count}->{HiC_G1_UA_total} = $g1_ua_total;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_percent_G1_UA_total} = $perc_g1_ua;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_G1_UA} = $g1_ua;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_UA_G1} = $ua_g1;
+  $yaml_count++;
+
+  # G2 / UA
+  $yaml{$yaml_count}->{HiC_G2_UA_total} = $g2_ua_total;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_percent_G2_UA_total} = $perc_g2_ua;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_G2_UA} = $g2_ua;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_UA_G2} = $ua_g2;
+  $yaml_count++;
+
+  # G1 / G2
+  $yaml{$yaml_count}->{HiC_G1_G2_total} = $g1_g2_total;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_percent_G1_G2_total} = $perc_g1_g2;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_G1_G2} = $g1_g2;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_G2_G1} = $g2_g1;
+  $yaml_count++;
+
+  # conflicting
+  $yaml{$yaml_count}->{HiC_conflicting} = $conflicting;
+  $yaml_count++;
+  $yaml{$yaml_count}->{HiC_percent_conflicting} = $perc_conflicting;
+  $yaml_count++;
 
 }
 
@@ -698,6 +800,57 @@ sub princess_paired_end{
   print REPORT "\tthereof were read pairs:\t$conflicting_pairs\n";
   print REPORT "\tthereof were singletons:\t$conflicting_singletons\n\n";
 
+  ### YAML
+  # total reads
+  $yaml{$yaml_count}->{PE_total_reads} = $count;
+  $yaml_count++;
+  
+  $yaml{$yaml_count}->{PE_total_pairs} = $count_pairs;
+  $yaml_count++;
+  
+  $yaml{$yaml_count}->{PE_total_singletons} = $count_singletons;
+  $yaml_count++;
+
+  # unassignable
+  $yaml{$yaml_count}->{PE_unassignable} = $unassigned;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_percent_unassignable} = $perc_unassigned;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_unassignable_pairs} = $unassigned_pairs;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_unassignable_singletons} = $unassigned_singletons;
+  $yaml_count++;
+
+  # genome 1
+  $yaml{$yaml_count}->{PE_genome1} = $genome1;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_percent_genome1} = $perc_genome1;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_genome1_pairs} = $g1_pairs;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_genome1_singletons} = $g1_singletons;
+  $yaml_count++;
+
+  # genome 2
+  $yaml{$yaml_count}->{PE_genome2} = $genome2;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_percent_genome2} = $perc_genome2;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_genome2_pairs} = $g2_pairs;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_genome2_singletons} = $g2_singletons;
+  $yaml_count++;
+
+  # conflicting
+  $yaml{$yaml_count}->{PE_conflicting} = $conflicting;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_percent_conflicting} = $perc_conflicting;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_conflicting_pairs} = $conflicting_pairs;
+  $yaml_count++;
+  $yaml{$yaml_count}->{PE_conflicting_singletons} = $conflicting_singletons;
+  $yaml_count++;
+
 }
 
 
@@ -706,7 +859,7 @@ sub open_output_filehandles{
   my $infile = my $file = shift;
   $file =~ s/allele_flagged\.bam$/bam/;
 
-  my $genome1_file = my $genome2_file = my $unassigned_file = my $conflicting_file = $report_file = $file;
+  my $genome1_file = my $genome2_file = my $unassigned_file = my $conflicting_file = $report_file = my $yaml_file = $file;
   my $genome1_file_st = my $genome2_file_st = my $unassigned_file_st = my $conflicting_file_st = $file;
 
   my $g1_ua_file = my $g2_ua_file = my $g1_g2_file = $file;
@@ -740,6 +893,7 @@ sub open_output_filehandles{
   }
 
   $report_file =~ s/bam$/SNPsplit_sort.txt/;
+  $yaml_file   =~ s/bam$/SNPsplit_sort.yaml/;
 
   if ($bam){ # default
 
@@ -813,6 +967,8 @@ sub open_output_filehandles{
   }
 
   open (REPORT,'>',"${output_dir}$report_file") or die "Unable to write to file '$report_file': $!\n";
+  warn "Writing YAML report to $yaml_file\n\n";
+  open (YAML,'>',"${output_dir}$yaml_file") or die "Unable to write to file '$yaml_file': $!\n";
 
   if ($hic){
     warn "Input file:\t\t\t\t\t\t'$infile'\n";
@@ -949,7 +1105,6 @@ sub print_helpfile{
 
   For more information on sorting options pelase refer to the SNPsplit documentation.
 
-
   USAGE: tag2sort [options] [SNPsplit tagged input file(s)]
 
 SNPsplit tagged input file(s): These files are required to be SAM/BAM files that contain the
@@ -989,7 +1144,7 @@ be assigned to a specific allele, and they are one of the following:
 
 
 
-                          Script last modified: 04 September 2017
+                          Script last modified: 21 November 2019
 
 EOF
     ;

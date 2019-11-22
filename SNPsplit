@@ -25,7 +25,7 @@ use Cwd;
 
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.4_dev';
+my $pipeline_version = '0.3.4dev';
 my $parent_dir = getcwd;
 my ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
 my %snps; # storing SNP position and sequence information for all SNPs
@@ -35,12 +35,17 @@ my $no_snp_found = 0;
 my $count_SNPs_stored = 0;
 
 my ($no_snp,$genome1,$genome2,$bizarre,$conflicting,$unassigned,$ct_snp,$unassigned_but_ct);
+my %yaml; # keeping relevant statistitcs for YAML report
+my $yaml_count = 0;
 
 while (@ARGV){
+	$yaml_count = 0; # resetting if more than one file is processed with a single command
+	%yaml = ();
     my $file = shift @ARGV;
 
     warn "Now starting to process file <<< '$file' >>> \n\n";
-    sleep (1);
+    $yaml{$yaml_count}->{infile} = $file;
+    ++$yaml_count;
 
     my $outfile = open_output_filehandles($file);
 
@@ -162,30 +167,72 @@ while (@ARGV){
 
     ####
 
-    my $sortfile = $outfile;
+    my $sortfile = my $sort_yaml_file = $outfile;
 
-    if ($sortfile =~ s/allele_flagged\.bam$/bam/){
-	if ($sortfile =~ s/bam$/SNPsplit_sort.txt/){
-	    if (-e $sortfile){
+    if ($sortfile =~ s/allele_flagged\.bam$/SNPsplit_sort.txt/){
+		if (-e $sortfile){
 
-		open (SORT,"${output_dir}$sortfile") or die "Failed to read sorting report from '${output_dir}$sortfile': $!\n";
-		my $doc;
-		while(<SORT>){
-		    chomp;
-		    $_ =~ s/\r//g;
-		    $doc .= $_."\n";
+			open (SORT,"${output_dir}$sortfile") or die "Failed to read sorting report from '${output_dir}$sortfile': $!\n";
+			my $doc;
+			while(<SORT>){
+				chomp;
+				$_ =~ s/\r//g;
+				$doc .= $_."\n";
+			}
+
+			close SORT or die $!;
+
+			### appending the sorting report to the tagging report
+			warn "Appending sorting report to tagging report...\n";
+
+			print REPORT $doc;
 		}
-
-		close SORT or die $!;
-
-		### appending the sorting report to the tagging report
-		warn "Appending sorting report to tagging report...\n";
-
-		print REPORT $doc;
-	    }
-	}
     }
-    warn "SNPsplit processing finished...\n\n";
+   
+    # warn "Printing YAML report to \n";
+    print_YAML($sort_yaml_file);
+	warn "\n\nSNPsplit processing finished...\n\n";
+
+}
+
+sub print_YAML{
+	my $sort_yaml_file = shift;
+	print YAML "---\n";
+	print YAML "- Tagging:\n";
+
+	foreach my $entry (sort {$a<=>$b} keys %yaml){
+		foreach my $stat(keys %{$yaml{$entry}}){
+			# warn "Entry: $entry\t$stat: $yaml{$entry}->{$stat}\n";
+			print YAML "  $stat: $yaml{$entry}->{$stat}\n";
+		}
+	}
+	if ($sort_yaml_file){
+		
+		if ($sort_yaml_file =~ s/allele_flagged\.bam$/SNPsplit_sort.yaml/){
+			if (-e $sort_yaml_file){
+				# warn "Found sorting YAML file ($sort_yaml_file). Printing that too\n";
+				print YAML "- Sorting:\n";
+				open (SORTYAML,"${output_dir}$sort_yaml_file") or die "Failed to read sorting report from '${output_dir}$sort_yaml_file': $!\n";
+				#my $doc;
+				while(<SORTYAML>){
+					chomp;
+					my ($key,$value) = (split /: /);
+					print YAML "  $key: $value\n";
+				}
+
+				close SORTYAML or die $!;
+				if (unlink $sort_yaml_file){ 
+					# removing the sort.yaml file to avoid duplication
+				}
+				else{
+					warn "Deletion of file >>$sort_yaml_file<< failed!";
+					warn "\n\n";
+				}
+			}
+		}	
+	}
+	print YAML "...\n";
+
 }
 
 ###
@@ -321,7 +368,7 @@ sub process_masked_BAM_file{
 
 	chomp; # appending the XX tag to the current BAM line
 	$_ .= "\t$XX_tag\n";
-	print OUT;
+		print OUT;
 
     }
 
@@ -359,28 +406,74 @@ sub process_masked_BAM_file{
     print REPORT "$genome1 reads were specific for genome 1 ($perc_genome1%)\n";
     print REPORT "$genome2 reads were specific for genome 2 ($perc_genome2%)\n";
     if ($bisulfite){
-	print REPORT "$unassigned_but_ct reads that were unassignable contained C>T SNPs preventing the assignment\n"
+		print REPORT "$unassigned_but_ct reads that were unassignable contained C>T SNPs preventing the assignment\n"
     }
     print REPORT "$no_snp reads did not contain one of the expected bases at known SNP positions ($perc_no_snp%)\n";
     print REPORT "$bizarre contained conflicting allele-specific SNPs ($perc_bizarre%)\n\n\n";
 
+    ### YAML
+	# total reads
+	$yaml{$yaml_count}->{total_reads} = $count;
+	++$yaml_count;
+	
+	# unaligned
+	$yaml{$yaml_count}->{unaligned} = $unmapped;
+	++$yaml_count;
+	$yaml{$yaml_count}->{percent_unaligned} = $perc_unmapped;
+	++$yaml_count;
+
+	# genome 1
+	$yaml{$yaml_count}->{g1} = $genome1;
+	++$yaml_count;
+	$yaml{$yaml_count}->{percent_g1} = $perc_genome1;
+	++$yaml_count;
+
+	# genome 2
+	$yaml{$yaml_count}->{g2} = $genome2;
+	++$yaml_count;
+	$yaml{$yaml_count}->{percent_g2} = $perc_genome2;
+	++$yaml_count;
+
+	# unassigned
+	$yaml{$yaml_count}->{unassignable} = $unassigned;
+	++$yaml_count;
+	$yaml{$yaml_count}->{percent_unassignable} = $perc_unassigned;
+	++$yaml_count;
+
+    if ($bisulfite){
+		$yaml{$yaml_count}->{unassigned_but_ct} = $unassigned_but_ct;
+		++$yaml_count;
+    }
+
+    # no SNP
+    $yaml{$yaml_count}->{no_snp} = $no_snp;
+	++$yaml_count;
+	$yaml{$yaml_count}->{percent_no_snp} = $perc_no_snp;
+	++$yaml_count;
+
+   	# Conflicting
+	$yaml{$yaml_count}->{bizarre} = $bizarre;
+	++$yaml_count;
+    $yaml{$yaml_count}->{percent_bizarre} = $perc_bizarre;
+	++$yaml_count;
+
     my ($pc_n_found , $pc_no_n_found , $pc_n_deletion , $pc_multi_n_deletion);
 
     if ($count == 0){
-	$pc_n_found = $pc_no_n_found =  $pc_n_deletion = $pc_multi_n_deletion = 'N/A';
+		$pc_n_found = $pc_no_n_found =  $pc_n_deletion = $pc_multi_n_deletion = 'N/A';
     }
     else{
-	if ( ($snp_found + $no_snp_found) == 0){
-	    $pc_n_found = 'N/A';
-	    $pc_no_n_found = 'N/A';
-	}
-	else{
-	    $pc_n_found    = sprintf ("%.2f",$snp_found*100/($snp_found + $no_snp_found));
-	    $pc_no_n_found = sprintf ("%.2f",$no_snp_found*100/ ($snp_found + $no_snp_found) );
-	}
+		if ( ($snp_found + $no_snp_found) == 0){
+		    $pc_n_found = 'N/A';
+		    $pc_no_n_found = 'N/A';
+		}
+		else{
+		    $pc_n_found    = sprintf ("%.2f",$snp_found*100/($snp_found + $no_snp_found));
+		    $pc_no_n_found = sprintf ("%.2f",$no_snp_found*100/ ($snp_found + $no_snp_found) );
+		}
 
-	$pc_n_deletion   = sprintf ("%.2f",$contained_N_deletion*100/ $count );
-	$pc_multi_n_deletion = sprintf ("%.2f",$multi_N_deletion*100/ $count );
+		$pc_n_deletion   = sprintf ("%.2f",$contained_N_deletion*100/ $count );
+		$pc_multi_n_deletion = sprintf ("%.2f",$multi_N_deletion*100/ $count );
     }
 
     warn "SNP coverage report\n===================\n";
@@ -393,7 +486,7 @@ sub process_masked_BAM_file{
     warn "Of valid N containing reads,\n";
     warn "N was present in the list of known SNPs:\t$snp_found ($pc_n_found%)\n";
     if ($bisulfite){
-	warn "Positions were skipped since they involved C>T SNPs:\t$ct_snp\n";
+		warn "Positions were skipped since they involved C>T SNPs:\t$ct_snp\n";
     }
     warn "N was not present in the list of SNPs:\t\t$no_snp_found ($pc_no_n_found%)\n\n";
 
@@ -408,9 +501,52 @@ sub process_masked_BAM_file{
     print REPORT "Of valid N containing reads,\n";
     print REPORT "N was present in the list of known SNPs:\t$snp_found ($pc_n_found%)\n";
     if ($bisulfite){
-	print REPORT "Positions were skipped since they involved C>T SNPs:\t$ct_snp\n";
+		print REPORT "Positions were skipped since they involved C>T SNPs:\t$ct_snp\n";
     }
     print REPORT "N was not present in the list of SNPs:\t\t$no_snp_found ($pc_no_n_found%)\n\n";
+    
+    ### YAML
+    # SNP annotation file
+    $yaml{$yaml_count}->{SNP_annotation} = $snp_file;
+	++$yaml_count;
+
+	# number of SNPs stored
+    $yaml{$yaml_count}->{SNPs_stored} = $count_SNPs_stored;
+	++$yaml_count;
+
+	# N-containing reads
+    $yaml{$yaml_count}->{N_containing_reads} = $count_N_containing;
+	++$yaml_count;	
+
+	# non N-containing reads
+    $yaml{$yaml_count}->{non_N_containing_reads} = $non_N_containing;
+	++$yaml_count;
+
+	# N-deletion reads
+    $yaml{$yaml_count}->{N_deletion} = $contained_N_deletion;
+	++$yaml_count;
+    $yaml{$yaml_count}->{percent_N_deletion} = $pc_n_deletion;
+	++$yaml_count;
+
+	# multi N-deletion reads
+    $yaml{$yaml_count}->{multi_N_deletion} = $multi_N_deletion;
+	++$yaml_count;
+
+    # N was known SNP
+    $yaml{$yaml_count}->{N_was_known_SNP} = $snp_found;
+	++$yaml_count;
+	$yaml{$yaml_count}->{percent_N_was_known_SNP} = $pc_n_found;
+	++$yaml_count;
+
+    if ($bisulfite){
+		$yaml{$yaml_count}->{CT_positions_skipped} = $ct_snp;
+		++$yaml_count;
+    }
+
+	$yaml{$yaml_count}->{N_not_known} = $no_snp_found;
+	++$yaml_count;
+	$yaml{$yaml_count}->{percent_N_not_known} = $pc_no_n_found;
+	++$yaml_count;
 
     close OUT or warn "Failed to close filehandle OUT: $!. Exit status: $?\n";
 
@@ -1309,18 +1445,21 @@ sub open_output_filehandles{
 
     $report_file =~ s/sam$/bam/;
     $report_file =~ s/bam$/SNPsplit_report.txt/;
+    my $yaml_report = $report_file;
+	$yaml_report =~ s/txt$/yaml/;
 
     if ($bam){
-	$outfile =~ s/sam$/bam/;
-	open (OUT,"| $samtools_path view -bS 2> /dev/null - > ${output_dir}$outfile") or die "Unable to write to BAM file '$outfile': $!\n";
+		$outfile =~ s/sam$/bam/;
+		open (OUT,"| $samtools_path view -bS 2> /dev/null - > ${output_dir}$outfile") or die "Unable to write to BAM file '$outfile': $!\n";
     }
     else{ # writing out to a SAM file
-	open (OUT,'>',"${output_dir}$outfile") or die "Unable to write to file '${output_dir}$outfile': $!\n";
+		open (OUT,'>',"${output_dir}$outfile") or die "Unable to write to file '${output_dir}$outfile': $!\n";
     }
 
     open (REPORT,'>',"${output_dir}$report_file") or die "Unable to write to file '${output_dir}$report_file': $!\n";
-
-    warn "Input file:\t\t\t\t\t'$file'\n";
+ 	open (YAML,'>',"${output_dir}$yaml_report") or die "Unable to write to file '${output_dir}$yaml_report': $!\n";
+    
+	warn "Input file:\t\t\t\t\t'$file'\n";
     print REPORT "Input file:\t\t\t\t\t'$file'\n";
 
     warn "Writing SNPplit-tag report to:\t\t\t'$report_file'\n";
@@ -1766,7 +1905,7 @@ sub print_helpfile{
     --version              Displays version information and exits.
 
 
-                                   Script last modified: 16 Sept 2019
+                                   Script last modified: 22 Nov 2019
 EOF
     ;
   exit 1;
