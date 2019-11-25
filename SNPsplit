@@ -7,7 +7,7 @@ use lib "$RealBin/../lib";
 use Cwd;
 
 
-## This program is Copyright (C) 2014-17, Felix Krueger (felix.krueger@babraham.ac.uk)
+## This program is Copyright (C) 2014-20, Felix Krueger (felix.krueger@babraham.ac.uk)
 
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -25,8 +25,11 @@ use Cwd;
 
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.4dev';
+my $pipeline_version = '0.3.4_dev';
 my $parent_dir = getcwd;
+my $full_commandline = join (" ","SNPsplit",@ARGV);
+# warn "Full commandline: $full_commandline\n"; sleep(5);
+
 my ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
 my %snps; # storing SNP position and sequence information for all SNPs
 
@@ -36,17 +39,21 @@ my $count_SNPs_stored = 0;
 
 my ($no_snp,$genome1,$genome2,$bizarre,$conflicting,$unassigned,$ct_snp,$unassigned_but_ct);
 my %yaml; # keeping relevant statistitcs for YAML report
+my %meta; # also for YAML report, but for Meta data
+
 my $yaml_count = 0;
+my $meta_count = 0;
 
 while (@ARGV){
 	$yaml_count = 0; # resetting if more than one file is processed with a single command
+	$meta_count = 0;
 	%yaml = ();
+	%meta = ();
+
     my $file = shift @ARGV;
+	my $timestamp = localtime(time);
 
     warn "Now starting to process file <<< '$file' >>> \n\n";
-    $yaml{$yaml_count}->{infile} = $file;
-    ++$yaml_count;
-
     my $outfile = open_output_filehandles($file);
 
     warn "\nSummary of parameters for SNPsplit-tag:\n";
@@ -57,32 +64,65 @@ while (@ARGV){
     warn "Parent directory:\t\t>$parent_dir<\n";
     warn "Samtools path:\t\t\t$samtools_path\n";
     if ($bam){
-	warn "Output format:\t\t\tBAM (default)\n";
+		warn "Output format:\t\t\tBAM (default)\n";
     }
     else{
-	warn "Output format:\t\t\tSAM\n";
+		warn "Output format:\t\t\tSAM\n";
     }
+	my $mode;
     if ($hic){
-	warn "Input format:\t\t\tHi-C (by definition paired-end)\n";
+		warn "Input format:\t\t\tHi-C (by definition paired-end)\n";
+		$mode = 'Hi-C';
     }
     else{
+		if ($paired){
+			if ($bisulfite){
+				warn "Input format:\t\t\tBismark paired-end (not relevant for tagging process)\n";
+			}
+			else{
+				warn "Input format:\t\t\tPaired-end (not relevant for tagging process)\n";
+			}
+		}
+		else{
+			if ($bisulfite){
+				warn "Input format:\t\t\tBismark Single-End\n";
+			}
+			else{
+				warn "Input format:\t\t\tSingle-End\n";
+			}
+		}
+    }
+	if ($bisulfite){
+		$mode = 'bisulfite';
+	}
+	unless($bisulfite or $hic){
+		$mode = 'standard DNA';
+	}
+	my $library;
 	if ($paired){
-	    if ($bisulfite){
-		warn "Input format:\t\t\tBismark paired-end (not relevant for tagging process)\n";
-	    }
-	    else{
-		warn "Input format:\t\t\tPaired-end (not relevant for tagging process)\n";
-	    }
+		$library = 'paired-end';
 	}
 	else{
-	    if ($bisulfite){
-		warn "Input format:\t\t\tBismark Single-End\n";
-	    }
-	    else{
-		warn "Input format:\t\t\tSingle-End\n";
-	    }
+		$library = 'single-end';
 	}
-    }
+
+
+	$meta{$meta_count}->{tool} = 'SNPsplit';
+    ++$meta_count;
+	$meta{$meta_count}->{version} = $pipeline_version;
+    ++$meta_count;
+	$meta{$meta_count}->{infile} = $file;
+    ++$meta_count;
+	$meta{$meta_count}->{date_run} = $timestamp;
+    ++$meta_count;
+	$meta{$meta_count}->{mode} = $mode;
+    ++$meta_count;
+	$meta{$meta_count}->{library} = $library;
+    ++$meta_count;
+	$meta{$meta_count}->{command} = $full_commandline;
+    ++$meta_count;
+
+
     warn "\n\n";
 
     sleep (1);
@@ -101,29 +141,29 @@ while (@ARGV){
 
     ### Paired-end
     if ($paired){
-	unless ($no_sort){
-	    warn "File specified as unsorted paired-end BAM file\n";
-	    $file = sort_by_name_paired_end($file); # setting this as the new file
+		unless ($no_sort){
+			warn "File specified as unsorted paired-end BAM file\n";
+			$file = sort_by_name_paired_end($file); # setting this as the new file
+		}
+		else{
+			warn "File was specified to be sorted (i.e. Read 1 and Read 2 are following each other in the paired-end BAM file), thus skipping the sorting step\n\n";
+		}
 	}
-	else{
-	    warn "File was specified to be sorted (i.e. Read 1 and Read 2 are following each other in the paired-end BAM file), thus skipping the sorting step\n\n";
-	}
-    }
-    else{ ### single-end
-	warn "File specified as single-end BAM file\n";
+	else{ ### single-end
+		warn "File specified as single-end BAM file\n";
     }
 
     if (%snps){ # not necessary to read SNPs a second time
-	warn "Using already stored SNP information\n";
-	sleep (1);
+		warn "Using already stored SNP information\n";
+		sleep (1);
     }
     else{
-	### READ IN SNP FILE
-	$count_SNPs_stored = read_snps();
+		### READ IN SNP FILE
+		$count_SNPs_stored = read_snps();
 
-	unless (%snps){
-	    die "SNP file doesn't appear to contain readable SNP positions. Please check the filename/file format and try again\n\n";
-	}
+		unless (%snps){
+			die "SNP file doesn't appear to contain readable SNP positions. Please check the filename/file format and try again\n\n";
+		}
     }
 
     process_masked_BAM_file($file);
@@ -139,28 +179,28 @@ while (@ARGV){
     # Calling the allele-specific sorting now
     my @args;
     if ($hic){
-	push @args, '--hic';
+		push @args, '--hic';
     }
     if ($samtools_path){
-	push @args, "--samtools_path $samtools_path";
+		push @args, "--samtools_path $samtools_path";
     }
     if ($paired){
-	push @args, '--paired';
+		push @args, '--paired';
     }
     unless ($bam){
-	push @args, '--sam';
+		push @args, '--sam';
     }
     if ($verbose){
-	push @args, '--verbose';
+		push @args, '--verbose';
     }
     if ($output_dir){ # not passing on empty strings
-	push @args, "--output_dir $output_dir";
+		push @args, "--output_dir $output_dir";
     }
     if ($conflict){
-	push @args, '--conflicting';
+		push @args, '--conflicting';
     }
     if ($singletons){
-	push @args, '--singletons';
+		push @args, '--singletons';
     }
 
     system ("$RealBin/tag2sort @args $outfile");
@@ -198,20 +238,31 @@ while (@ARGV){
 sub print_YAML{
 	my $sort_yaml_file = shift;
 	print YAML "---\n";
-	print YAML "- Tagging:\n";
 
+	# First printing some Metadata about the run
+	print YAML "Meta:\n";
+	foreach my $entry (sort {$a<=>$b} keys %meta){
+		foreach my $stat(keys %{$meta{$entry}}){
+			# warn "Entry: $entry\t$stat: $meta{$entry}->{$stat}\n";
+			print YAML "  $stat: $meta{$entry}->{$stat}\n";
+		}
+	}
+	
+	# Tagging stats
+	print YAML "Tagging:\n";
 	foreach my $entry (sort {$a<=>$b} keys %yaml){
 		foreach my $stat(keys %{$yaml{$entry}}){
 			# warn "Entry: $entry\t$stat: $yaml{$entry}->{$stat}\n";
 			print YAML "  $stat: $yaml{$entry}->{$stat}\n";
 		}
 	}
+
+	# Sorting stats
 	if ($sort_yaml_file){
-		
 		if ($sort_yaml_file =~ s/allele_flagged\.bam$/SNPsplit_sort.yaml/){
 			if (-e $sort_yaml_file){
 				# warn "Found sorting YAML file ($sort_yaml_file). Printing that too\n";
-				print YAML "- Sorting:\n";
+				print YAML "Sorting:\n";
 				open (SORTYAML,"${output_dir}$sort_yaml_file") or die "Failed to read sorting report from '${output_dir}$sort_yaml_file': $!\n";
 				#my $doc;
 				while(<SORTYAML>){
@@ -1905,7 +1956,7 @@ sub print_helpfile{
     --version              Displays version information and exits.
 
 
-                                   Script last modified: 22 Nov 2019
+                                   Script last modified: 25 Nov 2019
 EOF
     ;
   exit 1;
