@@ -52,7 +52,8 @@ while (@ARGV){
 
     my $file = shift @ARGV;
 	my $timestamp = localtime(time);
-
+	# warn "timestamp:\n$timestamp\n"; 
+	
     warn "Now starting to process file <<< '$file' >>> \n\n";
     my $outfile = open_output_filehandles($file);
 
@@ -113,7 +114,25 @@ while (@ARGV){
     ++$meta_count;
 	$meta{$meta_count}->{infile} = $file;
     ++$meta_count;
-	$meta{$meta_count}->{date_run} = $timestamp;
+	# let's get canonical YAML date format (http://sweetohm.net/article/introduction-yaml.en.html#dates:e7bb92ccaaf13ef0e08921ccaca9f391)
+	my @elements = split (/ /,$timestamp);
+	my %months = (
+		'Jan' => 1,
+		'Feb' => 2,
+		'Mar' => 3,
+		'Apr' => 4,
+		'May' => 5,
+		'Jun' => 6,
+		'Jul' => 7,
+		'Aug' => 8,
+		'Sep' => 9,
+		'Oct' => 10,
+		'Nov' => 11,
+		'Dec' => 12,
+	);
+	my $canonical_timestamp = "$elements[4]-$months{$elements[1]}-$elements[2]T$elements[3].1Z";
+	
+	$meta{$meta_count}->{date_run} = $canonical_timestamp;
     ++$meta_count;
 	$meta{$meta_count}->{mode} = $mode;
     ++$meta_count;
