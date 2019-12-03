@@ -25,7 +25,7 @@ use Cwd;
 
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.4_dev';
+my $pipeline_version = '0.3.4_dev_softer';
 my $parent_dir = getcwd;
 my $full_commandline = join (" ","SNPsplit",@ARGV);
 # warn "Full commandline: $full_commandline\n"; sleep(5);
@@ -144,18 +144,15 @@ while (@ARGV){
 
     warn "\n\n";
 
-    sleep (1);
-
-
     ### SAM TO BAM CONVERSION - if necessary
     if ($file =~/\.sam$/){
-	$file = sam2bam_convert($file);
+		$file = sam2bam_convert($file);
     }
     elsif ($file =~ /\.bam$/){
-	# fine
+		# fine
     }
     else{
-	die "Please supply a file in either SAM or BAM format (ending with .sam or .bam). File name given was '$file'\n\n";
+		die "Please supply a file in either SAM or BAM format (ending with .sam or .bam). File name given was '$file'\n\n";
     }
 
     ### Paired-end
@@ -195,7 +192,7 @@ while (@ARGV){
     #####            #####
     ######################
 
-    # Calling the allele-specific sorting now
+    # Calling the allele-specific sorting now (tag2sort)
     my @args;
     if ($hic){
 		push @args, '--hic';
@@ -324,6 +321,7 @@ sub process_masked_BAM_file{
     my $contained_N_deletion = 0;
     my $multi_N_deletion = 0;
     my $unmapped = 0;
+	my $hardclipped = 0;
 
     while (<IN>){
 
@@ -349,10 +347,25 @@ sub process_masked_BAM_file{
 	    $unmapped++;
 	    next; # skipping
 	}
+	if ($cigar =~ /H/){
+		# warn "CIGAR string contained hard-clipped bases. Skipping.\n";
+		++$hardclipped;
+		next;
+	}
+	
+	#warn "'$_'";
+	# chomp;
+	my $md_tag;
+	$md_tag = $1 if ($_ =~ /MD:Z:(\S+)/); # should capture anything up to a white space or newline
+	# $md_tag = $1 if ($_ =~ /MD:Z:(.*)/);
 
-	my $md_tag = $1 if ($_ =~ /MD:Z:(.+?)\s+/);
 	unless ($md_tag){
-	    die "Failed to extract MD:Z tag from line:\n$_\n";
+	   	# warn "Failed to extract MD:Z tag from line:\n$_\n";
+		next;
+		# TODO: Look for cs tag instead?
+	}
+	else{
+		# warn "found MD:Z: >>$md_tag<<\n";
 	}
 
 	#  if ($verbose){
@@ -366,63 +379,66 @@ sub process_masked_BAM_file{
 
 	    my $n_dels = 0;
 	    while ($md_tag =~ /\^\D*N\D*\d+/g){ # looking for the number of deletions of the N-SNP position in the read
-		++$n_dels;
+			++$n_dels;
 	    }
 
 	    if ($n_dels == 1){
-		++$contained_N_deletion;
-		++$bizarre;
-		$XX_tag = 'XX:Z:CF';     # Reads where the N was deleted are 'conflicting'
-		# print $_;
+			++$contained_N_deletion;
+			++$bizarre;
+			$XX_tag = 'XX:Z:CF';     # Reads where the N was deleted are 'conflicting'
+			# print $_;
 	    }
 	    elsif($n_dels > 1){
-		++$contained_N_deletion;
-		++$multi_N_deletion;
-		++$bizarre;
-		# warn "Read contained more than 1 deleted N position. MD-tag: $md_tag\n";
-		# print join ("\t",$id,$flag,$chr,$start,$cigar,$sequence,$md_tag),"\n";
-		$XX_tag = 'XX:Z:CF';     # calling this situation 'conflicting' for the time being
-		# print $_;
+			++$contained_N_deletion;
+			++$multi_N_deletion;
+			++$bizarre;
+			# warn "Read contained more than 1 deleted N position. MD-tag: $md_tag\n";
+			# print join ("\t",$id,$flag,$chr,$start,$cigar,$sequence,$md_tag),"\n";
+			$XX_tag = 'XX:Z:CF';     # calling this situation 'conflicting' for the time being
+			# print $_;
 	    }
 	    else{ # no deletion of the N position itself
-		++$count_N_containing;
-		### Determine whether the N was a known SNP and whether we can assign an allele
-		($genome1_count,$genome2_count,$ct_unassigned) = determine_N_position ($chr,$start,$cigar,$sequence,$md_tag,$_);
+			++$count_N_containing;
+			### Determine whether the N was a known SNP and whether we can assign an allele
+			($genome1_count,$genome2_count,$ct_unassigned) = determine_N_position ($chr,$start,$cigar,$sequence,$md_tag,$_);
+			# warn "G1: $genome1_count\n";
+			# warn "G2: $genome2_count\n";
+			# warn "UA: $ct_unassigned\n\n";
 
-		if ($genome1_count > 0 and $genome2_count > 0){
-		    ++$bizarre;
-		    $XX_tag = 'XX:Z:CF'; #  read contained one or more SNPs for both genomes -> dodgy
-		}
-		elsif ($genome1_count > $genome2_count){
-		    $genome1++;
-		    $XX_tag = 'XX:Z:G1'; # genome 1 specific
-		}
-		elsif($genome2_count > $genome1_count){
-		    $genome2++;
-		    $XX_tag = 'XX:Z:G2'; # genome 2 specific
-		}
-		elsif($genome1_count == 0 and $genome2_count == 0){
-		    # read came back without any assigned number, e.g. the SNP position contained a base different to either genome. The read is thus unassignable
-		    if ($bisulfite){
-			# for bisulfite reads this may have happened because of C>T SNPs
-			if ($ct_unassigned > 0){
-			    # we will not score this read as having an unexpected base at the SNP position, but as unassignable because of C>T SNps
-			    ++$unassigned_but_ct;
+			if ($genome1_count > 0 and $genome2_count > 0){
+				++$bizarre;
+				$XX_tag = 'XX:Z:CF'; #  read contained one or more SNPs for both genomes -> dodgy
+			}
+			elsif ($genome1_count > $genome2_count){
+				$genome1++;
+				$XX_tag = 'XX:Z:G1'; # genome 1 specific
+			}
+			elsif($genome2_count > $genome1_count){
+				$genome2++;
+				$XX_tag = 'XX:Z:G2'; # genome 2 specific
+			}
+			elsif($genome1_count == 0 and $genome2_count == 0){
+				# read came back without any assigned number, e.g. the SNP position contained a base different to either genome. The read is thus unassignable
+				if ($bisulfite){
+					# for bisulfite reads this may have happened because of C>T SNPs
+					if ($ct_unassigned > 0){
+						# we will not score this read as having an unexpected base at the SNP position, but as unassignable because of C>T SNps
+						++$unassigned_but_ct;
+					}
+					else{
+						++$no_snp; # here the base must have been different to ref and SNP, and not involve a C/T of either of them
+					}
+				}
+				else{
+					++$no_snp;
+				}
+				$XX_tag = 'XX:Z:UA'; # unassignable read
+				++$unassigned;
 			}
 			else{
-			    ++$no_snp; # here the base must have been different to ref and SNP, and not involve a C/T of either of them
+				warn "g1: $genome1_count\ng2: $genome2_count\n";
+				die "The read could not be assigned an XX-tag\n\n";
 			}
-		    }
-		    else{
-			++$no_snp;
-		    }
-		    $XX_tag = 'XX:Z:UA'; # unassignable read
-		    ++$unassigned;
-		}
-		else{
-		    warn "g1: $genome1_count\ng2: $genome2_count\n";
-		    die "The read could not be assigned an XX-tag\n\n";
-		}
 	    }
 	}
 	else{
@@ -439,32 +455,32 @@ sub process_masked_BAM_file{
 	chomp; # appending the XX tag to the current BAM line
 	$_ .= "\t$XX_tag\n";
 		print OUT;
-
     }
 
     ### Printing Summary reports of the stats on a per-read basis
 
     my ($perc_no_snp,$perc_genome1,$perc_genome2,$perc_bizarre,$perc_unassigned,$perc_unmapped);
     if ($count == 0){
-	$perc_unassigned = $perc_no_snp = $perc_genome1 = $perc_genome2 = $perc_bizarre = $perc_unmapped = 'N/A';
+		$perc_unassigned = $perc_no_snp = $perc_genome1 = $perc_genome2 = $perc_bizarre = $perc_unmapped = 'N/A';
     }
     else{
-	$perc_unassigned = sprintf ("%.2f",$unassigned*100/$count);
-	$perc_no_snp     = sprintf ("%.2f",$no_snp*100/$count);
-	$perc_genome1    = sprintf ("%.2f",$genome1*100/$count);
-	$perc_genome2    = sprintf ("%.2f",$genome2*100/$count);
-	$perc_bizarre    = sprintf ("%.2f",$bizarre*100/$count);
-	$perc_unmapped   = sprintf ("%.2f",$unmapped*100/$count);
+		$perc_unassigned = sprintf ("%.2f",$unassigned*100/$count);
+		$perc_no_snp     = sprintf ("%.2f",$no_snp*100/$count);
+		$perc_genome1    = sprintf ("%.2f",$genome1*100/$count);
+		$perc_genome2    = sprintf ("%.2f",$genome2*100/$count);
+		$perc_bizarre    = sprintf ("%.2f",$bizarre*100/$count);
+		$perc_unmapped   = sprintf ("%.2f",$unmapped*100/$count);
     }
 
     warn "\nAllele-tagging report\n",'='x21,"\n";
     warn "Processed $count read alignments in total\n";
     warn "Reads were unaligned and hence skipped: $unmapped ($perc_unmapped%)\n";
+	warn "Reads were hard-clipped (CIGAR: H) and skipped: $hardclipped\n";
     warn "$unassigned reads were unassignable ($perc_unassigned%)\n";
     warn "$genome1 reads were specific for genome 1 ($perc_genome1%)\n";
     warn "$genome2 reads were specific for genome 2 ($perc_genome2%)\n";
     if ($bisulfite){
-	warn "$unassigned_but_ct reads that were unassignable contained C>T SNPs preventing the assignment\n"
+		warn "$unassigned_but_ct reads that were unassignable contained C>T SNPs preventing the assignment\n"
     }
     warn "$no_snp reads did not contain one of the expected bases at known SNP positions ($perc_no_snp%)\n";
     warn "$bizarre contained conflicting allele-specific SNPs ($perc_bizarre%)\n\n\n";
@@ -638,371 +654,408 @@ sub determine_N_position{
     die "CIGAR string contained a non-matching number of lengths and operations\n" unless (scalar @len == scalar @ops);
 
     my @ns = split /N/,$md_tag;
+	
+	if (scalar @ops == 1 and $ops[0] eq 'M'){
 
-    if (scalar @ops == 1 and $ops[0] eq 'M'){
+		if ($verbose){ warn "Read is a single continuous match: $cigar\n"; sleep(1);}
+		# adjusting the read mapping position by the SNP position
 
-	if ($verbose){ warn "Read is a single contiguous match: $cigar\n"; sleep(1);}
-	# adjusting the read mapping position the SNP position
-
-	if ($verbose){
-	    warn "MD-tag: $md_tag\n";
-	    print join ("\t",@ns),"\n";
-	}
-
-	die "There were fewer than 2 elements in the MD tag $md_tag! number of elements: ",scalar @ns,"\n" if (scalar @ns < 2);
-	my $pos;
-
-	foreach my $index (0..($#ns-1)){ # the last index of @ns is the number of matching strings after the last N, so is not relevant
-
-	    if ($ns[$index] =~/\D/){ # Element is a Non-Digit
-
-		if ($ns[$index] =~/\W/){
-		    if ($verbose){ warn "Element contains a Non-Word character: $ns[$index]\n~~~~~~~~!!!\n"};
+		if ($verbose){
+			warn "MD-tag: $md_tag\n";
+			print join ("\t",@ns),"\n";
 		}
 
-		if ($verbose){ warn "element contains a Non-DIGIT: $ns[$index]\n"};
-		my @array = split /[ATCG]/,$ns[$index];
-		if ($verbose){ warn "Elements in the array: ",scalar @array,"\n"};
+		die "There were fewer than 2 elements in the MD tag $md_tag! number of elements: ",scalar @ns,"\n" if (scalar @ns < 2);
+		my $pos;
 
-		foreach my $element(@array){
-		    if ($verbose){ warn "Adding $element to pos\n"};
-		    $pos += $element;
-		    if ($verbose){ warn "pos right now: $pos\n"};
+		foreach my $index (0..($#ns-1)){ # the last index of @ns is the number of matching strings after the last N, so is not relevant
+
+	    	if ($ns[$index] =~/\D/){ # Element is a Non-Digit
+
+				if ($ns[$index] =~/\W/){
+					if ($verbose){ warn "Element contains a Non-Word character: $ns[$index]\n~~~~~~~~!!!\n"};
+				}
+
+				if ($verbose){ warn "element contains a Non-DIGIT: $ns[$index]\n"};
+				my @array = split /[ATCG]/,$ns[$index];
+				if ($verbose){ warn "Elements in the array: ",scalar @array,"\n"};
+
+				foreach my $element(@array){
+					if ($verbose){ warn "Adding $element to pos\n"};
+					$pos += $element;
+					if ($verbose){ warn "pos right now: $pos\n"};
+				}
+				if ($verbose){ warn "now adjusting for the number of elements in the array, adding ",(scalar @array-1),"\n"};
+				$pos += (scalar @array) - 1;
+				if ($verbose){ warn "pos right now: $pos\n\n"; sleep(1)};
+			}
+			else{ # element is a digit, so we can just add it to the position
+				if ($verbose){ warn "element is $ns[$index]\n"};
+				$pos += $ns[$index];
+				if ($verbose){ warn "Start: $start\tpos: $pos\n"; sleep(1);};
+			}
+
+			my $genomic_pos = $pos + $start;
+
+			### seeing if the SNP is present in the SNP position list
+			if (exists $snps{$chr}->{$genomic_pos}){
+			++$snp_found;
+
+			if ($verbose) { warn "SNP was present: ref: $snps{$chr}->{$genomic_pos}->{ref}\tsnp: $snps{$chr}->{$genomic_pos}->{snp}\n";}
+			if ($verbose){ warn "pos: $pos\n$sequence\n";}
+			my $read_base = substr($sequence,$pos,1); # The N position has not been adjusted for the N yet so can be used as index
+			if ($verbose) { warn "base in read was: $read_base\n";}
+
+			if ($bisulfite){
+				($genome1,$genome2,$irrelevant,$ct_unassigned) = score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant,$ct_unassigned);
+			}
+			else{ ## DEFAULT
+				if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
+					if ($verbose) { warn "genome 1 specific!\n";}
+						++$genome1;
+					}
+					elsif ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
+						if ($verbose) { warn "genome 2 specific!\n";}
+						++$genome2;
+					}
+					else{
+						if ($verbose) { warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+						++$irrelevant;
+					}
+				}
+			}
+			else{
+				++$no_snp_found;
+				if ($verbose) { warn "SNP was not present in the SNP list\n";}
+			}
+
+			if ($verbose) { warn "now adjusting the position for the N itself\n";}
+			$pos += 1; # adjusting position for the N itself. irrelevant if this is the last element of the array
+			if ($verbose) { warn "pos right now: $pos\n";}
 		}
-		if ($verbose){ warn "now adjusting for the number of elements in the array, adding ",(scalar @array-1),"\n"};
-		$pos += (scalar @array) - 1;
-		if ($verbose){ warn "pos right now: $pos\n\n"; sleep(1)};
-	    }
-	    else{ # element is a digit, so we can just add it to the position
-		if ($verbose){ warn "element is $ns[$index]\n"};
-		$pos += $ns[$index];
-		if ($verbose){ warn "Start: $start\tpos: $pos\n"; sleep(1);};
-	    }
 
-	    my $genomic_pos = $pos + $start;
-
-	    ### seeing if the SNP is present in the SNP position list
-	    if (exists $snps{$chr}->{$genomic_pos}){
-		++$snp_found;
-
-		if ($verbose) { warn "SNP was present: ref: $snps{$chr}->{$genomic_pos}->{ref}\tsnp: $snps{$chr}->{$genomic_pos}->{snp}\n";}
-		if ($verbose){ warn "pos: $pos\n$sequence\n";}
-		my $read_base = substr($sequence,$pos,1); # The N position has not been adjusted for the N yet so can be used as index
-		if ($verbose) { warn "base in read was: $read_base\n";}
-
-		if ($bisulfite){
-		    ($genome1,$genome2,$irrelevant,$ct_unassigned) = score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant,$ct_unassigned);
-		}
-		else{ ## DEFAULT
-
-		    if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
-			if ($verbose) { warn "genome 1 specific!\n";}
-			++$genome1;
-		    }
-		    elsif ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
-			if ($verbose) { warn "genome 2 specific!\n";}
-			++$genome2;
-		    }
-		    else{
-			if ($verbose) { warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-			++$irrelevant;
-		    }
-		}
-	    }
-	    else{
-		++$no_snp_found;
-		if ($verbose) { warn "SNP was not present in the SNP list\n";}
-	    }
-
-	    if ($verbose) { warn "now adjusting the position for the N itself\n";}
-	    $pos += 1; # adjusting position for the N itself. irrelevant if this is the last element of the array
-	    if ($verbose) { warn "pos right now: $pos\n";}
-	}
-
-	if ($verbose) { warn "~~~~~~~~~~~~~~~~~~~~\n\n\n\n";}
+		if ($verbose) { warn "~~~~~~~~~~~~~~~~~~~~\n\n\n\n";}
 
     }
     else{ # CIGAR string is not a simple match
-	if ($verbose){
-	    warn "CIGAR string is not a simple match:\n";
-	    print "MD-tag: $md_tag\tIndividual elements are:\n";
-	    print join ("\t",@ns),"\n";
-	}
+		if ($verbose){
+			warn "CIGAR string is not a simple match:\n";
+			print "MD-tag: $md_tag\tIndividual elements are:\n";
+			print join ("\t",@ns),"\n";
+		}
 
-	die "There were fewer than 2 elements in the MD tag $md_tag! number of elements: ",scalar @ns,"\n" if (scalar @ns < 2);
-	my $pos = 0;
-	my %insertions_accounted_for;
+		die "There were fewer than 2 elements in the MD tag $md_tag! number of elements: ",scalar @ns,"\n" if (scalar @ns < 2);
+		my $pos = 0;
+		my %insertions_accounted_for;
+		my %softclips_accounted_for;
 
-	### STEP I: determining the position of the N(s) in the read
+		### STEP I: determining the position of the N(s) in the read
 
-	foreach my $index (0..($#ns-1)){ # the last index of @ns is the number of matching strings after the last N, so is not relevant
+		foreach my $index (0..($#ns-1)){ # the last index of @ns is the number of matching strings after the last N, so is not relevant
+			
+	    	if ($ns[$index] =~/\D/){ # non-digit
+				
+				if ($ns[$index] =~/\W/){ # non-word character, e.g. ^ for deletions
+					if ($verbose) { warn "element contains a Non-Word character: $ns[$index]\n";}
+					if ($ns[$index] =~ /\^/){ # contains deletion
+						if ($verbose){  warn "This was a deletion\n";}
 
-	    if ($ns[$index] =~/\D/){ # non-digit
+						# split into single characters
+						my @string = split //,$ns[$index];
+						if ($verbose){  warn "before starting, \$pos was $pos\n";}
+						my $operation; # will store the operation, 
+						# either a number for matches or a variable number of letters for deletions
+						foreach my $char (@string){
 
-		if ($ns[$index] =~/\W/){ # non-word character, e.g. ^ for deletions
-		    if ($verbose) { warn "element contains a Non-Word character: $ns[$index]\n";}
-		    if ($ns[$index] =~ /\^/){ # contains deletion
-			if ($verbose){  warn "This was a deletion\n";}
+							# setting first element
+							unless (defined $operation){ # can be 0
+								if ($verbose){	warn "Setting \$operation to $char\n";}
+								$operation = $char;
+								next;
+							}
+							if ($verbose){   warn "$char\n";}
 
-			# split into single characters
-			my @string = split //,$ns[$index];
-			if ($verbose){  warn "before starting, \$pos was $pos\n";}
-			my $operation; # will store the operation, either a number for matches or a variable number of letters for deletions
-			foreach my $char (@string){
+							if ($operation =~ /\d+/){
+								if ($verbose){ warn "$operation is a digit\n";}
+								if ($char =~ /\d+/){
+									if ($verbose){ warn "appending $char to $operation\n";}
+									$operation .= $char;
+									if ($verbose){ warn "\$operation is now $operation\n";}
+								}
+								else{
+									if ($verbose){  warn "\$char is now a non-digit character, so need to process \$operation\n";}
+									$pos += $operation;
+									if ($verbose){  warn "\$pos is now $pos\n";}
 
-			    # setting first element
-			    unless (defined $operation){ # can be 0
-				if ($verbose){	warn "Setting \$operation to $char\n";}
-				$operation = $char;
-				next;
-			    }
-			    if ($verbose){   warn "$char\n";}
+									# setting $operation as the new character
+									$operation = $char;
+									if ($verbose){  warn "Setting \$operation to: $operation\n";}
+								}
+							}
+							else{ # $operation is a non-digit character
+								if ($verbose){ 	warn "$operation is a non-digit character\n";}
 
-			    if ($operation =~ /\d+/){
-				if ($verbose){ warn "$operation is a digit\n";}
-				if ($char =~ /\d+/){
-				    if ($verbose){ warn "appending $char to $operation\n";}
-				    $operation .= $char;
-				    if ($verbose){ warn "\$operation is now $operation\n";}
+								if ($char =~ /\d+/){
+									if ($verbose){ 	warn "\$char is now a digit, so need to process \$operation: $operation\n";}
+
+									if ($operation =~ /^\^/){ #  if the string starts with a ^ symbol is was a deletion
+										if ($verbose){ 	 warn "Deletions do not count towards the position within a read -> skipping...\n";}
+									}
+									else{ # else it was a mismatch and the full length needs to be considered
+										if ($verbose){ warn "Now adding length of \$operation (just a mismatch)\n";}
+										$pos += (length $operation);
+									}
+									if ($verbose){ warn "\$pos is now $pos\n";}
+
+									# setting $operation to the new character
+									$operation = $char;
+									if ($verbose){ warn "Setting \$operation to: $operation\n";}
+								}
+								else{
+									if ($verbose){  warn "appending $char to $operation\n";}
+									$operation .= $char;
+									if ($verbose){ warn "\$operation is now $operation\n";}
+								}
+							}
+						}
+
+						if ($verbose){ 	    warn "Now processing the last string which has to be a number\n";}
+						die "\$operation was not a number: '${operation}'!" unless ($operation =~ /\d+/);
+						$pos += $operation;
+						if ($verbose){   warn "\$pos is now $pos\n\n";}
+					}
+					else{
+						# this might give us a clue of which other characters might turn up in the MD-tag
+						if ($verbose){ warn "The character was no deletion: $ns[$index]\n"; sleep(1);}
+					}
 				}
 				else{
-				    if ($verbose){  warn "\$char is now a non-digit character, so need to process \$operation\n";}
-				    $pos += $operation;
-				    if ($verbose){  warn "\$pos is now $pos\n";}
+					if ($verbose){ warn "Element contains a Non-DIGIT word character(s), but is no deletion: $ns[$index]\n";}
+					my @array = split /[ATCG]/,$ns[$index];
 
-				    # setting $operation as the new character
-				    $operation = $char;
-				    if ($verbose){  warn "Setting \$operation to: $operation\n";}
+					if ($verbose){
+						warn "Elements in the array: ",scalar @array,"\n";
+						print join ("\t",@array),"\n";
+					}
+
+					foreach my $element(@array){
+						if ($verbose){  warn "Adding $element to pos\n";}
+						$pos += $element;
+						if ($verbose){ warn "pos right now: $pos\n";}
+					}
+					if ($verbose){ warn "now adjusting for the number of elements in the array, adding ",(scalar @array-1),"\n";}
+					$pos += (scalar @array) - 1;
+					if ($verbose){ warn "pos right now: $pos\n";}
 				}
-			    }
-			    else{ # $operation is a non-digit character
-				if ($verbose){ 	warn "$operation is a non-digit character\n";}
-
-				if ($char =~ /\d+/){
-				    if ($verbose){ 	warn "\$char is now a digit, so need to process \$operation: $operation\n";}
-
-				    if ($operation =~ /^\^/){ #  if the string starts with a ^ symbol is was a deletion
-					if ($verbose){ 	 warn "Deletions do not count towards the position within a read -> skipping...\n";}
-				    }
-				    else{	                    # else it was a mismatch and the full length needs to be considered
-					if ($verbose){ warn "Now adding length of \$operation (just a mismatch)\n";}
-					$pos += (length $operation);
-				    }
-				    if ($verbose){ warn "\$pos is now $pos\n";}
-
-				    # setting $operation as the new character
-				    $operation = $char;
-				    if ($verbose){ warn "Setting \$operation to: $operation\n";}
-				}
-				else{
-				    if ($verbose){  warn "appending $char to $operation\n";}
-				    $operation .= $char;
-				    if ($verbose){ warn "\$operation is now $operation\n";}
-				}
-			    }
 			}
-			if ($verbose){ 	    warn "Now processing the last string which has to be a number\n";}
-			die "\$operation was not a number: '${operation}'!" unless ($operation =~ /\d+/);
-			$pos += $operation;
-			if ($verbose){   warn "\$pos is now $pos\n\n";}
-		    }
-		    else{
-			# this might give us a clue of which other characters might turn up in the MD-tag
-			if ($verbose){ warn "The character was no deletion: $ns[$index]\n"; sleep(1);}
-		    }
-		}
-		else{
-		    if ($verbose){ warn "Element contains a Non-DIGIT word character(s), but is no deletion: $ns[$index]\n";}
-		    my @array = split /[ATCG]/,$ns[$index];
-
-		    if ($verbose){
-			warn "Elements in the array: ",scalar @array,"\n";
-			print join ("\t",@array),"\n";
-		    }
-
-		    foreach my $element(@array){
-			if ($verbose){  warn "Adding $element to pos\n";}
-			$pos += $element;
-			if ($verbose){ warn "pos right now: $pos\n";}
-		    }
-		    if ($verbose){ warn "now adjusting for the number of elements in the array, adding ",(scalar @array-1),"\n";}
-		    $pos += (scalar @array) - 1;
-		    if ($verbose){ warn "pos right now: $pos\n";}
-		}
-	    }
-	    else{ # element is a digit, so we can just add it to the position
-		if ($verbose){ warn "element is $ns[$index]\n"; }
-		$pos += $ns[$index];
-		if ($verbose){ warn "Start: $start\tpos: $pos\n"; }
-	    }
+			else{ # element is a digit, so we can just add it to the position
+				if ($verbose){ warn "Element is the following digit: $ns[$index]\n"; }
+				$pos += $ns[$index];
+				if ($verbose){ warn "Start: $start\tpos: $pos\n"; }
+			}
 
 
-	    ### STEP II: Adjusting $pos for insertions
-	    # Insertions in the read are omitted from the MD:Z: tag, and can only be seen when processing the CIGAR string. In order not to extract the wrong base from the read we quickly process the CIGAR string and adjust $pos if necessary
+			### STEP II: Adjusting $pos for insertions
+			# Insertions in the read are omitted from the MD:Z: tag,
+			# and can only be seen when processing the CIGAR string.
+			# Edit 03 12 2019: 
+			# The same goes for soft-clipped bases (CIGAR operation: S)
+			# In order not to extract the wrong base from the read we 
+			# quickly process the CIGAR string and adjust $pos if necessary
 
-	    # Even though insertions should affect the position within a read, they are in fact absent from the MD:Z: field. Here is an example:
-	    # HISEQ2500-01:182:H89GMADXX:1:1101:15083:2899    83      17      31124195        42      9M2I40M =       31124087        -157    GAGGCTCATGAGGCCTAGCTGACAGTGTCCCCTGCCCCTTGGTCAGTTTAC     JJJJJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJHHGHHFFFFFCCC AS:i:-12 XN:i:1  XM:i:1  XO:i:1  XG:i:2  NM:i:3  MD:Z:44N4       YS:i:0  YT:Z:CP
-	    # The sequence is 51bp long, so is the CIGAR string, but the MD:Z: field is only 49bp long!!
+			# Even though insertions should affect the position within a read, they are in fact absent from the MD:Z: field. Here is an example:
+			# HISEQ2500-01:182:H89GMADXX:1:1101:15083:2899    83      17      31124195        42      9M2I40M =       31124087        -157    GAGGCTCATGAGGCCTAGCTGACAGTGTCCCCTGCCCCTTGGTCAGTTTAC     JJJJJJJJJJJJJJJJJJJIJJJJJJJJJJJJJJJJJJHHGHHFFFFFCCC AS:i:-12 XN:i:1  XM:i:1  XO:i:1  XG:i:2  NM:i:3  MD:Z:44N4       YS:i:0  YT:Z:CP
+			# The sequence is 51bp long, so is the CIGAR string, but the MD:Z: field is only 49bp long!!
 
-	    if ($verbose){  warn "\nNow adjusting \$pos for potential insertions in the read. \$pos now is $pos\n";}
-	    my $total_length_of_ops = 0;
-	    if ($verbose){  warn "\$total_length_of_ops is $total_length_of_ops at the start\n";}
+			if ($verbose){  warn "\nNow adjusting \$pos for potential insertions in the read. \$pos now is $pos\n";}
+			my $total_length_of_ops = 0;
+			if ($verbose){  warn "\$total_length_of_ops is $total_length_of_ops at the start\n";}
 
-	    foreach my $index(0..$#len){
-		if ($ops[$index] eq 'M'){  # standard matching bases
-		    $total_length_of_ops += $len[$index];
-		    if ($verbose){ warn "\$total_length_of_ops is $total_length_of_ops\n";}
-		}
-		elsif ($ops[$index] eq 'D'){  # deletions do not count towards the position within the read
-		    if ($verbose){ warn "Deletion. skipping...\n";}
-		}
-		elsif ($ops[$index] eq 'N'){  # splice junctions are similar to deletions and do not count towards the position within the read
-		    if ($verbose){ warn "Splice junction. skipping...\n";}
-		}
-		elsif($ops[$index] eq 'I'){
-		    if ($total_length_of_ops >= $pos){
-			if ($verbose){ warn "\$pos is $pos, but there were already enough matches to be at position $total_length_of_ops! Exiting adjustment\n\n";}
-			last; # exiting now
-		    }
-		    else{
-			if (exists $insertions_accounted_for{$total_length_of_ops} ){ # if we have already adjusted the position for this insertion we skip it this time
-			    if ($verbose){ warn "This insertion has been accounted for already. Skipping this time...\n";}
-			    next;
+			foreach my $index(0..$#len){
+				if ($ops[$index] eq 'M'){  # standard matching bases
+					if ($verbose){ warn "Matching bases. Adding $len[$index]...\n";}
+					$total_length_of_ops += $len[$index];
+					if ($verbose){ warn "\$total_length_of_ops is $total_length_of_ops\n";}
+				}
+				elsif ($ops[$index] eq 'D'){  # deletions do not count towards the position within the read
+					if ($verbose){ warn "Deletion. skipping...\n";}
+				}
+				elsif ($ops[$index] eq 'N'){  # splice junctions are similar to deletions and do not count towards the position within the read
+					if ($verbose){ warn "Splice junction. skipping...\n";}
+				}
+				elsif($ops[$index] eq 'I'){
+		   			if ($total_length_of_ops >= $pos){
+						# the insertion occurs after the current N position
+						if ($verbose){ warn "\$pos is $pos, but there were already enough matches to be at position $total_length_of_ops! Exiting adjustment\n\n";}
+						last; # exiting now
+		    		}
+					else{
+						if (exists $insertions_accounted_for{$total_length_of_ops} ){ # if we have already adjusted the position for this insertion we skip it this time
+							if ($verbose){ warn "This insertion has been accounted for already. Skipping this time...\n";}
+							next;
+						}
+						else{
+							++$insertions_accounted_for{$total_length_of_ops};
+							if ($verbose){ warn "Operation is 'I', adding length of $len[$index]\n";}
+							$pos += $len[$index];
+							if ($verbose){ warn "New \$pos is now: $pos\n";}
+						}
+					}
+				}
+				elsif($ops[$index] eq 'S'){
+					if ($total_length_of_ops >= $pos){
+						# The soft-clip occurs after the current N position, so we don't change the position within the read
+						if ($verbose){ warn "N-positions witin the read \$pos is $pos, but there were already enough matches to be at position $total_length_of_ops! Exiting adjustment\n\n";}
+						last; # exiting now
+		    		}
+					else{
+						if (exists $softclips_accounted_for{$total_length_of_ops} ){ # if we have already adjusted the position for this soft-clip so we skip it this time
+							if ($verbose){ warn "This soft-clip has been accounted for already. Skipping this time...\n";}
+							next;
+						}
+						else{
+							++$softclips_accounted_for{$total_length_of_ops};
+							if ($verbose){ warn "Operation is 'S', adding length of $len[$index]\n";}
+							$pos += $len[$index];
+							if ($verbose){ warn "New \$pos is now: $pos\n";}
+						}
+					}
+				}	
+				else{
+					die "Found CIGAR operations other than M, I, D, S or N: '$ops[$index]'. Not allowed at the moment\n";
+				}
+			}
+
+			### STEP III; Determining the genomic position
+			if ($verbose){ warn "Now determining the genomic position of the SNP\n------------------\n";}
+			my $genomic_pos = $start; # this is the start of the read
+			my $temp_pos = $pos;
+			my $endpos = $start; # of the current CIGAR operation
+			my $operation_length = 0;
+			if ($verbose){
+				warn "Chromosome is $chr\n";
+				warn "Position within the read is: $temp_pos. MD-tag is: $md_tag\n"; sleep(1);
+				warn "To start with, genomic position is: $genomic_pos\n";
+				warn "To start with, operation length is $operation_length\n\n";
+			}
+
+			### determining end position of a read
+			foreach my $index(0..$#len){
+
+				$operation_length = $len[$index];
+
+				if ($ops[$index] eq 'M'){  # standard matching bases
+					$endpos += $len[$index];
+					if ($verbose){
+						warn "Operation is 'M', length $len[$index] bp\n";
+						warn "Endpos is now: $endpos\n";
+						warn "Operation length is now: $operation_length\n";
+					}
+
+					# testing to see if the position within the read is contained within this stretch of matching bases
+					if ($temp_pos <= $operation_length){
+						if ($verbose){
+							warn "Read overlaps the N position\n";
+							warn "\$temp_pos is: $temp_pos\n";
+						}
+						$genomic_pos += $temp_pos;
+						if ($verbose){ warn "Setting \$genomic_pos to: $genomic_pos\n";}
+						last; # once we have got the genomic positions we can continue
+					}
+					else{
+						# adding the length of the M operation to genomic position
+						if ($verbose){   warn "Read does not yet overlap the N position\n";}
+						# adjusting the genomic position
+						$genomic_pos += $operation_length;
+						$temp_pos    -= $operation_length; # subtracting the operation length from the length within the read
+						if ($verbose){
+							warn "Adding $operation_length to \$genomic_pos. Now at: $genomic_pos\n";
+							warn "Subtracting $operation_length from \$temp_pos. Now at: $temp_pos\n";
+						}
+					}
+				}
+				elsif($ops[$index] eq 'I'){ # insertions in the read do not affect the genomic position
+					if ($verbose){
+					warn "Operation is 'I', not adjusting genomic position but \$temp_pos\n";
+					warn "Operation length is now: $operation_length\n\n";
+					}
+					$temp_pos    -= $operation_length; # subtracting the operation length from the length within the read
+					if ($verbose){  warn "\$temp_pos is now: $temp_pos\n";}
+					# Since we have adjusted $pos in STEP II we can now subtract the length
+					# of the insertion from the read
+				}
+				elsif($ops[$index] eq 'S'){ # Soft-clipped bases in the read do not affect the genomic position
+					if ($verbose){
+						warn "Operation is 'S', not adjusting genomic position but \$temp_pos\n";
+						warn "Operation length is now: $operation_length\n\n";
+					}
+					$temp_pos    -= $operation_length; # subtracting the operation length from the length within the read
+					if ($verbose){  warn "\$temp_pos is now: $temp_pos\n";}
+					# Since we have adjusted $pos in STEP II, we can now subtract 
+					# the length of the soft-clip from the read
+				}
+				elsif($ops[$index] eq 'D'){ # deletions do affect the genomic position but not the $temp_pos within the read
+					if ($verbose){   warn "Operation is 'D', adding $len[$index] bp to the genomic position\n";}
+					### example read with a deletion, length 51 bp
+					# HISEQ2500-01:182:H89GMADXX:1:1101:15249:2789    99      8       87082089        23      33M6D18M        =       87082185        147     ACAGCCAACTGCTTTCCTCCAGGGGTGCCCATGACCTGCACACCTCAGCTG     CCCFFFFFHHHHHJJJJJJJJJJJJHHIJJJJJJJJJJJJJJJJJJJJJJJ  AS:i:-24        XN:i:1  XM:i:1  XO:i:1  XG:i:6  NM:i:7  MD:Z:33^ACTCGA11N6      YS:i:-1 YT:Z:CP
+					$genomic_pos += $operation_length;
+					if ($verbose){
+						warn "Operation length is now: $operation_length\n\n";
+						warn "Adding $operation_length to \$genomic_pos. Now at: $genomic_pos\n";
+					}
+				}
+				elsif($ops[$index] eq 'N'){ # skipped regions (= splice junctions) do affect the genomic position but not the $temp_pos within the read (similar to deletions)
+					if ($verbose){	  warn "Operation is 'N', adding $len[$index] bp to the genomic position\n";}
+					$genomic_pos += $len[$index];
+					if ($verbose){  warn "Endpos is now: $endpos\n";}
+				}
+				else{
+					die "Found CIGAR operations other than M, I, D, S or N: '$ops[$index]'. Not allowed at the moment\n";
+				}
+			}
+
+			### STEP IV: determining if the SNP is present in the SNP position list, and whether the position in the read was the reference or SNP base
+			if ($verbose){   warn "Found a match, genomic position should be: $genomic_pos\n~~~~~~~~~~~~~~\n\n"; sleep(1);}
+			if (exists $snps{$chr}->{$genomic_pos}){
+				++$snp_found;
+
+				if ($verbose){	warn "SNP was present: ref: $snps{$chr}->{$genomic_pos}->{ref}\tsnp: $snps{$chr}->{$genomic_pos}->{snp}\n";}
+				if ($verbose){	warn "pos: $pos\n$sequence\n";}
+				my $read_base = substr($sequence,$pos,1); # The N position has not been adjusted for the N yet so can be used as index
+
+				if ($verbose){	warn "base in read was: $read_base\n";}
+				if ($bisulfite){
+					($genome1,$genome2,$irrelevant,$ct_unassigned) = score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant,$ct_unassigned);
+				}
+				### Non-bisulfite setting ( = DEFAULT)
+				else{
+					if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
+						if ($verbose){ warn "genome 1 specific!\n";}
+						++$genome1;
+					}
+					elsif ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
+						if ($verbose){ warn "genome 2 specific!\n";}
+						++$genome2;
+					}
+					else{
+						if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+						++$irrelevant;
+					}
+				}
 			}
 			else{
-			    ++$insertions_accounted_for{$total_length_of_ops};
-			    if ($verbose){ warn "Operation is 'I', adding length of $len[$index]\n";}
-			    $pos += $len[$index];
-			    if ($verbose){ warn "New \$pos is now: $pos\n";}
+				++$no_snp_found;
+				if ($verbose){
+					warn "SNP was not present in the SNP list\n";
+				}
 			}
-		    }
-		}
-		else{
-		    die "Found CIGAR operations other than M, I, D or N: '$ops[$index]'. Not allowed at the moment\n";
-		}
-	    }
 
-	    ### STEP III; Determining the genomic position
-	    my $genomic_pos = $start; # this is the start of the read
-	    my $temp_pos = $pos;
-	    my $endpos = $start; # of the current CIGAR operation
-	    my $operation_length = 0;
-	    if ($verbose){
-		warn "Chromosome is $chr\n";
-		warn "Now determining the genomic position of the SNP\n";
-		warn "Position within the read is: $temp_pos. MD-tag is: $md_tag\n"; sleep(1);
-		warn "To start with, genomic position is: $genomic_pos\n";
-		warn "To start with, operation length is $operation_length\n\n";
-	    }
-
-	    ### determining end position of a read
-	    foreach my $index(0..$#len){
-
-		$operation_length = $len[$index];
-
-		if ($ops[$index] eq 'M'){  # standard matching bases
-		    $endpos += $len[$index];
-		    if ($verbose){
-			warn "Operation is 'M', length $len[$index] bp\n";
-			warn "Endpos is now: $endpos\n";
-			warn "Operation length is now: $operation_length\n";
-		    }
-
-		    # testing to see if the position within the read is contained within this stretch of matching bases
-		    if ($temp_pos <= $operation_length){
-			if ($verbose){
-			    warn "Read overlaps the N position\n";
-			    warn "\$temp_pos is: $temp_pos\n";
-			}
-			$genomic_pos += $temp_pos;
-			if ($verbose){ warn "Setting \$genomic_pos to: $genomic_pos\n";}
-			last; # once we have got the genomic positions we can continue
-		    }
-		    else{
-			# adding the length of the M operation to genomic position
-			if ($verbose){   warn "Read does not yet overlap the N position\n";}
-			# adjusting the genomic position
-			$genomic_pos += $operation_length;
-			$temp_pos    -= $operation_length; # subtracting the operation length from the length within the read
-			if ($verbose){
-			    warn "Adding $operation_length to \$genomic_pos. Now at: $genomic_pos\n";
-			    warn "Subtracting $operation_length from \$temp_pos. Now at: $temp_pos\n";
-			}
-		    }
-		}
-		elsif($ops[$index] eq 'I'){ # insertions in the read do not affect the genomic position
-		    if ($verbose){
-			warn "Operation is 'I', not adjusting genomic position but \$temp_pos\n";
-			warn "Operation length is now: $operation_length\n\n";
-		    }
-		    $temp_pos    -= $operation_length; # subtracting the operation length from the length within the read
-		    if ($verbose){  warn "\$temp_pos is now: $temp_pos\n";}
-		    # Since we have adjusted $pos in STEP II we can now subtract the length of the insertion from the read (which I find logical)
-		}
-		elsif($ops[$index] eq 'D'){ # deletions do affect the genomic position but not the $temp_pos within the read
-		    if ($verbose){   warn "Operation is 'D',adding $len[$index] bp to the genomic position\n";}
-		    ### eaxample read with a deletion, length 51 bp
-		    # HISEQ2500-01:182:H89GMADXX:1:1101:15249:2789    99      8       87082089        23      33M6D18M        =       87082185        147     ACAGCCAACTGCTTTCCTCCAGGGGTGCCCATGACCTGCACACCTCAGCTG     CCCFFFFFHHHHHJJJJJJJJJJJJHHIJJJJJJJJJJJJJJJJJJJJJJJ  AS:i:-24        XN:i:1  XM:i:1  XO:i:1  XG:i:6  NM:i:7  MD:Z:33^ACTCGA11N6      YS:i:-1 YT:Z:CP
-		    $genomic_pos += $operation_length;
-		    if ($verbose){
-			warn "Operation length is now: $operation_length\n\n";
-			warn "Adding $operation_length to \$genomic_pos. Now at: $genomic_pos\n";
-		    }
-		}
-		elsif($ops[$index] eq 'N'){ # skipped regions (= splice junctions) do affect the genomic position but not the $temp_pos within the read (similar to deletions)
-		    if ($verbose){	  warn "Operation is 'N', adding $len[$index] bp to the genomic position\n";}
-		    $genomic_pos += $len[$index];
-		    if ($verbose){  warn "Endpos is now: $endpos\n";}
-		}
-		else{
-		    die "Found CIGAR operations other than M, I, D or N: '$ops[$index]'. Not allowed at the moment\n";
-		}
-	    }
-
-	    ### STEP IV: determining if the SNP is present in the SNP position list, and whether the position in the read was the reference or SNP base
-	    if ($verbose){   warn "Found a match, genomic position should be: $genomic_pos\n~~~~~~~~~~~~~~\n\n"; sleep(1);}
-	    if (exists $snps{$chr}->{$genomic_pos}){
-		++$snp_found;
-
-		if ($verbose){	warn "SNP was present: ref: $snps{$chr}->{$genomic_pos}->{ref}\tsnp: $snps{$chr}->{$genomic_pos}->{snp}\n";}
-		if ($verbose){	warn "pos: $pos\n$sequence\n";}
-		my $read_base = substr($sequence,$pos,1); # The N position has not been adjusted for the N yet so can be used as index
-
-		if ($verbose){	warn "base in read was: $read_base\n";}
-		if ($bisulfite){
-		    ($genome1,$genome2,$irrelevant,$ct_unassigned) = score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant,$ct_unassigned);
-		}
-		### Non-bisulfite setting ( = DEFAULT)
-		else{
-		    if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
-			if ($verbose){ warn "genome 1 specific!\n";}
-			++$genome1;
-		    }
-		    elsif ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
-			if ($verbose){ warn "genome 2 specific!\n";}
-			++$genome2;
-		    }
-		    else{
-			if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-			++$irrelevant;
-		    }
-		}
-	    }
-	    else{
-		++$no_snp_found;
-		if ($verbose){
-		    warn "SNP was not present in the SNP list\n";
+			if ($verbose){  warn "now adjusting the position for the N itself\n";}
+			$pos += 1; # adjusting position for the N itself. irrelevant if this is the last element of the array
+			if ($verbose){ warn "pos right now: $pos\n";}
 		}
 
-	    }
-
-	    if ($verbose){  warn "now adjusting the position for the N itself\n";}
-	    $pos += 1; # adjusting position for the N itself. irrelevant if this is the last element of the array
-	    if ($verbose){ warn "pos right now: $pos\n";}
-	}
-
-	if ($verbose){  warn "***************************\n\n\n\n";}
-
+		if ($verbose){  warn "***************************\n\n\n\n";}
     }
 
     return ($genome1,$genome2,$ct_unassigned);
@@ -1716,7 +1769,7 @@ sub process_commandline{
     SNPsplit - Allele-specific alignment sorting
 
 	        Version: $pipeline_version
-	  Copyright 2014-17 Felix Krueger
+	  Copyright 2014-20 Felix Krueger
              Babraham Bioinformatics
        https://github.com/FelixKrueger/SNPsplit
 
@@ -1727,27 +1780,27 @@ VERSION
 
     ### no files provided
     unless (@ARGV){
-	warn "You need to provide one or more SAM/BAM files to start the allele-specific pipeline. Please respecify!\n";
-	print_helpfile();
-	exit;
+		warn "You need to provide one or more SAM/BAM files to start the allele-specific pipeline. Please respecify!\n";
+		print_helpfile();
+		exit;
     }
 
 
     unless ($snp_file){
-	die "You need to provide a text file detailing SNPs with '--SNP_file your.file'. Please respecify!\n";
+		die "You need to provide a text file detailing SNPs with '--SNP_file your.file'. Please respecify!\n";
     }
 
     if ($no_sort){
-	foreach my $file (@ARGV){
-	    die "The option --no_sorting requires you to supply a BAM file (ending in .bam), but at least one of the file names did not look like a BAM file: '$file'. Please respecify!\n\n" unless ($file =~ /\.bam$/);
-	}
+		foreach my $file (@ARGV){
+			die "The option --no_sorting requires you to supply a BAM file (ending in .bam), but at least one of the file names did not look like a BAM file: '$file'. Please respecify!\n\n" unless ($file =~ /\.bam$/);
+		}
     }
 
     ### checking to see if all files are indeed present in the folder
     foreach my $file (@ARGV){
-	unless(-e $file){
-	    die "Input file '$file' doesn't exist in the input folder. Please check filenames and try again!\n\n";
-	}
+		unless(-e $file){
+			die "Input file '$file' doesn't exist in the input folder. Please check filenames and try again!\n\n";
+		}
     }
 
     ### PATH TO SAMTOOLS
@@ -1755,22 +1808,22 @@ VERSION
 	# if Samtools was specified as full command
 	if ($samtools_path =~ /samtools$/){
 	    if (-e $samtools_path){
-		# Samtools executable found
+			# Samtools executable found
 	    }
 	    else{
-		die "Could not find an installation of Samtools at the location $samtools_path. Please respecify\n";
+			die "Could not find an installation of Samtools at the location $samtools_path. Please respecify\n";
 	    }
 	}
 	else{
 	    unless ($samtools_path =~ /\/$/){
-		$samtools_path =~ s/$/\//;
+			$samtools_path =~ s/$/\//;
 	    }
 	    $samtools_path .= 'samtools';
-	    if (-e $samtools_path){
-		# Samtools executable found
+		if (-e $samtools_path){
+			# Samtools executable found
 	    }
 	    else{
-		die "Could not find an installation of Samtools at the location $samtools_path. Please respecify\n";
+			die "Could not find an installation of Samtools at the location $samtools_path. Please respecify\n";
 	    }
 	}
 
@@ -1809,31 +1862,31 @@ VERSION
     ### OUTPUT DIRECTORY PATH
     chdir $parent_dir or die "Failed to move back to current working directory\n";
     if (defined $output_dir){
-	unless ($output_dir eq ''){
-	    unless ($output_dir =~ /\/$/){
-		$output_dir =~ s/$/\//;
-	    }
-	}
+		unless ($output_dir eq ''){
+			unless ($output_dir =~ /\/$/){
+				$output_dir =~ s/$/\//;
+			}
+		}
 
-	if (chdir $output_dir){
-	    $output_dir = getcwd(); #  making the path absolute
-	    unless ($output_dir =~ /\/$/){
-		$output_dir =~ s/$/\//;
-	    }
-	}
-	else{
-	    mkdir $output_dir or die "Unable to create directory $output_dir $!\n";
-	    warn "Created output directory $output_dir!\n\n";
-	    chdir $output_dir or die "Failed to move to $output_dir\n";
-	    $output_dir = getcwd; #  making the path absolute
-	    unless ($output_dir =~ /\/$/){
-		$output_dir =~ s/$/\//;
-	    }
-	}
-	warn "Output will be written into the directory: $output_dir\n";
+		if (chdir $output_dir){
+			$output_dir = getcwd(); #  making the path absolute
+			unless ($output_dir =~ /\/$/){
+			$output_dir =~ s/$/\//;
+			}
+		}
+		else{
+			mkdir $output_dir or die "Unable to create directory $output_dir $!\n";
+			warn "Created output directory $output_dir!\n\n";
+			chdir $output_dir or die "Failed to move to $output_dir\n";
+			$output_dir = getcwd; #  making the path absolute
+			unless ($output_dir =~ /\/$/){
+				$output_dir =~ s/$/\//;
+			}
+		}
+		warn "Output will be written into the directory: $output_dir\n";
     }
     else{
-	$output_dir = '';
+		$output_dir = '';
     }
     chdir $parent_dir or die "Failed to move back to current working directory\n";
 
@@ -1847,29 +1900,30 @@ VERSION
     ### Checking to see if the input file is a Bismark processed Bisulfite-Seq file
     unless ($hic_data){
 
-	warn "Testing if input file '$ARGV[0]' looks like a Bisulfite-Seq file\n";
-	(my $isBismark,$paired) = check_for_bs($paired,$samtools_path);
-	if ($isBismark){
-	    $bisulfite++;
-	    if ($paired){
-		warn "File looks like a Bismark paired-end file. Setting '--bisulfite' and '--paired'...\n";
+		warn "Testing if input file '$ARGV[0]' looks like a Bisulfite-Seq file\n";
+		(my $isBismark,$paired) = check_for_bs($paired,$samtools_path);
+		if ($isBismark){
+			$bisulfite++;
+			if ($paired){
+				warn "File looks like a Bismark paired-end file. Setting '--bisulfite' and '--paired'...\n";
 
-		my ($skip_sorting_by_name) = test_positional_sorting($ARGV[0],$samtools_path);
-		if ($skip_sorting_by_name){
-		    warn "File appears to be in the right format (Read1 and Read2 following each other), setting '--no_sort'...\n";
-		    $no_sort = 1;
+				my ($skip_sorting_by_name) = test_positional_sorting($ARGV[0],$samtools_path);
+				if ($skip_sorting_by_name){
+					warn "File appears to be in the right format (Read1 and Read2 following each other), setting '--no_sort'...\n";
+					$no_sort = 1;
+				}
+				else{
+					warn "File needs sorting by name first (Read1 and Read2 are required to follow each other for SNPsplit processing)...\n";
+				}
+			}
+			else{
+			warn "File looks like a Bismark single-end file. Setting '--bisulfite'...\n";
+			}
 		}
-		else{
-		    warn "File needs sorting by name first (Read1 and Read2 are required to follow each other for SNPsplit processing)...\n";
-		}
-	    }
-	    else{
-		warn "File looks like a Bismark single-end file. Setting '--bisulfite'...\n";
-	    }
-	}
     }
 
     return ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic_data,$conflict,$output_dir,$singletons,$bisulfite);
+
 }
 
 
