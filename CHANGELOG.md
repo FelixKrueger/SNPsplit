@@ -1,6 +1,8 @@
 ## v0.3.4_dev (22 11 2019)
 
-- SNPsplit now writes important statistics out in YAML format to enable easier integration into `MultiQC`. If `tag2sort` is called via `SNPsplit` itself, the `...sort.yaml` file will be integrated into the main `...SNPsplit_report.yaml` file (and deleted afterwards).
+- SNPsplit now writes important statistics out in YAML format to enable easier integration into `MultiQC`. If `tag2sort` is called via `SNPsplit` itself, the `...sort.yaml` file will be integrated into the main `...SNPsplit_report.yaml` file (and deleted afterwards)
+
+- Added option `--skip_tag2sort` to allow the separation of the allele-tagging and allele-sorting (`tag2sort`) processes. This might be desired to add a de-duplication step such as `markduplicates` or `deduplicate_bismark` for Nextflow pipelines
 
 
 ## v0.3.4 (25 May 2018)
