@@ -22,15 +22,15 @@ use Cwd;
 ## You should have received a copy of the GNU General Public License
 ## along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-
+# June 16: making changes to skip tag2sort
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.4_dev_softer';
+my $pipeline_version = '0.3.4_dev';
 my $parent_dir = getcwd;
 my $full_commandline = join (" ","SNPsplit",@ARGV);
 # warn "Full commandline: $full_commandline\n"; sleep(5);
 
-my ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite) = process_commandline ();
+my ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite,$skip_tag2sort) = process_commandline ();
 my %snps; # storing SNP position and sequence information for all SNPs
 
 my $snp_found = 0;
@@ -64,7 +64,10 @@ while (@ARGV){
     warn "Output directory:\t\t>$output_dir<\n";
     warn "Parent directory:\t\t>$parent_dir<\n";
     warn "Samtools path:\t\t\t$samtools_path\n";
-    if ($bam){
+	if ($skip_tag2sort){
+		warn "No allele-specific sorting:\tYes (allele-tagging only)\n";  
+	}
+	if ($bam){
 		warn "Output format:\t\t\tBAM (default)\n";
     }
     else{
@@ -192,6 +195,11 @@ while (@ARGV){
     #####            #####
     ######################
 
+	if ($skip_tag2sort){
+		warn "Skip tag2sort selected to allow de-duplicating the allele-tagged BAM file\n\nSNPsplit run complete...\n\n";
+		exit;
+	}
+	
     # Calling the allele-specific sorting now (tag2sort)
     my @args;
     if ($hic){
@@ -247,7 +255,7 @@ while (@ARGV){
    
     # warn "Printing YAML report to \n";
     print_YAML($sort_yaml_file);
-	warn "\n\nSNPsplit processing finished...\n\n";
+	warn "\n\nSNPsplit processing finished... [Allele-tagging + tag2sort]\n\n";
 
 }
 
@@ -1736,6 +1744,7 @@ sub process_commandline{
     my $output_dir;
     my $singletons;
     my $bisulfite;
+	my $skip_tag2sort;
 
     my $command_line = GetOptions ('help|man'                => \$help,
 				   'versions'                => \$version,
@@ -1750,17 +1759,18 @@ sub process_commandline{
 				   'conflicting|weird'       => \$conflict,
 				   'singletons'              => \$singletons,
 				   'bisulfite'               => \$bisulfite,
+				   'skip_tag2sort'           => \$skip_tag2sort,
 	);
 
     ### EXIT ON ERROR if there were errors with any of the supplied options
     unless ($command_line){
-	die "Please respecify command line options\n";
+		die "Please respecify command line options\n";
     }
 
     ### HELPFILE
     if ($help){
-	print_helpfile();
-	exit;
+		print_helpfile();
+		exit;
     }
 
     if ($version){
@@ -1922,7 +1932,7 @@ VERSION
 		}
     }
 
-    return ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic_data,$conflict,$output_dir,$singletons,$bisulfite);
+    return ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic_data,$conflict,$output_dir,$singletons,$bisulfite,$skip_tag2sort);
 
 }
 
@@ -2024,12 +2034,15 @@ sub print_helpfile{
                            Samtools can be found, the SAM output will be compressed with GZIP instead (yielding a
                            .sam.gz output file).
 
+	--skip_tag2sort        Carry out the allele-tagging process, and exit afterwards. This might be desirable when using SNPsplit in
+	                       pipelining systems, such as Nextflow, when a deduplication step is to be added following allele tagging.
+
     --help                 Displays this help information and exits.
 
     --version              Displays version information and exits.
 
 
-                                   Script last modified: 25 Nov 2019
+                                   Script last modified: 16 June 2020
 EOF
     ;
   exit 1;
