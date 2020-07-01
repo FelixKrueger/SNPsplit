@@ -6,7 +6,7 @@ use FindBin qw($Bin);
 use lib "$Bin/../lib";
 use Cwd;
 
-## This program is Copyright (C) 2014-17, Felix Krueger (felix.krueger@babraham.ac.uk)
+## This program is Copyright (C) 2014-20, Felix Krueger (felix.krueger@babraham.ac.uk)
 
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -26,8 +26,10 @@ use Cwd;
 ### It has been tested with the latest version of the SNP file 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz' at the time of writing (11 May 2016). I can't guarantee that
 ### it will work with any other supplied VCF file.
 
+# Modifying 30 June 2020
+
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.3';
+my $pipeline_version = '0.3.3dev';
 my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build) = process_commandline ();
 
@@ -85,10 +87,14 @@ warn "\n";
 
 ### Dealing with chromosomes
 my @chroms;
+my %chroms; # here we will keep a record whether a chromosome had been covered with SNPs (this is dictated by the VCF file)
 
 if ($skip_filtering){
     # HUMAN GENOME @chroms = (1..22,'X','Y','MT'); # this is currently using chromosomes for the human genome
     @chroms = (1..19,'X','Y','MT'); # MOUSE GENOME this is currently using chromosomes for the mouse genome
+	foreach my $c (@chroms){
+		$chroms{$c} = 1;
+	}
 }
 else{ # default
     @chroms = detect_chroms();
@@ -126,8 +132,23 @@ my $low_confidence = 0;
 my $report = "${strain}_genome_preparation_report.txt";
 open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";
 
-for my $chr (@chroms) {
-    create_modified_chromosome($chr,$strain);
+for my $chr (sort keys %chromosomes) {
+
+	# If there SNPs associated with the current chromosome, modify the genomic sequence
+	# this may be N-masking, full sequence or both
+	if (exists $chroms{$chr} ){
+		# warn "Got SNP information for chromosome $chr. Creating modified chromosome\n";
+		create_modified_chromosome($chr,$strain);
+	}
+	else{
+		# warn "Got no SNP information for chromosome $chr. Printing sequence only...\n";
+		if ($nmasking){
+			write_SNP_chromosome($chr,$chromosomes{$chr},1,$strain);
+		} 
+		if ($full_sequence){
+			write_SNP_chromosome($chr,$chromosomes{$chr},0,$strain);
+		}
+	}
 }
 
 if ($nmasking){
@@ -149,11 +170,11 @@ if ($dual_hybrid){
     # Need to read and filter the SNP file once more for Strain 2
     ### Determining and Filtering homozygous high-confidence SNPs for the strain in question                                                                             
     if ($skip_filtering){                                                                                                                                            
-	warn "Skipped reading the VCF file and filtering SNPs again for strain 2 (specified by user)\n\n";                                                                               
+		warn "Skipped reading the VCF file and filtering SNPs again for strain 2 (specified by user)\n\n";                                                                               
     }                                                                                                                                                                            
     else{
-	filter_relevant_SNP_calls_from_VCF($strain2,$strain2_index,'2'); # the last number is the strain identity, here the second strain for dual hybrids
-	warn "Finished filtering and writing out SNPs for strain 2 [$strain2]\n\n";
+		filter_relevant_SNP_calls_from_VCF($strain2,$strain2_index,'2'); # the last number is the strain identity, here the second strain for dual hybrids
+		warn "Finished filtering and writing out SNPs for strain 2 [$strain2]\n\n";
     }                                                                                                                                                                          
     
     $new_n_total = 0;                                                                                      
@@ -165,17 +186,31 @@ if ($dual_hybrid){
     my $report = "${strain2}_genome_preparation_report.txt";
 
     open (REPORT,'>',$report) or die "Failed to write to file $report: $!\n";    
-    for my $chr (@chroms){
-	create_modified_chromosome($chr,$strain2);
+	for my $chr (sort keys %chromosomes) {
+
+		if (exists $chroms{$chr} ){
+			# warn "Got SNP information for chromosome $chr. Creating modified chromosome\n";
+			create_modified_chromosome($chr,$strain2);
+		}
+		else{
+			# warn "Got no SNP information for chromosome $chr. Printing sequence only...\n";
+			if ($nmasking){
+				write_SNP_chromosome($chr,$chromosomes{$chr},1,$strain2);
+			} 
+			if ($full_sequence){
+				write_SNP_chromosome($chr,$chromosomes{$chr},0,$strain2);
+			}
+		}	
     }
+
     if ($nmasking){
-	warn "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain 2 [$strain2] in total\n";
-	print REPORT "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain 2 [$strain2] in total\n";
+		warn "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain 2 [$strain2] in total\n";
+		print REPORT "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain 2 [$strain2] in total\n";
     }
 
     if ($full_sequence){
-	warn "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain 2 [$strain2] in total\n\n";
-	print REPORT "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain 2 [$strain2] in total\n";
+		warn "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain 2 [$strain2] in total\n\n";
+		print REPORT "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain 2 [$strain2] in total\n";
     }
     close REPORT;
 
@@ -204,25 +239,42 @@ if ($dual_hybrid){
     $already_total = 0;
     $low_confidence = 0; 
 
-    for my $chr (@chroms) {
-	create_modified_chromosome_dual_hybrid($chr,$strain,$strain2);
+    #for my $chr (@chroms) {
+		# TODO: here we need to loop through %chroms and not @chroms
+	
+
+	for my $chr (sort keys %chromosomes) {
+
+		if (exists $chroms{$chr} ){
+			warn "Got SNP information for chromosome $chr. Creating modified chromosome\n";
+			create_modified_chromosome_dual_hybrid($chr,$strain,$strain2);
+		}
+		else{
+			warn "Got no SNP information for chromosome $chr. Printing sequence only...\n";
+			if ($nmasking){
+				write_SNP_chromosome($chr,$chromosomes{$chr},1,"${strain}_${strain2}_dual_hybrid.based_on_${genome_build}");
+			} 
+			if ($full_sequence){
+				write_SNP_chromosome($chr,$chromosomes{$chr},0,"${strain}_${strain2}_dual_hybrid.based_on_${genome_build}");
+			}
+		}
     }
 
     if ($nmasking){
-	warn "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain/strain 2 [${strain}/$strain2] in total\n";
-	print REPORT "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strainstrain 2 [${strain}$strain2] in total\n";
+		warn "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain/strain 2 [${strain}/$strain2] in total\n";
+		print REPORT "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strainstrain 2 [${strain}$strain2] in total\n";
     }
 
     if ($full_sequence){
-	warn "$new_snp_total SNPs were newly introduced into the full sequence genome version for strainstrain 2 [${strain}/$strain2] in total\n\n";
-	print REPORT "$new_snp_total SNPs were newly introduced into the full sequence genome version for strainstrain 2 [${strain}/$strain2] in total\n";
+		warn "$new_snp_total SNPs were newly introduced into the full sequence genome version for strainstrain 2 [${strain}/$strain2] in total\n\n";
+		print REPORT "$new_snp_total SNPs were newly introduced into the full sequence genome version for strainstrain 2 [${strain}/$strain2] in total\n";
     }
     close REPORT;
 
     
 
 }
-warn "All done. Genome(s) are now ready to be indexed with your favourite aligner!\nFYI, aligners shown to work with SNPsplit are Bowtie2, Tophat, STAR, Hisat2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)\n\n";      
+warn "All done. Genome(s) are now ready to be indexed with your favourite aligner!\nFYI, aligners shown to work with SNPsplit are Bowtie2, STAR, HISAT2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)\n\n";      
 
 
 
@@ -515,25 +567,25 @@ sub create_modified_chromosome {
     my ($chr,$strain) = @_; # $strain may be strain 1 or 2
     warn "Processing chromosome $chr (for strain $strain)\n";
     unless ($chromosomes{$chr}){
-	warn "\nThe chromosome name given in the VCF file was '$chr' and was not found in the reference genome.\nA rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)\nbut the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)\n";
-	warn "The chromosome names in the reference genome folder were:\n";
-	foreach my $c (sort keys %chromosomes){
-	    warn "$c\n";
-	}
-	die "[FATAL ERROR] Please ensure that the same version of the genome is used for both VCF annotations and reference genome (FastA files). Exiting...\n\n";
+		warn "\nThe chromosome name given in the VCF file was '$chr' and was not found in the reference genome.\nA rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)\nbut the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)\n";
+		warn "The chromosome names in the reference genome folder were:\n";
+		foreach my $c (sort keys %chromosomes){
+			warn "$c\n";
+		}
+		die "[FATAL ERROR] Please ensure that the same version of the genome is used for both VCF annotations and reference genome (FastA files). Exiting...\n\n";
     }
 
     my $sequence = $chromosomes{$chr};
     my $n_sequence;
     
     if ($nmasking){
-	$n_sequence = $sequence;
+		$n_sequence = $sequence;
     }
 
     my @snps = @{read_snps($chr,$strain)};
     unless (@snps){
-	@snps = ();
-	warn "Clearing SNP array...\n"
+		@snps = ();
+		warn "Clearing SNP array...\n"
     }
     
     my $count = 0;
@@ -570,24 +622,24 @@ sub create_modified_chromosome {
 	    next;
 	}
       
-	### Ref/Alt bases are matching, so we can proceed to changing the ref base for the SNP base or Ns (N-masking)
+		### Ref/Alt bases are matching, so we can proceed to changing the ref base for the SNP base or Ns (N-masking)
+		
+		### N-masking 
+		if ($nmasking){ # default
+			my $return =  substr($n_sequence,($snp->[0])-1,1,'N');  # Replacing the base with 'N'
+			unless ($return){
+			warn "Replacing failed...\n";
+			}
+			++$new_n;
+		}
 	
-	### N-masking 
-	if ($nmasking){ # default
-	    my $return =  substr($n_sequence,($snp->[0])-1,1,'N');  # Replacing the base with 'N'
-	    unless ($return){
-		warn "Replacing failed...\n";
-	    }
-	    ++$new_n;
-	}
-	
-	if ($full_sequence){
-	    my $return = substr($sequence,$snp->[0]-1,1,$snp->[2]); # Replacing the reference with the SNP base
-	    unless ($return){
-		warn "Replacing failed...\n";
-	    }
-	    ++$new_snp;
-	}
+		if ($full_sequence){
+			my $return = substr($sequence,$snp->[0]-1,1,$snp->[2]); # Replacing the reference with the SNP base
+			unless ($return){
+				warn "Replacing failed...\n";
+			}
+			++$new_snp;
+		}
     }
   
     $new_n_total += $new_n;
@@ -595,20 +647,20 @@ sub create_modified_chromosome {
     
     $already_total += $already;
     if ($nmasking){ 
-	write_SNP_chromosome($chr,$n_sequence,1,$strain);
+		write_SNP_chromosome($chr,$n_sequence,1,$strain);
     }
     if ($full_sequence){
-	write_SNP_chromosome($chr,$sequence,0,$strain);
+		write_SNP_chromosome($chr,$sequence,0,$strain);
     }
     
     warn "$count SNPs total for chromosome $chr\n";
     if ($nmasking){ # default
-	warn "$new_n positions on chromosome $chr were changed to 'N'\n";
-	print REPORT "$new_n positions on chromosome $chr were changed to 'N'\n";
+		warn "$new_n positions on chromosome $chr were changed to 'N'\n";
+		print REPORT "$new_n positions on chromosome $chr were changed to 'N'\n";
     }
     if ($full_sequence){
-	warn "$new_snp reference positions on chromosome $chr were changed to the SNP alternative base\n\n";
-	print REPORT "$new_snp reference positions on chromosome $chr were changed to the SNP alternative base\n\n";
+		warn "$new_snp reference positions on chromosome $chr were changed to the SNP alternative base\n\n";
+		print REPORT "$new_snp reference positions on chromosome $chr were changed to the SNP alternative base\n\n";
     }
     warn "\n";
 
@@ -673,11 +725,11 @@ sub create_modified_chromosome_dual_hybrid {
        }
        
        if ($full_sequence){
-	   my $return = substr($sequence,$pos-1,1,$snps_dual_genome{$chr}->{$pos}->{snp}); # Replacing the reference with the SNP base
-	   unless ($return){
-	       warn "Replacing failed...\n";
-	   }
-	   ++$new_snp;
+			my $return = substr($sequence,$pos-1,1,$snps_dual_genome{$chr}->{$pos}->{snp}); # Replacing the reference with the SNP base
+			unless ($return){
+				warn "Replacing failed...\n";
+			}
+	   	++$new_snp;
        }
    }
   
@@ -710,22 +762,22 @@ sub write_SNP_chromosome {
 
     my ($chr,$sequence,$nm,$strain) = @_; # $nm will discriminate between N-masking and full sequence output
     if ($nm){
-	warn "Writing modified chromosome (N-masking)\n";
+		warn "Writing modified chromosome (N-masking)\n";
     }
     else{
-	warn "Writing modified chromosome (incorporating SNPs)\n";
+		warn "Writing modified chromosome (incorporating SNPs)\n";
     }
     
     my $type;
     my $outfile;
     
     if ($nm){
-	$type = 'N-masked';
-	$outfile = "chr${chr}.N-masked.fa";
+		$type = 'N-masked';
+		$outfile = "chr${chr}.N-masked.fa";
     }
     if ($nm == 0){
-	$type = 'full_sequence';
-	$outfile = "chr${chr}.SNPs_introduced.fa";
+		$type = 'full_sequence';
+		$outfile = "chr${chr}.SNPs_introduced.fa";
     }
     
     # warn "Starting sequence is ".length($sequence)." bp\n";
@@ -1143,11 +1195,11 @@ sub read_genome_into_memory{
 
     ### if there aren't any genomic files with the extension .fa we will look for files with the extension .fasta
     unless (@chromosome_filenames){
-      @chromosome_filenames =  <*.fasta>;
+      	@chromosome_filenames =  <*.fasta>;
     }
 
     unless (@chromosome_filenames){
-      die "The specified reference genome folder $genome_folder does not contain any sequence files in FastA format (with .fa or .fasta file extensions)\n";
+      	die "The specified reference genome folder $genome_folder does not contain any sequence files in FastA format (with .fa or .fasta file extensions)\n";
     }
 
     my $SQ_count = 0;
@@ -1164,46 +1216,46 @@ sub read_genome_into_memory{
 	my $sequence;
 
 	while (<CHR_IN>){
-	  chomp;
-	  $_ =~ s/\r//; # removing carriage returns if present
-	  if ($_ =~ /^>/){
+		chomp;
+		$_ =~ s/\r//; # removing carriage returns if present
+		if ($_ =~ /^>/){
 	
-	    ### storing the previous chromosome in the %chromosomes hash, only relevant for Multi-Fasta-Files (MFA)
-	    if (exists $chromosomes{$chromosome_name}){
-	      print "chr $chromosome_name (",length $sequence ," bp)\n";
-	      die "Exiting because chromosome name already exists. Please make sure all chromosomes have a unique name!\n";
-	    }
-	    else {
-	      if (length($sequence) == 0){
-		warn "Chromosome $chromosome_name in the multi-fasta file $chromosome_filename did not contain any sequence information!\n";
-	      }
-	      print "chr $chromosome_name (",length $sequence ," bp)\n";
-	      $chromosomes{$chromosome_name} = $sequence;
-	    }
-	    ### resetting the sequence variable
-	    $sequence = '';
-	    ### setting new chromosome name
-	    $chromosome_name = extract_chromosome_name($_);
-	  }
-	  else{
-	    $sequence .= uc$_;
-	  }
+			### storing the previous chromosome in the %chromosomes hash, only relevant for Multi-Fasta-Files (MFA)
+			if (exists $chromosomes{$chromosome_name}){
+				print "chr $chromosome_name (",length $sequence ," bp)\n";
+				die "Exiting because chromosome name already exists. Please make sure all chromosomes have a unique name!\n";
+			}
+			else {
+				if (length($sequence) == 0){
+					warn "Chromosome $chromosome_name in the multi-fasta file $chromosome_filename did not contain any sequence information!\n";
+				}
+				print "chr $chromosome_name (",length $sequence ," bp)\n";
+				$chromosomes{$chromosome_name} = $sequence;
+			}
+			### resetting the sequence variable
+			$sequence = '';
+			### setting new chromosome name
+			$chromosome_name = extract_chromosome_name($_);
+		}
+		else{
+			$sequence .= uc$_;
+		}
 	}
 	
- 	### Processing last chromosome of a multi Fasta File or the only entry in case of single entry FastA files
+		### Processing last chromosome of a multi Fasta File or the only entry in case of single entry FastA files
 
-	if (exists $chromosomes{$chromosome_name}){
-	    print "chr $chromosome_name (",length $sequence ," bp)\t";
-	    die "Exiting because chromosome name already exists. Please make sure all chromosomes have a unique name.\n";
-	}
-	else{
-	    if (length($sequence) == 0){
-		warn "Chromosome $chromosome_name in the file $chromosome_filename did not contain any sequence information!\n";
-	    }
+		if (exists $chromosomes{$chromosome_name}){
+			print "chr $chromosome_name (",length $sequence ," bp)\t";
+			die "Exiting because chromosome name already exists. Please make sure all chromosomes have a unique name.\n";
+		}
+		else{
+			if (length($sequence) == 0){
+				warn "Chromosome $chromosome_name in the file $chromosome_filename did not contain any sequence information!\n";
+			}
 
-	    print "chr $chromosome_name (",length $sequence ," bp)\n";
-	    $chromosomes{$chromosome_name} = $sequence;
-	}
+			print "chr $chromosome_name (",length $sequence ," bp)\n";
+			$chromosomes{$chromosome_name} = $sequence;
+		}
     }
     print "\n";
     chdir $cwd or die "Failed to move to directory $cwd\n";
@@ -1272,7 +1324,7 @@ sub process_commandline{
 	
                                SNPsplit Genome Preparation
 			           version: $pipeline_version
-                             Copyright 2014-18, Felix Krueger
+                             Copyright 2014-20, Felix Krueger
                                  Babraham Bioinformatics
                         https://github.com/FelixKrueger/SNPsplit
 
@@ -1538,7 +1590,7 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 --version                     Displays version information and exits.
 
 
-                                                             Last modified: 1 March 2017
+                                                             Last modified: 1 July 2020
 
 EOF
     ;
