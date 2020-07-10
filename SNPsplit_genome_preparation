@@ -92,12 +92,14 @@ my %chroms; # here we will keep a record whether a chromosome had been covered w
 if ($skip_filtering){
     # HUMAN GENOME @chroms = (1..22,'X','Y','MT'); # this is currently using chromosomes for the human genome
     @chroms = (1..19,'X','Y','MT'); # MOUSE GENOME this is currently using chromosomes for the mouse genome
-	foreach my $c (@chroms){
-		$chroms{$c} = 1;
-	}
 }
 else{ # default
     @chroms = detect_chroms();
+}
+
+# Keeping a record of chromosomes for which we have have SNP information available
+foreach my $c (@chroms){
+	$chroms{$c} = 1;
 }
 
 if ($skip_filtering){
@@ -434,32 +436,32 @@ sub read_snp_files{
 	    $snps{$chr}->{$pos}->{read}++; # SNP is present in both genomes as high confidence SNP.
 	    
 	    unless ($ref eq $snps{$chr}->{$pos}->{ref}){
-		warn "reference was different for the same position!!!\n";
+			warn "reference was different for the same position!!!\n";
 	    }
 	    # The SNP compared to the GRCm38 genome is the same in SNP=Strain2 ($snp) and Ref=Strain ($snps{$chr}->{$pos}->{snp})
 	    if ($snp eq $snps{$chr}->{$pos}->{snp}){
-		++$same;
-		print OUT_COMMON "$_\n";
-		# warn "SNP is the same in Ref and SNP. Printing to SNPs in common\n";
-		next;
+			++$same;
+			print OUT_COMMON "$_\n";
+			# warn "SNP is the same in Ref and SNP. Printing to SNPs in common\n";
+			next;
 	    }
 	    else{
-		++$different;
-  		# warn "GRCm38 sequence:\t\t$ref\n";
-		# warn "Strain (=new Ref) sequence:\t$snps{$chr}->{$pos}->{snp}\n";
-		# warn "SNP (=new SNP) sequence:\t\t$snp\n";
-		# sleep(1);
-		
-		### we need a new SNP format where Ref/SNP is now Strain/Strain2
-		my $new_snp = "$snps{$chr}->{$pos}->{snp}/$snp";
-		# warn "New $strain/$strain2 SNP is: $new_snp\n";
-		# sleep (1);
-		if ($new_snp){
-		    print ALL_STRAIN_STRAIN2 "$different\t$chr\t$pos\t1\t$new_snp\n";
-		}
-		else{
-		    warn "'$new_snp' is empty, skipping\n";
-		}
+			++$different;
+			# warn "GRCm38 sequence:\t\t$ref\n";
+			# warn "Strain (=new Ref) sequence:\t$snps{$chr}->{$pos}->{snp}\n";
+			# warn "SNP (=new SNP) sequence:\t\t$snp\n";
+			# sleep(1);
+			
+			### we need a new SNP format where Ref/SNP is now Strain/Strain2
+			my $new_snp = "$snps{$chr}->{$pos}->{snp}/$snp";
+			# warn "New $strain/$strain2 SNP is: $new_snp\n";
+			# sleep (1);
+			if ($new_snp){
+				print ALL_STRAIN_STRAIN2 "$different\t$chr\t$pos\t1\t$new_snp\n";
+			}
+			else{
+				warn "'$new_snp' is empty, skipping\n";
+			}
 	    }
 	}
 	else{
@@ -738,10 +740,10 @@ sub create_modified_chromosome_dual_hybrid {
     
     $already_total += $already;
     if ($nmasking){ 
-	write_SNP_chromosome($chr,$n_sequence,1,"${strain}_${strain2}_dual_hybrid.based_on_${genome_build}");
+		write_SNP_chromosome($chr,$n_sequence,1,"${strain}_${strain2}_dual_hybrid.based_on_${genome_build}");
     }
     if ($full_sequence){
-	write_SNP_chromosome($chr,$sequence,0,"${strain}_${strain2}_dual_hybrid.based_on_${genome_build}");
+		write_SNP_chromosome($chr,$sequence,0,"${strain}_${strain2}_dual_hybrid.based_on_${genome_build}");
     }
     
     warn "$count SNPs total for chromosome $chr\n";
@@ -1590,7 +1592,7 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 --version                     Displays version information and exits.
 
 
-                                                             Last modified: 1 July 2020
+                                                             Last modified: 10 July 2020
 
 EOF
     ;
