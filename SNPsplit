@@ -307,7 +307,7 @@ sub print_YAML{
 		}	
 	}
 	print YAML "...\n";
-
+	close YAML or die "Failed to close filehandle YAML: $!";
 }
 
 ###
@@ -2042,7 +2042,7 @@ sub print_helpfile{
     --version              Displays version information and exits.
 
 
-                                   Script last modified: 16 June 2020
+                                   Script last modified: 22 September 2020
 EOF
     ;
   exit 1;
