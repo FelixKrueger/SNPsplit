@@ -1,6 +1,6 @@
-02 May, 2018
+29 September, 2020
 
-# SNPsplit [v0.3.4]
+# SNPsplit [v0.4.0]
 ______
 
 ## General
@@ -98,6 +98,8 @@ Alignment files produced by the Spliced Transcripts Alignment to a Reference [(S
 
 **1)** Since SNPsplit only recognises the CIGAR operations M, I, D and N (see above), alignments need to be run in end-to-end mode and not using local alignments (which may result in soft-clipping). This can be accomplished using the option: `--alignEndsType EndToEnd`
 
+**Edit 29 09 2020:** As of version 0.4.0, SNPsplit also supports soft-clipped reads. (CIGAR operation: S).
+
 **2)** SNPsplit requires the `MD:Z:` field of the BAM alignment to work out mismatches involving masked N positions. Since STAR doesn’t report the `MD:Z:` field by default it needs to be instructed to do so, e.g.: `--outSAMattributes NH HI NM MD`
 
 **3)** To save some time and avoid having to sort the reads by name, STAR can be told to leave R1 and R2 following each other in the BAM file using the option: `--outSAMtype BAM Unsorted`
@@ -106,7 +108,9 @@ Alignment files produced by the Spliced Transcripts Alignment to a Reference [(S
 
 DNA or RNA alignment files produced by [HISAT2](https://github.com/infphilo/hisat2 "HISAT2") also work well with SNPsplit if you make sure that HISAT2 doesn’t perform soft-clipping. At the time of writing the current version of HISAT2 (2.0.3-beta) does perform soft-clipping (CIGAR operation: S) even though this is not well documented (or in fact the documentation on Github suggests that the default mode is end-to-end which should not perform any soft-clipping whatsoever). Until the end-to-end mode works as expected users will have to set the penalty for soft-clipping so high that it is effectively not performed (`--sp` is the option governing the soft-clipping penalty). We suggest adding the following option to the HISAT2 command: `--sp 1000,1000`
 
-**EDIT:** HISAT2 does now also have an option `--no-softclip` which should have the same effect.
+**Edit:** HISAT2 does now also have an option `--no-softclip` which should have the same effect.
+
+**Edit 29 09 2020:** As of version 0.4.0, SNPsplit also supports soft-clipped reads. (CIGAR operation: S).
 
 ### Alignments with BWA
 
