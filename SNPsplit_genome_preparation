@@ -29,7 +29,7 @@ use Cwd;
 # Modifying 30 June 2020
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.3dev';
+my $pipeline_version = '0.4.0';
 my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build) = process_commandline ();
 

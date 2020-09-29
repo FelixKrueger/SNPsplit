@@ -22,10 +22,8 @@ use Cwd;
 ## You should have received a copy of the GNU General Public License
 ## along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-# June 16: making changes to skip tag2sort
-
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.3.4_dev';
+my $pipeline_version = '0.4.0';
 my $parent_dir = getcwd;
 my $full_commandline = join (" ","SNPsplit",@ARGV);
 # warn "Full commandline: $full_commandline\n"; sleep(5);
