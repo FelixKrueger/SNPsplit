@@ -4,6 +4,7 @@
 
 - Added option `--skip_tag2sort` to allow the separation of the allele-tagging and allele-sorting (`tag2sort`) processes. This might be desired to add a de-duplication step such as `markduplicates` or `deduplicate_bismark` for Nextflow pipelines
 
+- For genomes that consist of chromosomes for which SNPs are recorded, and scaffolds for which there are no SNPs, now all chromosomes and scaffolds are printed to both the N-masked and full sequence genomes (see [here](https://github.com/FelixKrueger/SNPsplit/issues/38)).
 
 ## v0.3.4 (25 May 2018)
 
