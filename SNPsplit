@@ -1984,7 +1984,7 @@ sub print_helpfile{
                            are being used for analysis. The genome referred to as 'Ref' will be used as genome 1,
                            the genome containing the 'SNP' base as genome 2.
 
-    --paired               Paired-end mode. (Default: OFF).
+    --paired               Paired-end mode. (Default: AUTO-DETECT).
 
     -o/--outdir <dir>      Write all output files into this directory. By default the output files will be written into
                            the same folder as the input file(s). If the specified folder does not exist, SNPsplit will attempt
