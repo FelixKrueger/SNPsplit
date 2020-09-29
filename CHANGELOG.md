@@ -1,10 +1,17 @@
-## v0.3.4_dev (22 11 2019)
+## v0.4.0 (29 09 2020)
+
+- SNPsplit now supports soft-clipping of reads (`CIGAR` operation `S`). 
 
 - SNPsplit now writes important statistics out in YAML format to enable easier integration into `MultiQC`. If `tag2sort` is called via `SNPsplit` itself, the `...sort.yaml` file will be integrated into the main `...SNPsplit_report.yaml` file (and deleted afterwards)
 
 - Added option `--skip_tag2sort` to allow the separation of the allele-tagging and allele-sorting (`tag2sort`) processes. This might be desired to add a de-duplication step such as `markduplicates` or `deduplicate_bismark` for Nextflow pipelines
 
 - For genomes that consist of chromosomes for which SNPs are recorded, and scaffolds for which there are no SNPs, now all chromosomes and scaffolds are printed to both the N-masked and full sequence genomes (see [here](https://github.com/FelixKrueger/SNPsplit/issues/38)).
+
+- added auto-detection of single-end or paired-end files. This avoids accidentally processing paired-end files in single-end mode [see here](https://github.com/FelixKrueger/SNPsplit/issues/27).
+
+- now making use of variable genome_build instead of using GRCm38 invariably
+
 
 ## v0.3.4 (25 May 2018)
 
