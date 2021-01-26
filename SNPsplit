@@ -7,7 +7,7 @@ use lib "$RealBin/../lib";
 use Cwd;
 
 
-## This program is Copyright (C) 2014-20, Felix Krueger (felix.krueger@babraham.ac.uk)
+## This program is Copyright (C) 2014-21, Felix Krueger (felix.krueger@babraham.ac.uk)
 
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ use Cwd;
 ## along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.4.0';
+my $pipeline_version = '0.4.0dev';
 my $parent_dir = getcwd;
 my $full_commandline = join (" ","SNPsplit",@ARGV);
 # warn "Full commandline: $full_commandline\n"; sleep(5);
@@ -1609,7 +1609,7 @@ sub open_output_filehandles{
 sub check_for_bs{
 
     my ($paired_end,$samtools_path) = @_;
-    my $isBismark;
+    my $isBismark = 0; # default is non-bisulfite
 
     # SAM/BAM format, checking the first file supplied
 
@@ -1629,31 +1629,35 @@ sub check_for_bs{
     while (<DETERMINE>){
 		last unless (/^\@/);
 		if ($_ =~ /^\@PG/){
-			#  warn "found the \@PG line:\n";
-			# warn "$_";
-
+			# warn "found a \@PG line:\n$_";
+			
 			# Bismark bisulfite test
-			if ($_ =~ /Bismark/){
+			if ($_ =~ /ID:Bismark/){
 				$isBismark = 1;
-			}
-			else{
-				$isBismark = 0;
 			}
 			
 			# Paired-end test
-			unless ($paired_end){ # unless the user specified --paired we try to extract this information from the @PG line
+			if ($_ =~ /ID:Bismark/ or $_ =~ /ID:hisat2/ or $_ =~ /ID:bowtie2/){
+				unless ($paired_end){ # unless the user specified --paired we try to extract this information from the @PG line
 
-				if ($_ =~ /\s+-1\s+/ and $_ =~ /\s+-2\s+/){
-					warn "Treating file(s) as paired-end data (as extracted from \@PG line)\n\n";
-					$paired_end = 1;
+					if ($_ =~ /\s+-1\s+/ and $_ =~ /\s+-2\s+/){
+						warn "Treating file(s) as paired-end data (as extracted from \@PG line)\n\n";
+						$paired_end = 1;
+					}
+					else{
+						warn "Treating file(s) as single-end data (as extracted from \@PG line)\n\n";
+						$paired_end = 0;
+					}
+					last; # exiting after one attempt
 				}
-				else{
-					warn "Treating file(s) as single-end data (as extracted from \@PG line)\n\n";
-					$paired_end = 0;
-				}
+
 			}
 		}
     }
+
+	unless (defined $paired_end){
+		die "Unable to detect library type automatically, please specify whether the file is single- or paired-end manually\n\n";
+	}
     return ($isBismark,$paired_end);
 }
 
@@ -1777,7 +1781,7 @@ sub process_commandline{
     SNPsplit - Allele-specific alignment sorting
 
 	        Version: $pipeline_version
-	  Copyright 2014-20 Felix Krueger
+	  Copyright 2014-21 Felix Krueger
              Babraham Bioinformatics
        https://github.com/FelixKrueger/SNPsplit
 
@@ -2040,7 +2044,7 @@ sub print_helpfile{
     --version              Displays version information and exits.
 
 
-                                   Script last modified: 22 September 2020
+                                   Script last modified: 26 January 2020
 EOF
     ;
   exit 1;
