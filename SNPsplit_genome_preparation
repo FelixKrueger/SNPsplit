@@ -26,12 +26,14 @@ use Cwd;
 ### It has been tested with the latest version of the SNP file 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz' at the time of writing (11 May 2016). I can't guarantee that
 ### it will work with any other supplied VCF file.
 
-# Modifying 30 June 2020
+# Modifying 15 March 2021 - to accept the new release version 
+# mgp_REL2005_snps_indels.vcf.gz from May 2020
+
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.4.0';
+my $pipeline_version = '0.4.0dev';
 my $parent_dir = getcwd();
-my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build) = process_commandline ();
+my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build,$v7) = process_commandline ();
 
 my %snps; # storing all filtered SNPs
 my %snps_dual_genome; # storing all SNPs for dual genome
@@ -903,6 +905,8 @@ sub filter_relevant_SNP_calls_from_VCF{
     my $low_confidence = 0;
     my $same = 0;
     my $homozygous = 0;
+
+	my $indel_pos = 0;
   
   
     my $dir = "SNPs_$strain";
@@ -922,7 +926,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     while (<IN>){
 	$_ =~ s/(\r|\n)//g; # removing end of line characters
 
-	# warn "$_\n"; sleep(1);
+	#	warn "$_\n"; sleep(1);
 	next if ($_ =~ /^\#\#/); # filters out header information lines
 	if ($_ =~ /^\#CHROM/){ # Table Header
 	    my ($name) = (split /\t/)[$strain_index];
@@ -933,18 +937,35 @@ sub filter_relevant_SNP_calls_from_VCF{
 	if ($count%1000000 ==0){
 	    warn "processed $count lines\n";
 	}
-	# last if ($count == 10000);
+	# warn "$_\n"; sleep(1);
+	# last if ($count == 100);
 	
-	my ($chr,$pos,$ref,$alt,$strain) = (split /\t/)[0,1,3,4,$strain_index];
+	my ($chr,$pos,$ref,$alt,$info,$strain) = (split /\t/)[0,1,3,4,7,$strain_index];
 	# warn "$chr , $pos , $ref , $alt , $strain\n"; sleep(1);
+		
+	# for v5: $strain is in the form: GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI
+	# for v7: $strain is in the form: GT:PL:DP:ADF:ADR:AD:GQ:FI
+	my ($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi,$adf,$adr,$ad);
 	
-	# $strain is in the form: GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI
-	my ($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi) = split/:/,$strain;
-	
+	if ($v7){ # the v7 version, currently experimental
+ 		($gt,$pl,$dp,$adf,$adr,$ad,$gq,$fi) = split/:/,$strain;
+	}
+	else{ # mgp v5, default
+	 	($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi) = split/:/,$strain;
+	}
 	# warn "genotype: $gt\nfilter:   $fi\n";
 	# warn "$fi\n"; sleep(1);
 	# $gt is the Genotype:
 	
+	# The v7 file contains both SNPs as wella s INDELS. We are only interested in SNPs here, so removing all INDELs
+	if ($v7){
+		if ($info =~ /INDEL/){
+			# warn "This variant is an INDEL:\n$info\nRemoving...\n"; sleep(1);
+			++$indel_pos;
+			next;
+		}
+	}
+
 	# '.'   = no genotype call was made
 	# '0/0' = genotype is the same as the reference genome
 	# '1/1' = homozygous alternative allele; can also be '2/2',
@@ -1073,6 +1094,9 @@ sub filter_relevant_SNP_calls_from_VCF{
     warn "\nSNP position summary for strain $strain (based on genome build $genome_build)\n";
     warn "="x75,"\n\n";
     warn "Positions read in total:\t$count\n\n";
+	if ($v7){
+		warn "$indel_pos\tPositions were INDELs (and hence skipped)\n";
+	}
     warn "$homozygous\tSNP were homozygous. Of these:\n";
     warn "$hcg_count\tSNP were homozygous and passed high confidence filters and were thus included into the $strain genome\n";
     warn "\nNot included into $strain genome:\n";
@@ -1084,6 +1108,9 @@ sub filter_relevant_SNP_calls_from_VCF{
     print REPORT "SNP position summary for strain $strain (based on genome build $genome_build)\n";
     print REPORT "="x75,"\n\n";
     print REPORT "Positions read in total:\t$count\n\n";
+	if ($v7){
+		print REPORT "$indel_pos\tPositions were INDELs (and hence skipped)\n";
+	}
     print REPORT "$homozygous\tSNP were homozygous. Of these:\n";
     print REPORT "$hcg_count\tSNP were homozygous and passed high confidence filters and were thus included into the $strain genome\n";
     print REPORT "\nNot included into $strain genome:\n";
@@ -1118,31 +1145,31 @@ sub detect_chroms{
     my @chrom;
     
     if ($vcf_file =~ /gz$/){
-	open (DETECT,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
+		open (DETECT,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
     }
     else{
-	open (DETECT, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
+		open (DETECT, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
     }
     
     # warn "Detecting chromosomes from file '$vcf_file'\n\n";
     while (<DETECT>){
-	$_ =~ s/(\r|\n)//g; # removing end of line characters
-	last unless ($_ =~ /^\#/);
-	
-	if ($_ =~ /^\#\#contig/){ # filters header lines
-	    # warn "$_\n"; # sleep(1);
-	    $_ =~ /ID=(.+),/;
-	    my $chr = $1;
-	    # warn "Identified chromosome $chr\n";
-	    unless (exists $chrom{$chr}){
-		$chrom{$chr}++;
-	    }
+		$_ =~ s/(\r|\n)//g; # removing end of line characters
+		last unless ($_ =~ /^\#/);
+		
+		if ($_ =~ /^\#\#contig/){ # filters header lines
+			# warn "$_\n"; # sleep(1);
+			$_ =~ /ID=(.+),/;
+			my $chr = $1;
+				# warn "Identified chromosome $chr\n";
+			unless (exists $chrom{$chr}){
+				$chrom{$chr}++;
+			}
+		}
 	}
-    }
     
-    foreach my $chr(keys %chrom){
-	# warn "$chr\n";	
-	push @chrom, $chr;
+	foreach my $chr(keys %chrom){
+		# warn "$chr\n"; sleep(1);
+		push @chrom, $chr;
     }
     # close DETECT or warn "Failed to close filehandle DETECT: $!\n";
     return @chrom;
@@ -1155,28 +1182,29 @@ sub detect_strains{
     my %strains; # detecting the available strains from the VCF file
     
     if ($vcf_file =~ /gz$/){
-	open (STRAIN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
+		open (STRAIN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
     }
     else{
-	open (STRAIN, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
+		open (STRAIN, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
     }
     
     # warn "Detecting strains from file '$vcf_file'\n\n";
     while (<STRAIN>){
-	$_ =~ s/(\r|\n)//g; # removing end of line characters
-	next if ($_ =~ /^\#\#/);	
-	if ($_ =~ /^\#CHROM/){ # header line listing all different strains
-	    # warn "$_\n"; sleep(1);
-	}
+		$_ =~ s/(\r|\n)//g; # removing end of line characters
+		next if ($_ =~ /^\#\#/);	
+		if ($_ =~ /^\#CHROM/){ # header line listing all different strains
+			# warn "$_\n"; sleep(1);
+		}
 	last unless ($_ =~ /^\#/); # everything from now on are the SNPs themselves
 	
-	my @strains = split (/\t/);
+		my @strains = split (/\t/);
 	
-	foreach my $index(0..$#strains){
-	    next if ($index <= 8); # The first 8 fields are irrelevant: #CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  
-	    $strains{$strains[$index]} = $index; 
-	    # warn "$index\t$strains[$index]\n";
-	}
+		foreach my $index(0..$#strains){
+			next if ($index <= 8); # The first 8 fields are irrelevant: 
+			#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  
+			$strains{$strains[$index]} = $index; 
+			# warn "$index\t$strains[$index]\n";
+		}
     }
     
     # close STRAIN or warn "Failed to close filehandle STRAIN: $!\n";
@@ -1294,6 +1322,7 @@ sub process_commandline{
     my $dual_hybrid;
     my $no_nmasking;
     my $genome_build;
+	my $v7_MGP_file;
     
     my $command_line = GetOptions ('help|man'             => \$help,
 				   'versions'             => \$version,
@@ -1308,17 +1337,18 @@ sub process_commandline{
 				   'dual_hybrid'          => \$dual_hybrid,
 				   'reference_genome=s'   => \$genome_folder,
 				   'genome_build=s'       => \$genome_build,
+				   'v7_VCF'               => \$v7_MGP_file,
 	);
   
     ### EXIT ON ERROR if there were errors with any of the supplied options
     unless ($command_line){
-	die "Please respecify command line options\n";
+		die "Please respecify command line options\n";
     }
     
     ### HELPFILE
     if ($help){
-	print_helpfile();
-	exit;
+		print_helpfile();
+		exit;
     }
     
     if ($version){
@@ -1326,7 +1356,7 @@ sub process_commandline{
 	
                                SNPsplit Genome Preparation
 			           version: $pipeline_version
-                             Copyright 2014-20, Felix Krueger
+                             Copyright 2014-21, Felix Krueger
                                  Babraham Bioinformatics
                         https://github.com/FelixKrueger/SNPsplit
 
@@ -1337,112 +1367,124 @@ VERSION
     }
 
     if (defined $vcf_file){
-	unless(-e $vcf_file){
-	    die "Input VCF file '$vcf_file' doesn't exist in the folder. Please check filenames and try again!\n\n";
-	}
+		unless(-e $vcf_file){
+			die "Input VCF file '$vcf_file' doesn't exist in the folder. Please check filenames and try again!\n\n";
+		}
+		### March 2021: Now also accepting the v7 combined SNP and INDEL file
+		if ($v7_MGP_file){
+			my $tmp_vcf_name = $vcf_file;
+			$tmp_vcf_name =~ s/.*\///; # removing path information
+			
+			if($tmp_vcf_name eq 'mgp_REL2005_snps_indels.vcf.gz') {
+				warn "Using v7 MGP file 'mgp_REL2005_snps_indels.vcf.gz'. This file can be obtained from:\n";
+				warn "ftp://ftp-mouse.sanger.ac.uk/REL-2004-v7-SNPs_Indels/mgp_REL2005_snps_indels.vcf.gz\n\n";
+				warn "PLEASE NOTE:\n============\nThis file is currently not marked as Current_SNPs, so consider this approach experimental for the time being (as of 15 03 2021)\n\n";	
+				sleep(1);
+			}
+			else{
+				warn "Version 7 input file selected. Input VCF file '$vcf_file' doesn't appear to be file 'mgp_REL2005_snps_indels.vcf.gz'. If something goes wrong, I won't accept responsibility....!\n\n";
+				sleep(3);
+			}
+		}
     }
     else{
-	unless($skip_filtering){
-	    die "\nYou need to provide a VCF file detailing SNPs positions with '--vcf_file your.file' (e.g.: --vcf mgp.v5.merged.snps_all.dbSNP142.vcf.gz). Please respecify!\n\n";
-	}
+		unless($skip_filtering){
+			die "\nYou need to provide a VCF file detailing SNPs positions with '--vcf_file your.file' (e.g.: --vcf mgp.v5.merged.snps_all.dbSNP142.vcf.gz). Please respecify!\n\n";
+		}
     }
 
     my $strain_index;
     my $strain2_index;
     unless($skip_filtering){
-	my %strains = detect_strains($vcf_file);
+		my %strains = detect_strains($vcf_file);
 
-	if ($list_strains){
-	    warn "\nAvailable genomes to choose from are:\n";
-	    warn "="x37,"\n";
-	    foreach my $strain(keys %strains){
-		print "$strain\n";
-	    }
-	    warn "="x37,"\n";
-	    warn "\nPlease choose a strain using '--strain NAME' to continue.\n\n";
-	    exit;
-	}
-
-
-
-	### Strain 1 (required)
-	if (defined $strain){
-	    if (exists $strains{$strain}){
-		$strain_index = $strains{$strain};
-		warn "Strain defined as '$strain' (strain index: $strain_index)\n";
-	    }
-	    else{
-		warn "Strain name specified [$strain] does not match any of the available strain names!\n";
-		warn "\nAvailable genomes to choose from are:\n";
-		warn "="x37,"\n";	
-		foreach my $strain(keys %strains){
-		    print "$strain\n";
+		if ($list_strains){
+			warn "\nAvailable genomes to choose from are:\n";
+			warn "="x37,"\n";
+			foreach my $strain(keys %strains){
+			print "$strain\n";
+			}
+			warn "="x37,"\n";
+			warn "\nPlease choose a strain using '--strain NAME' to continue.\n\n";
+			exit;
 		}
-		warn "="x37,"\n";
-		die "\nPlease double check the name and try again (using '--strain NAME')\n\n";
-	    }
-	}
-	else{
-	    warn "No strain specified!\n";
-	    warn "\nAvailable genomes to choose from are:\n";
-	    warn "="x37,"\n";	
-	    foreach my $strain(keys %strains){
-		print "$strain\n";
-	    }
-	    warn "="x37,"\n";
-	    die "\nPlease choose one of the available strains using '--strain NAME' and try again\n\n";
-	}
-	
-	### Strain 2 (optional)
-	if (defined $strain2){
-	    unless ($dual_hybrid){
-		warn "Strain 2 specified, setting option '--dual_hybrid'\n";
-		$dual_hybrid = 1;
-	    }
-	}
-	if ($dual_hybrid){
-	    warn "Dual Hybrid strain selected\n";
 
-	    # this automatically sets the full_sequence option
-	    $full_sequence = 1;
-
-	    if (defined $strain2){
-		if (exists $strains{$strain2}){
-		    $strain2_index = $strains{$strain2};
-		    warn "Strain2 defined as '$strain2' (strain2 index: $strain2_index)\n";
+		### Strain 1 (required)
+		if (defined $strain){
+			if (exists $strains{$strain}){
+				$strain_index = $strains{$strain};
+				warn "Strain defined as '$strain' (strain index: $strain_index)\n";
+			}
+			else{
+				warn "Strain name specified [$strain] does not match any of the available strain names!\n";
+				warn "\nAvailable genomes to choose from are:\n";
+				warn "="x37,"\n";	
+				foreach my $strain(keys %strains){
+					print "$strain\n";
+				}
+				warn "="x37,"\n";
+				die "\nPlease double check the name and try again (using '--strain NAME')\n\n";
+			}
 		}
 		else{
-		    warn "Strain2 name specified [$strain2] does not match any of the available strain names!\n";
-		    warn "\nAvailable genomes to choose from are:\n";
-		    warn "="x37,"\n";	
-		    foreach my $strain(keys %strains){
-			print "$strain\n";
-		    }
-		    warn "="x37,"\n";
-		    die "\nPlease double check the name and try again (using '--strain2 NAME')\n\n";
+			warn "No strain specified!\n";
+			warn "\nAvailable genomes to choose from are:\n";
+			warn "="x37,"\n";	
+			foreach my $strain(keys %strains){
+				print "$strain\n";
+			}
+			warn "="x37,"\n";
+			die "\nPlease choose one of the available strains using '--strain NAME' and try again\n\n";
 		}
-	    }
-	    else{
-		warn "No strain 2 specified!\n";
-		warn "\nAvailable genomes to choose from are:\n";
-		warn "="x37,"\n";	
-		foreach my $strain(keys %strains){
-		    print "$strain\n";
+	
+		### Strain 2 (optional)
+		if (defined $strain2){
+			unless ($dual_hybrid){
+				warn "Strain 2 specified, setting option '--dual_hybrid'\n";
+				$dual_hybrid = 1;
+			}
 		}
-		warn "="x37,"\n";
-		die "\nPlease choose one of the available strains using '--strain2 NAME' and try again\n\n";
-	    }
-	    
-	    # make sure that Strain 1 and Strain 2 are different from each other
-	    if ($strain eq $strain2){
-		die "Strain 1 [$strain] and Strain 2 [$strain2] must be different from each other. Please respecify!\n\n"; 
-	    }
-	}
+		if ($dual_hybrid){
+			warn "Dual Hybrid strain selected\n";
 
+			# this automatically sets the full_sequence option
+			$full_sequence = 1;
+
+			if (defined $strain2){
+				if (exists $strains{$strain2}){
+					$strain2_index = $strains{$strain2};
+					warn "Strain2 defined as '$strain2' (strain2 index: $strain2_index)\n";
+				}
+				else{
+					warn "Strain2 name specified [$strain2] does not match any of the available strain names!\n";
+					warn "\nAvailable genomes to choose from are:\n";
+					warn "="x37,"\n";	
+					foreach my $strain(keys %strains){
+						print "$strain\n";
+					}
+				warn "="x37,"\n";
+				die "\nPlease double check the name and try again (using '--strain2 NAME')\n\n";
+				}
+			}
+			else{
+				warn "No strain 2 specified!\n";
+				warn "\nAvailable genomes to choose from are:\n";
+				warn "="x37,"\n";	
+				foreach my $strain(keys %strains){
+					print "$strain\n";
+				}
+				warn "="x37,"\n";
+				die "\nPlease choose one of the available strains using '--strain2 NAME' and try again\n\n";
+			}
+	    
+			# make sure that Strain 1 and Strain 2 are different from each other
+			if ($strain eq $strain2){
+				die "Strain 1 [$strain] and Strain 2 [$strain2] must be different from each other. Please respecify!\n\n"; 
+			}
+		}
     }
 
     ### GENOME FOLDER
-    
     unless ($genome_folder){
 	warn "Reference genome folder was not specified! Please use --reference_genome </genome/folder/>\n";
 	# print_helpfile();
@@ -1481,7 +1523,7 @@ VERSION
 	$genome_build = 'GRCm38';
     }
 
-    return ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build);
+    return ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build,$v7_MGP_file);
 
 }
 
@@ -1539,6 +1581,11 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
                                           SNP-ID     Chromosome  Position    Strand   Ref/SNP
                               example:   33941939        9       68878541       1       T/G
 
+--v7_MPG                      This will use the file 'mgp_REL2005_snps_indels.vcf.gz' instead of the mgp.v5 file mentioned
+                              above. This file contains both SNP and INDEL information, but INDELs are skipped. The mgp.v5
+							  file is still listed as Current_SNPs, so the v7 file is still considered experimental. The v7
+							  file contains a number of additional strains, and was released in May2020. Get it here:
+							  ftp://ftp-mouse.sanger.ac.uk/REL-2004-v7-SNPs_Indels/mgp_REL2005_snps_indels.vcf.gz
 
 --strain <strain_name>        The strain you would like to use as SNP (ALT) genome. Mandatory. For an overview of strain names
                               just run SNPsplit_genome_preparation selecting '--list_strains'.
@@ -1592,7 +1639,7 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 --version                     Displays version information and exits.
 
 
-                                                             Last modified: 10 July 2020
+                                                             Last modified: 15 March 2021
 
 EOF
     ;
