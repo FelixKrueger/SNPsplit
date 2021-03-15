@@ -2,7 +2,7 @@
 
 #### SNPsplit_genome_preparation
 
-- Added option `--v7_MGP`; now also accepts the v7 file (`mgp_REL2005_snps_indels.vcf.gz`) of Mouse Genomes Project which may be downloaded here: ftp://ftp-mouse.sanger.ac.uk/REL-2004-v7-SNPs_Indels/mgp_REL2005_snps_indels.vcf.gz. INDEL variants are being skipped (this is noted in the report). This new version adds a number of additional strains to choose from:
+- Added option `--v7_MGP`; now also accepts the v7 file (`mgp_REL2005_snps_indels.vcf.gz`) of Mouse Genomes Project which may be downloaded here: ftp://ftp-mouse.sanger.ac.uk/REL-2004-v7-SNPs_Indels/mgp_REL2005_snps_indels.vcf.gz. INDEL variants are being skipped (this is noted in the report). This new version adds a number of additional strains to choose from, now amounting to 51 strains in total:
 
 **Available genomes to choose from are:**
 
