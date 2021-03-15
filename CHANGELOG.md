@@ -1,3 +1,67 @@
+## v0.4.0dev (15 03 2021)
+
+#### SNPsplit_genome_preparation
+
+- Added option `--v7_MGP`; now also accepts the v7 file (`mgp_REL2005_snps_indels.vcf.gz`) of Mouse Genomes Project which may be downloaded here: ftp://ftp-mouse.sanger.ac.uk/REL-2004-v7-SNPs_Indels/mgp_REL2005_snps_indels.vcf.gz. INDEL variants are being skipped (this is noted in the report). This new version adds a number of additional strains to choose from:
+
+**Available genomes to choose from are:**
+
+```LG_J
+SEA_GnJ
+SM_J
+ST_bJ
+CAST_EiJ
+BALB_cByJ
+NON_LtJ
+FVB_NJ
+RIIIS_J
+CE_J
+NZO_HlLtJ
+C58_J
+BTBR_T+_Itpr3tf_J
+MOLF_EiJ
+BUB_BnJ
+C57L_J
+CZECHII_EiJ
+C57BL_10J
+B10.RIII
+AKR_J
+C3H_HeJ
+LP_J
+DBA_2J
+QSi3
+ZALENDE_EiJ
+A_J
+PL_J
+129S1_SvImJ
+NZW_LacJ
+PWK_PhJ
+C57BL_10SnJ
+C57BR_cdJ
+QSi5
+C57BL_6NJ
+SWR_J
+MA_MyJ
+C3H_HeH
+SPRET_EiJ
+LEWES_EiJ
+WSB_EiJ
+129P2_OlaHsd
+CBA_J
+SJL_J
+BALB_cJ
+KK_HiJ
+JF1_MsJ
+NZB_B1NJ
+I_LnJ
+DBA_1J
+129S5SvEvBrd
+NOD_ShiLtJ
+RF_J
+```
+
+
+
 ## v0.4.0 (29 09 2020)
 
 - SNPsplit now supports soft-clipping of reads (`CIGAR` operation `S`). 
