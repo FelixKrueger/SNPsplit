@@ -940,18 +940,32 @@ sub filter_relevant_SNP_calls_from_VCF{
 	# warn "$_\n"; sleep(1);
 	# last if ($count == 100);
 	
-	my ($chr,$pos,$ref,$alt,$info,$strain) = (split /\t/)[0,1,3,4,7,$strain_index];
-	# warn "$chr , $pos , $ref , $alt , $strain\n"; sleep(1);
+	my ($chr,$pos,$ref,$alt,$info,$strain) = (split /\t/)[0,1,3,4,8,$strain_index];
+	# warn "$chr , $pos , $ref , $alt , $info , $strain\n"; sleep(1);
 		
-	# for v5: $strain is in the form: GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI
-	# for v7: $strain is in the form: GT:PL:DP:ADF:ADR:AD:GQ:FI
-	my ($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi,$adf,$adr,$ad);
-	
-	if ($v7){ # the v7 version, currently experimental
- 		($gt,$pl,$dp,$adf,$adr,$ad,$gq,$fi) = split/:/,$strain;
+	# adapted for variable vcf format
+	my %strain_hash;
+	my @keys;
+	my @values;
+	my $i;
+	my $gt;
+	my $fi;
+	@keys = split/:/,$info;
+	@values = split/:/,$strain;
+	for( $i = 0; $i <@keys; $i = $i + 1){
+		$strain_hash{$keys[$i]} = $values[$i];
 	}
-	else{ # mgp v5, default
-	 	($gt,$gq,$dp,$mq0f,$gp,$pl,$an,$mq,$dv,$dp4,$sp,$sgb,$pv4,$fi) = split/:/,$strain;
+	if(exists($strain_hash{'GT'})){
+		my $gt = $strain_hash{'GT'};
+	}
+	else{
+		die "GT tag & values do not show in the info columns"
+	}
+	if(exists($strain_hash{'FI'})){
+		my $fi = $strain_hash{'FI'};
+	}
+	else{
+		die "FI tag & values do not show in the info columns"
 	}
 	# warn "genotype: $gt\nfilter:   $fi\n";
 	# warn "$fi\n"; sleep(1);
