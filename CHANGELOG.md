@@ -1,4 +1,4 @@
-## v0.4.0dev (15 03 2021)
+## v0.4.0dev (07 04 2021)
 
 #### SNPsplit_genome_preparation
 
@@ -59,7 +59,9 @@ DBA_1J
 NOD_ShiLtJ
 RF_J
 ```
+If the file `mgp_REL2005_snps_indels.vcf.gz` is given, `--v7` is set automatically.
 
+- now attempts to extract the fields `FORMAT` and `INFO` from the VCF file automatically, to get access to the required information `GT` (genotype) and `FI` (filter). See more here: #47.
 
 
 ## v0.4.0 (29 09 2020)
