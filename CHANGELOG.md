@@ -1,4 +1,4 @@
-## v0.4.0dev (07 04 2021)
+## v0.5.0 (26 07 2021)
 
 #### SNPsplit_genome_preparation
 
