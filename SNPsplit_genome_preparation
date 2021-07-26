@@ -31,7 +31,7 @@ use Cwd;
 
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.4.0dev';
+my $pipeline_version = '0.5.0';
 my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build,$v7) = process_commandline ();
 
@@ -1648,10 +1648,11 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 
 --v7_VCF                      This will use the file 'mgp_REL2005_snps_indels.vcf.gz' instead of the mgp.v5 file mentioned
                               above. This file contains both SNP and INDEL information, but INDELs are skipped. The mgp.v5
-							  file is still listed as Current_SNPs, so the v7 file is still considered experimental. The v7
-							  file contains a number of additional strains, and was released in May2020. Get it here:
-							  ftp://ftp-mouse.sanger.ac.uk/REL-2004-v7-SNPs_Indels/mgp_REL2005_snps_indels.vcf.gz
-
+                              file is still listed as Current_SNPs, so the v7 file is still considered experimental. The v7
+                              file contains a number of additional strains, and was released in May2020. Get it here:
+                              ftp://ftp-mouse.sanger.ac.uk/REL-2004-v7-SNPs_Indels/mgp_REL2005_snps_indels.vcf.gz
+                              NOTE: Both v5 and v7 files work for the GRCm38 genome build!
+							  
 --strain <strain_name>        The strain you would like to use as SNP (ALT) genome. Mandatory. For an overview of strain names
                               just run SNPsplit_genome_preparation selecting '--list_strains'.
 

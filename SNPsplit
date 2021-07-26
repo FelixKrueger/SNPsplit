@@ -23,7 +23,7 @@ use Cwd;
 ## along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.4.0dev';
+my $pipeline_version = '0.5.0';
 my $parent_dir = getcwd;
 my $full_commandline = join (" ","SNPsplit",@ARGV);
 # warn "Full commandline: $full_commandline\n"; sleep(5);
