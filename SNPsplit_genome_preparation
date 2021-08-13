@@ -1217,9 +1217,9 @@ sub detect_chroms{
 		
 		if ($_ =~ /^\#\#contig/){ # filters header lines
 			# warn "$_\n"; # sleep(1);
-			$_ =~ /ID=(.+),/;
+			$_ =~ /ID=(.+?),/; # changing to non-greedy match (in case there are several commas in that line...)
 			my $chr = $1;
-				# warn "Identified chromosome $chr\n";
+			# warn "Identified chromosome $chr\n";
 			unless (exists $chrom{$chr}){
 				$chrom{$chr}++;
 			}
