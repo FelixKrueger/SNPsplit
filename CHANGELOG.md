@@ -1,3 +1,9 @@
+## v0.5.0dev
+
+#### SNPsplit_genome_preparation
+
+- Changed the chromosome detection regex to a non-greedy match (so it only uses the NAME entry following the ID=NAME, up to, but not including the first `,`)
+
 ## v0.5.0 (26 07 2021)
 
 #### SNPsplit_genome_preparation
