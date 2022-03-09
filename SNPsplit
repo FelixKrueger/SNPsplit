@@ -7,7 +7,7 @@ use lib "$RealBin/../lib";
 use Cwd;
 
 
-## This program is Copyright (C) 2014-21, Felix Krueger (felix.krueger@babraham.ac.uk)
+## This program is Copyright (C) 2014-22, Felix Krueger (felix.krueger@babraham.ac.uk)
 
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ use Cwd;
 ## along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.5.0';
+my $pipeline_version = '0.5.1dev';
 my $parent_dir = getcwd;
 my $full_commandline = join (" ","SNPsplit",@ARGV);
 # warn "Full commandline: $full_commandline\n"; sleep(5);
@@ -1608,7 +1608,7 @@ sub open_output_filehandles{
 
 sub check_for_bs{
 
-    my ($paired_end,$samtools_path) = @_;
+    my ($paired_end,$samtools_path,$single_end) = @_;
     my $isBismark = 0; # default is non-bisulfite
 
     # SAM/BAM format, checking the first file supplied
@@ -1636,21 +1636,26 @@ sub check_for_bs{
 				$isBismark = 1;
 			}
 			
-			# Paired-end test
-			if ($_ =~ /ID:Bismark/ or $_ =~ /ID:hisat2/ or $_ =~ /ID:bowtie2/){
-				unless ($paired_end){ # unless the user specified --paired we try to extract this information from the @PG line
+			if ($single_end){
+				# single-end specified manually, no need to do auto-detection
+				$paired_end = 0;
+			}
+			else{	
+				# Paired-end test
+				if ($_ =~ /ID:Bismark/ or $_ =~ /ID:hisat2/ or $_ =~ /ID:bowtie2/){
+					unless ($paired_end){ # unless the user specified --paired we try to extract this information from the @PG line
 
-					if ($_ =~ /\s+-1\s+/ and $_ =~ /\s+-2\s+/){
-						warn "Treating file(s) as paired-end data (as extracted from \@PG line)\n\n";
-						$paired_end = 1;
+						if ($_ =~ /\s+-1\s+/ and $_ =~ /\s+-2\s+/){
+							warn "Treating file(s) as paired-end data (as extracted from \@PG line)\n\n";
+							$paired_end = 1;
+						}
+						else{
+							warn "Treating file(s) as single-end data (as extracted from \@PG line)\n\n";
+							$paired_end = 0;
+						}
+						last; # exiting after one attempt
 					}
-					else{
-						warn "Treating file(s) as single-end data (as extracted from \@PG line)\n\n";
-						$paired_end = 0;
-					}
-					last; # exiting after one attempt
-				}
-
+				}	
 			}
 		}
     }
@@ -1741,6 +1746,7 @@ sub process_commandline{
     my $samtools_path;
     my $sam;
     my $paired;
+	my $single_end;
     my $hic_data;
     my $conflict;
     my $output_dir;
@@ -1757,6 +1763,7 @@ sub process_commandline{
 				   'samtools_path=s'         => \$samtools_path,
 				   'sam'                     => \$sam,
 				   'paired'                  => \$paired,
+				   'single_end'              => \$single_end,
 				   'hic'                     => \$hic_data,
 				   'conflicting|weird'       => \$conflict,
 				   'singletons'              => \$singletons,
@@ -1781,7 +1788,7 @@ sub process_commandline{
     SNPsplit - Allele-specific alignment sorting
 
 	        Version: $pipeline_version
-	  Copyright 2014-21 Felix Krueger
+	  Copyright 2014-22 Felix Krueger
              Babraham Bioinformatics
        https://github.com/FelixKrueger/SNPsplit
 
@@ -1807,6 +1814,10 @@ VERSION
 			die "The option --no_sorting requires you to supply a BAM file (ending in .bam), but at least one of the file names did not look like a BAM file: '$file'. Please respecify!\n\n" unless ($file =~ /\.bam$/);
 		}
     }
+	if ($single_end){
+		die ("You cannot spcecify --paired as well as --single_end at the same time. Make your pick and try again!\n\n") if $paired;
+		$paired = 0;
+	}
 
     ### checking to see if all files are indeed present in the folder
     foreach my $file (@ARGV){
@@ -1909,11 +1920,13 @@ VERSION
 		$bam = 1;
     }
 
+
+
     ### Checking to see if the input file is a Bismark processed Bisulfite-Seq file
     unless ($hic_data){
 
 		warn "Testing if input file '$ARGV[0]' looks like a Bisulfite-Seq file\n";
-		(my $isBismark,$paired) = check_for_bs($paired,$samtools_path);
+		(my $isBismark,$paired) = check_for_bs($paired,$samtools_path,$single_end);
 		if ($isBismark){
 			$bisulfite++;
 			if ($paired){
@@ -1929,7 +1942,7 @@ VERSION
 				}
 			}
 			else{
-			warn "File looks like a Bismark single-end file. Setting '--bisulfite'...\n";
+				warn "File looks like a Bismark single-end file. Setting '--bisulfite'...\n";
 			}
 		}
     }
@@ -1988,6 +2001,8 @@ sub print_helpfile{
                            are being used for analysis. The genome referred to as 'Ref' will be used as genome 1,
                            the genome containing the 'SNP' base as genome 2.
 
+	--single_end           Manually sets data to single-end. Skips AUTO-DETECT.
+
     --paired               Paired-end mode. (Default: AUTO-DETECT).
 
     -o/--outdir <dir>      Write all output files into this directory. By default the output files will be written into
@@ -2044,7 +2059,7 @@ sub print_helpfile{
     --version              Displays version information and exits.
 
 
-                                   Script last modified: 26 January 2020
+                                   Script last modified:  09 March 2022
 EOF
     ;
   exit 1;

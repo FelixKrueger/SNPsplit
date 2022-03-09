@@ -1705,7 +1705,7 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 --version                     Displays version information and exits.
 
 
-                                                             Last modified: 06 April 2021
+                                                             Last modified:  13 August 2021
 
 EOF
     ;
