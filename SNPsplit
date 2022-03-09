@@ -1637,7 +1637,7 @@ sub check_for_bs{
 			}
 			
 			# Paired-end test
-			if ($_ =~ /ID:Bismark/ or $_ =~ /ID:hisat2/ or $_ =~ /ID:bowtie2/){
+			if ($_ =~ /ID:Bismark/ or $_ =~ /ID:hisat2/ or $_ =~ /ID:bowtie2/ or $_ =~ /ID:STAR/){
 				unless ($paired_end){ # unless the user specified --paired we try to extract this information from the @PG line
 
 					if ($_ =~ /\s+-1\s+/ and $_ =~ /\s+-2\s+/){
