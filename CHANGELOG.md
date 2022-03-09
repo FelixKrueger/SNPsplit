@@ -1,6 +1,10 @@
 ## v0.5.0dev
 
-#### SNPsplit_genome_preparation
+### SNPsplit
+
+Added an option `--single_end` to skip the paired-end auto-detection entirely (which failed for e.g. alignments with STAR [see here](https://github.com/FelixKrueger/SNPsplit/pull/56)).
+
+### SNPsplit_genome_preparation
 
 - Changed the chromosome detection regex to a non-greedy match (so it only uses the NAME entry following the ID=NAME, up to, but not including the first `,`)
 
