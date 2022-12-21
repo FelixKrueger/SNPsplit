@@ -4,6 +4,7 @@
 
 ## Allele-specific alignment sorting
 
+Update December 2022: SNPsplit has now been updated to work with new release of the [Mouse Genomes Project](https://www.mousegenomes.org/). This meansd that it will now assume the GRCm39 mouse genome build by default, and use the latest SNP annotation file (v8: [mgp_REL2021_snps.vcf.gz](https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/mgp_REL2021_snps.vcf.gz).
 
 ### Note for using a UCSC/NCBI genome in conjunction with the VCF file from the Mouse Genomes Project 
 
