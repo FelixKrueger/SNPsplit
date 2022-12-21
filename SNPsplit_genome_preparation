@@ -23,10 +23,12 @@ use Cwd;
 
 
 ### This script filters the latest VCF file for various SNPs versus the GRCm39 mouse genome build and writes high confidence SNPs into a folder called 'SNPs_Sanger';
+
 ### Update Dec 2022: The current version of the the Mouse Genomes Project (https://www.mousegenomes.org/) is v8. The SNP file may ne obtained here: 
 ### https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/: "mgp_REL2021_snps.vcf.gz"
 
-### Older versions of the SNPs/genomes are no longer supported but might still work (e.g.: 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz')
+### Older versions of the SNPs/genomes are no longer supported but might still work (e.g.: 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz'). However, please note that older
+### files also use the, now outdated, genome build GRCm38!
 
 # Modifying 20 December 2022 - to accept the new release v8 and work with the latest Mouse Genome Project 
 # https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/  "mgp_REL2021_snps.vcf.gz"
@@ -38,7 +40,7 @@ my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip
 
 my %snps; # storing all filtered SNPs
 my %snps_dual_genome; # storing all SNPs for dual genome
-my %homozygous_SNPs; # storing SNP genotypes and FILTER value for dual hybrids
+my %homozygous_SNPs;  # storing SNP genotypes and FILTER value for dual hybrids
 
 my $snp_file_strain =   "all_SNPs_${strain}_${genome_build}.txt.gz";
 my $snp_file_strain2;
@@ -1636,9 +1638,9 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
   USAGE:    SNPsplit_genome_preparation  [options] --vcf_file <file> --reference_genome /path/to/genome/ --strain <strain_name>
 
 
---vcf_file <file>             Mandatory file specifying SNP information for mouse strains from the Mouse Genomes Project
-                              (http://www.sanger.ac.uk/science/data/mouse-genomes-project). The file used and approved is 
-                              called 'mgp.v5.merged.snps_all.dbSNP142.vcf.gz'. Please note that future versions
+--vcf_file <file>             Mandatory file specifying SNP information for mouse strains from the Mouse Genomes Project 
+							  (https://www.mousegenomes.org/): https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/
+							  The file used and approved is called 'mgp_REL2021_snps.vcf.gz'. Please note that future versions
                               of this file or entirely different VCF files might not work out-of-the-box but may require some
                               tweaking. SNP calls are read from the VCF files, and high confidence SNPs are written into
                               a folder in the current working directory called SNPs_<strain_name>/chr<chromosome>.txt,
@@ -1647,12 +1649,9 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
                                           SNP-ID     Chromosome  Position    Strand   Ref/SNP
                               example:   33941939        9       68878541       1       T/G
 
---v7_VCF                      This will use the file 'mgp_REL2005_snps_indels.vcf.gz' instead of the mgp.v5 file mentioned
-                              above. This file contains both SNP and INDEL information, but INDELs are skipped. The mgp.v5
-                              file is still listed as Current_SNPs, so the v7 file is still considered experimental. The v7
-                              file contains a number of additional strains, and was released in May2020. Get it here:
-                              ftp://ftp-mouse.sanger.ac.uk/REL-2004-v7-SNPs_Indels/mgp_REL2005_snps_indels.vcf.gz
-                              NOTE: Both v5 and v7 files work for the GRCm38 genome build!
+--v7_VCF                      This will use the file 'mgp_REL2005_snps_indels.vcf.gz' instead of the mgp v8 file mentioned
+                              above, for backward compatibility reasons. This file contains both SNP and INDEL information,
+							  but INDELs are skipped. NOTE: The v5 and v7 files work for the GRCm38 (now outdated) genome build!
 							  
 --strain <strain_name>        The strain you would like to use as SNP (ALT) genome. Mandatory. For an overview of strain names
                               just run SNPsplit_genome_preparation selecting '--list_strains'.
@@ -1705,7 +1704,7 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 --version                     Displays version information and exits.
 
 
-                                                             Last modified:  20 December 2022
+                                                             Last modified:  21 December 2022
 
 EOF
     ;
