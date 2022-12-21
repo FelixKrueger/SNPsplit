@@ -7,7 +7,7 @@ use lib "$RealBin/../lib";
 use Cwd;
 
 
-## This program is Copyright (C) 2014-22, Felix Krueger (felix.krueger@babraham.ac.uk)
+## This program is Copyright (C) 2014-23, Felix Krueger (felix.krueger@babraham.ac.uk)
 
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -2021,7 +2021,7 @@ sub print_helpfile{
                            as input, i.e. the input BAM file is paired-end and Reads 1 and 2 follow each other. Thus,
                            this option also sets the flags --paired and --no_sort. Default: OFF.
 
-    --bisulfite            Assumes Bisulfite-Seq data processed with Bismark (www.bioinformatics.babraham.ac.uk/projects/bismark/)
+    --bisulfite            Assumes Bisulfite-Seq data processed with Bismark (https://github.com/FelixKrueger/Bismark)
                            as input. In paired-end mode (--paired), Read 1 and Read 2 of a pair are expected to follow
                            each other in consecutive lines. SNPsplit will run a quick check at the start of a run to see if the
                            file provided appears to be a Bismark file, and set the flags --bisulfite and/or --paired
@@ -2059,7 +2059,7 @@ sub print_helpfile{
     --version              Displays version information and exits.
 
 
-                                   Script last modified:  09 March 2022
+                                   Script last modified:  21 Dec 2022
 EOF
     ;
   exit 1;
