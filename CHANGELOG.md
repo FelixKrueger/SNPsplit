@@ -1,3 +1,9 @@
+## v0.6.0dev
+
+- restructuring docs
+
+- adding v8 annotation
+
 ## v0.5.0dev
 
 ### SNPsplit
