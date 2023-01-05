@@ -6,6 +6,8 @@ hide:
 06 January, 2023
 
 # SNPsplit [v0.6.0]
+
+![SNPsplit](images/SNPsplit.png)
 ______
 
 ## General
