@@ -1,7 +1,7 @@
 # Legacy (v5/GRCm38)
 
 
-`SNPsplit_genome_preparation` is designed to read in a variant call file from the Mouse Genomes Project (e.g. this [latest file](ftp://ftp-mouse.sanger.ac.uk/current_snps/mgp.v5.merged.snps_all.dbSNP142.vcf.gz)) and generate new genome versions where the strain SNPs are either incorporated into the new genome (full sequence) or masked by the ambiguity nucleobase `N` (**N-masking**).
+`SNPsplit_genome_preparation` is designed to read in a variant call file from the Mouse Genomes Project (e.g. this [v5 file, GRCm38](ftp://ftp-mouse.sanger.ac.uk/current_snps/mgp.v5.merged.snps_all.dbSNP142.vcf.gz)) and generate new genome versions where the strain SNPs are either incorporated into the new genome (full sequence) or masked by the ambiguity nucleobase `N` (**N-masking**).
 
 `SNPsplit_genome_preparation` may be run in two different modes:
 
