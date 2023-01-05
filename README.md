@@ -4,6 +4,8 @@
 
 ## Allele-specific alignment sorting
 
+See the documentation: https://felixkrueger.github.io/SNPsplit
+
 **Update December 2022:**
 
 SNPsplit has now been updated to work with new release of the [Mouse Genomes Project](https://www.mousegenomes.org/). This means that it will now assume the GRCm39 mouse genome build by default, and use the latest SNP annotation file (v8: [mgp_REL2021_snps.vcf.gz](https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/mgp_REL2021_snps.vcf.gz)).
@@ -27,6 +29,6 @@ The SNPsplit documentation can be found here: [SNPsplit User Guide](./SNPsplit_U
 
 ## Credits
 
-SNPsplit was written by Felix Krueger, as part of the [Babraham Bioinformatics](https://www.bioinformatics.babraham.ac.uk) group.
+SNPsplit was written by Felix Krueger at [Babraham Bioinformatics](https://www.bioinformatics.babraham.ac.uk), now part of Altos Bioinformatics.
 
-<p align="center"> <img title="Babraham Bioinformatics" id="logo_img" src="Images/bioinformatics_logo.png" width=300></p>
+<p align="center"> <img title="Babraham Bioinformatics" id="logo_img" src="docs/images/bioinformatics_logo.png" width=300></p>
