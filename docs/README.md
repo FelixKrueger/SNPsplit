@@ -16,10 +16,10 @@ SNPsplit offers a separate genome preparation step that allows you to generate N
 
 SNPsplit operates in two stages:
 
-## **I) SNPsplit-tag:** 
+## **I) SNPsplit tag:** 
 SNPsplit analyses reads (single-end mode) or read pairs (paired-end mode) for overlaps with known SNP positions, and writes out a tagged BAM file in the same order as the original file. Unsorted paired-end files are sorted by name first.
 
-## **II) SNPsplit-sort:** 
+## **II) SNPsplit sort:** 
 The tagged BAM file is read in again and sorted into allele-specific files. This process may also be run as a stand-alone module on tagged BAM files (tag2sort).
 
 The SNPsplit-tag module determines whether a read can be assigned to a certain allele and appends an additional optional field `XX:Z:` to each read. The tag can be one of the following:
