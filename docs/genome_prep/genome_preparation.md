@@ -1,14 +1,14 @@
-## SNPsplit genome preparation
+# SNPsplit genome preparation
 
-`SNPsplit_genome_preparation` is designed to read in a variant call file from the Mouse Genomes Project (e.g. this [latest file](ftp://ftp-mouse.sanger.ac.uk/current_snps/mgp.v5.merged.snps_all.dbSNP142.vcf.gz)) and generate new genome versions where the strain SNPs are either incorporated into the new genome (full sequence) or masked by the ambiguity nucleobase `N` (**N-masking**).
+`SNPsplit_genome_preparation` is designed to read in a variant call file from the Mouse Genomes Project (e.g. this [latest v8 file](https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/mgp_REL2021_snps.vcf.gz)) and generate new genome versions where the strain SNPs are either incorporated into the new genome (full sequence) or masked by the ambiguity nucleobase `N` (**N-masking**).
 
 `SNPsplit_genome_preparation` may be run in two different modes:
 
-#### Single strain mode:
+### Single strain mode:
 **1)** The VCF file is read and filtered for high-confidence SNPs in the strain specified with   strain <name>
 **2)** The reference genome (given with `--reference_genome <genome>`) is read into memory, and the filtered high-confidence SNP positions are incorporated either as N-masking (default), or full sequence (option `--full_sequence`)
 
-#### Dual strain mode:
+### Dual strain mode:
 **1)** The VCF file is read and filtered for high-confidence SNPs in the strain specified with `--strain <name>`
 **2)** The reference genome (given with `--reference_genome <genome>`) is read into memory, and the filtered high-confidence SNP positions are incorporated as full sequence and optionally as N-masking
 **3)** The VCF file is read one more time and filtered for high-confidence SNPs in strain 2 specified with `--strain2 <name>`
@@ -16,13 +16,13 @@
 **5)** The SNP information of strain and strain 2 relative to the reference genome build are compared, and a new Ref/SNP annotation is constructed whereby the new Ref/SNP information will be Strain/Strain2 (and no longer the standard reference genome strain Black6 (C57BL/6J))
 **6)** The full genome sequence given with `--strain <name>` is read into memory, and the high-confidence SNP positions between Strain and Strain2 are incorporated as full sequence, and optionally as N-masking
 
-The resulting `.fa` files are ready to be indexed with your favourite aligner. Proved and tested aligners include Bowtie2, Tophat, STAR, HISAT2, HiCUP and Bismark. Please note that STAR and HISAT2 may require you to disable soft-clipping, please see above for more details.
+The resulting `.fa` files are ready to be indexed with your favourite aligner. Proved and tested aligners include Bowtie2, Tophat, STAR, HISAT2, HiCUP and Bismark. Please note that STAR and HISAT2 may require you to disable soft-clipping, please see above for more details. 
 
 Both the SNP filtering and the genome preparation write out report files for record keeping.
 
 ## Filtering and processing high confidence SNPs from the VCF file
 
-This section describes in more detail the process of how high confidence SNPs are extracted from the sample VCF file **mgp.v5.merged.snps_all.dbSNP142.vcf.gz**. We are first going to paste the start of the VCF file and explain in more detail later the individual steps taken by the SNPsplit genome preparation for the strain CAST_EiJ as an example strain; the PDF version of the user guide had relevant information in the header lines or the variant data itself are marked in dark red, but unfotunately this is not supported in this markdown version, so please look carefully... . This should help you adapt the process to other genomes/VCF files should you wish to do so.
+This section describes in more detail the process of how high confidence SNPs are extracted from the sample VCF file **mgp_REL2021_snps.vcf.gz**. We are first going to paste the start of the VCF file and explain in more detail later the individual steps taken by the SNPsplit genome preparation for the strain CAST_EiJ as an example strain; the PDF version of the user guide had relevant information in the header lines or the variant data itself are marked in dark red, but unfotunately this is not supported in this markdown version, so please look carefully... . This should help you adapt the process to other genomes/VCF files should you wish to do so.
 
 ```
 VCF file: mgp.v5.merged.snps_all.dbSNP142.vcf.gz
@@ -154,7 +154,7 @@ VCF file: mgp.v5.merged.snps_all.dbSNP142.vcf.gz
 …
 ```
 
-### Detecting strains
+## Detecting strains
 To detect the available strains in the VCF file as well as to determine the column number of a desired strain in the file we skim through the header lines until we find a line starting with #CHROM. In terms of the strains in the file the next eight fields are irrelevant: 
 
 `#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT`
@@ -166,7 +166,7 @@ In our example the data for strain *CAST_EiJ* would be found in column 25, or ha
 
 If #CHROM is **not present** in the VCF file header, the **automated lookup and subsequent steps will fail**.
 
-### Detecting chromosomes
+## Detecting chromosomes
 Chromosomes to be processed are detected from the VCF header lines starting with ##contig=<ID=…,… >, e.g. here:
 
 ```
@@ -181,7 +181,7 @@ If the ##contig=… fields are missing from the VCF file, **subsequent steps are
 `my @chroms = (1..19,’X’,’Y’,’MT’);`
 
 
-### Dealing with Variant Calls
+## Dealing with Variant Calls
 For variant calls the SNPsplit genome preparation extracts the following information from each line:
 
 ```
@@ -244,7 +244,7 @@ The third position finally is a high-confidence homozygous SNP which would be in
 1	3000185	G	T	1/1:43:12:0:276,43,0:255,36,0:2:54:12:0,0,10,2:0:-0.680642:.:1
 ```
 	
-### Clearly defined clean genotype	
+## Clearly defined clean genotype	
 And finally, variants are required to have a clearly defined genotype, e.g. a made-up position:
 ```
 12	45630185	A	T/C
