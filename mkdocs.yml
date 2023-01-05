@@ -33,11 +33,10 @@ theme:
     - navigation.tabs
 
 nav:
-  - Home: README.md
-  - quick_reference.md
+  - Overview: README.md
   - workflow.md
   - Usage:
-      - bismark/README.md
+      - SNPsplit/README.md
       - bismark/genome_preparation.md
       - bismark/alignment.md
       - bismark/deduplication.md
@@ -52,12 +51,6 @@ nav:
       - options/genome_preparation.md
       - options/alignment.md
       - options/methylation_extraction.md
-  - FAQ:
-      - faq/README.md
-      - faq/single_cell_pbat.md
-      - faq/low_mapping.md
-      - faq/context_change.md
-      - faq/conversion_efficiency.md
 
 markdown_extensions:
   - admonition
