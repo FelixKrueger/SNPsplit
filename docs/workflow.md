@@ -20,4 +20,4 @@ The general workflow for working with SNPsplit is:
 6. Run `SNPsplit` on the resulting BAM file, using the SNP file generated in 3)
 
 
-Once this workflow has completed, proceed to downstream analysis of your choice (not part of SNPsplit).
+Once this workflow has completed, proceed to downstream analysis of your choice (outside scope of SNPsplit).
