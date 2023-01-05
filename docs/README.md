@@ -1,3 +1,8 @@
+---
+hide:
+  - navigation
+---
+
 05 January, 2023
 
 # SNPsplit [v0.6.0dev]
