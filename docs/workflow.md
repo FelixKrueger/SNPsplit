@@ -1,3 +1,8 @@
+---
+hide:
+  - navigation
+---
+
 # The SNPsplit workflow
 
 The general workflow for working with SNPsplit is:
