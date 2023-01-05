@@ -35,7 +35,7 @@ theme:
 nav:
   - Home: README.md
   - quick_reference.md
-  - installation.md
+  - workflow.md
   - Usage:
       - bismark/README.md
       - bismark/genome_preparation.md
