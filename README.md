@@ -4,7 +4,7 @@
 
 ## Allele-specific alignment sorting
 
-See the documentation: https://felixkrueger.github.io/SNPsplit
+> **See the documentation: https://felixkrueger.github.io/SNPsplit**
 
 **Update December 2022:**
 
