@@ -19,16 +19,16 @@ SNPsplit requires the following tools installed and ideally available in the `PA
 - [Samtools](http://samtools.sourceforge.net/)
 
 ## Documentation
-The SNPsplit documentation can be found here: [SNPsplit User Guide](./SNPsplit_User_Guide.md)
+The SNPsplit documentation can be found here: [SNPsplit User Guide](https://felixkrueger.github.io/SNPsplit)
 
 ## Links
 - SNPsplit publication at F1000 Research:
   * https://f1000research.com/articles/5-1479/v2
   
-- Here is a link to the [SNPsplit project site](https://www.bioinformatics.babraham.ac.uk/projects/SNPsplit/) at the Babraham Institute.
+- Here is a link to the [SNPsplit project site](https://www.bioinformatics.babraham.ac.uk/projects/SNPsplit/) at the Babraham Institute
 
 ## Credits
 
 SNPsplit was written by Felix Krueger at [Babraham Bioinformatics](https://www.bioinformatics.babraham.ac.uk), now part of Altos Bioinformatics.
 
-<p align="center"> <img title="Babraham Bioinformatics" id="logo_img" src="docs/images/bioinformatics_logo.png" width=300></p>
+<p align="center"> <img title="Babraham Bioinformatics" id="logo_img" src="docs/images/bioinformatics_logo.png" width=200></p>
