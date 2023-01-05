@@ -3,7 +3,7 @@ hide:
   - navigation
 ---
 
-# The SNPsplit workflow
+# SNPsplit workflow
 
 The general workflow for working with SNPsplit is outlined below (please note that steps 1-3 are only required as a one-off):
 
