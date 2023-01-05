@@ -5,7 +5,7 @@ hide:
 
 06 January, 2023
 
-# SNPsplit [v0.6.0dev]
+# SNPsplit [v0.6.0]
 ______
 
 ## General

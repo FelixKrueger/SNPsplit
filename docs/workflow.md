@@ -5,7 +5,7 @@ hide:
 
 # The SNPsplit workflow
 
-The general workflow for working with SNPsplit is:
+The general workflow for working with SNPsplit is outlined below (please note that steps 1-3 are only required as a one-off):
 
 1. Obtain the SNP annotation file from the [Mouse Genomes Project](https://www.mousegenomes.org/). The latest file is [v8 (12/2021)](https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/mgp_REL2021_snps.vcf.gz).
 
