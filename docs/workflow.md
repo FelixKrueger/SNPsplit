@@ -7,7 +7,7 @@ hide:
 
 The general workflow for working with SNPsplit is:
 
-1. Obtain the latest SNP annotation file from the [Mouse Genomes Project](https://www.mousegenomes.org/)
+1. Obtain the SNP annotation file from the [Mouse Genomes Project](https://www.mousegenomes.org/). The latest file is [v8 (12/2021)](https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/mgp_REL2021_snps.vcf.gz).
 
 2. Download the Mouse reference genome from Ensembl ([GRCm39](https://ftp.ensembl.org/pub/release-108/fasta/mus_musculus/dna/))
 

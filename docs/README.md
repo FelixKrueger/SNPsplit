@@ -20,13 +20,13 @@ SNPsplit operates in two stages:
 SNPsplit analyses reads (single-end mode) or read pairs (paired-end mode) for overlaps with known SNP positions, and writes out a tagged BAM file in the same order as the original file. Unsorted paired-end files are sorted by name first.
 
 ## II) SNPsplit sort:
-The tagged BAM file is read in again and sorted into allele-specific files. This process may also be run as a stand-alone module on tagged BAM files (tag2sort).
+The tagged BAM file is read in again and sorted into allele-specific files. This process may also be run as a stand-alone module on tagged BAM files (`tag2sort`).
 
-The SNPsplit-tag module determines whether a read can be assigned to a certain allele and appends an additional optional field `XX:Z:` to each read. The tag can be one of the following:
+The SNPsplit tag module determines whether a read can be assigned to a certain allele and appends an additional optional field `XX:Z:` to each read. The tag can be one of the following:
 
     XX:Z:UA - Unassigned
     XX:Z:G1 - Genome 1-specific
     XX:Z:G2 - Genome 2-specific
     XX:Z:CF - Conflicting
 
-The SNPsplit-sort module `tag2sort` reads in the tagged BAM file and sorts the reads (or read pairs) according to their `XX:Z:` tag (or the combination of tags for paired-end or Hi-C reads) into sub-files.
+The SNPsplit sort module `tag2sort` reads in the tagged BAM file and sorts the reads (or read pairs) according to their `XX:Z:` tag (or the combination of tags for paired-end or Hi-C reads) into sub-files.
