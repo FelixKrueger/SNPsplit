@@ -35,9 +35,9 @@ theme:
 nav:
   - Overview: README.md
   - workflow.md
-  - Usage:
-      - SNPsplit/README.md
-      - bismark/genome_preparation.md
+  - Genome preparation:
+      - genome_prep/README.md
+      - genome_prep/genome_preparation.md
       - bismark/alignment.md
       - bismark/deduplication.md
       - bismark/methylation_extraction.md
@@ -46,7 +46,9 @@ nav:
       - bismark/summary_report.md
       - bismark/filter_nonconverted_reads.md
       - bismark/library_types.md
-      - bismark/concordance.md
+  - SNPsplit:
+      - SNPsplit/README.md
+      - SNPsplit/genome_preparation.md
   - Full list of options:
       - options/genome_preparation.md
       - options/alignment.md
