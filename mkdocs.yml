@@ -37,7 +37,7 @@ nav:
   - workflow.md
   - Genome preparation:
       - genome_prep/genome_preparation.md
-      - genome_prep/legacy (v5/GRCm38).md
+      - genome_prep/legacy.md
   - SNPsplit:
       - SNPsplit/details.md
       - SNPsplit/specific_comments.md
