@@ -23,7 +23,7 @@
 
 **6)** The full genome sequence given with `--strain <name>` is read into memory, and the high-confidence SNP positions between Strain and Strain2 are incorporated as full sequence, and optionally as N-masking
 
-The resulting `.fa` files are ready to be indexed with your favourite aligner. Proven and tested aligners include Bowtie2, Tophat, STAR, HISAT2, HiCUP and Bismark. Please note that BWA does not support alignments to N-masked genome (see [here](../SNPsplit/specific_comments.md)).
+The resulting `.fa` files are ready to be indexed with your favourite aligner. Proven and tested aligners include Bowtie2, Tophat, STAR, HISAT2, HiCUP and Bismark. Please note that BWA does not support alignments to N-masked genome (see [here](../SNPsplit/specific_comments.md#bwa)).
 
 Both the SNP filtering and the genome preparation write out report files for record keeping.
 
