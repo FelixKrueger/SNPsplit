@@ -1,5 +1,7 @@
 # Genome preparation
 
+## Full list of options for SNPsplit_genome_preparation
+
 !!! note
     **USAGE:** `SNPsplit_genome_preparation  [options] --vcf_file <file> --reference_genome /path/to/genome/ --strain <strain_name>`
     

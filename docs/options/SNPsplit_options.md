@@ -21,9 +21,14 @@ Mandatory file specifying SNP positions to be considered, may be a plain text fi
 
 Only the information contained in fields 'Chromosome', 'Position' and 'Ref/SNP base' are being used for analysis. The genome referred to as 'Ref' will be used as genome 1, the genome containing the 'SNP' base as genome 2.
 
+
+- `--single_end`
+
+Manually sets data to single-end. Skips AUTO-DETECT
+
 - `--paired`
 
-Paired-end mode. (Default: OFF).
+Paired-end mode. (Default: AUTO-DETECT)
 
 - `-o/--outdir <dir>`
 
@@ -54,7 +59,11 @@ The path to your Samtools installation, e.g. `/home/user/samtools/`. Does not ne
 
 - `--sam`
 
-The output will be written out in SAM format instead of the default BAM format. SNPsplit will attempt to use the path to Samtools that was specified with `--samtools_path`, or, if it hasn't been specified, attempt to find Samtools in the `PATH` environment. 
+The output will be written out in SAM format instead of BAM (default). SNPsplit will attempt to use the path to Samtools that was specified with `--samtools_path`, or, if it hasn't been specified, attempt to find Samtools in the `PATH` environment. If no installation of Samtools can be found, the SAM output will be compressed with GZIP instead (yielding a `.sam.gz` output file).
+
+- `--skip_tag2sort`
+
+Carry out the allele-tagging process, and exit afterwards. This might be desirable when using SNPsplit in pipelining systems, such as Nextflow, when a deduplication step is to be added following allele tagging.
 
 - `--conflicting/--weird`
 
@@ -62,7 +71,7 @@ Reads or read pairs that were classified as 'Conflicting' (`XX:Z:CF`) will be wr
 
 - `--help`
 
-Displays this help information and exits.
+Displays this help information and exits
 
 - `--verbose`
 
@@ -71,3 +80,13 @@ Displays this help information and exits.
 - `--version`
 
 Displays version information and exits
+
+
+
+
+  
+
+
+
+
+  
