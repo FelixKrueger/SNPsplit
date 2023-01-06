@@ -1,5 +1,8 @@
 # Legacy (v5/GRCm38)
 
+!!!  warning
+    
+    This document references the now outdated mouse genome build GRCm38 and the equally outdated v5 annotation. We do not recommend or support this old version any longer, please go here for the most recent [genome/annotation version](./genome_preparation.md).
 
 `SNPsplit_genome_preparation` is designed to read in a variant call file from the Mouse Genomes Project (e.g. this [v5 file, GRCm38](ftp://ftp-mouse.sanger.ac.uk/current_snps/mgp.v5.merged.snps_all.dbSNP142.vcf.gz)) and generate new genome versions where the strain SNPs are either incorporated into the new genome (full sequence) or masked by the ambiguity nucleobase `N` (**N-masking**).
 

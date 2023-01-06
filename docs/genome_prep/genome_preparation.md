@@ -27,7 +27,7 @@ The resulting `.fa` files are ready to be indexed with your favourite aligner. P
 
 Both the SNP filtering and the genome preparation write out report files for record keeping.
 
-## Filtering and processing high confidence SNPs from the VCF file
+## Filtering high confidence SNPs from the VCF file
 
 This section describes in more detail the process of how high confidence SNPs are extracted from the VCF file **mgp_REL2021_snps.vcf.gz**. We are first going to paste the start of the VCF file and explain in more detail later the individual steps taken by the SNPsplit genome preparation for the strain CAST_EiJ as an example; the PDF version of the user guide had relevant information in the header lines or the variant data itself are marked in dark red, but unfotunately this is not supported in this markdown version, so please look carefully... . This should help you adapt the process to other genomes/VCF files should you wish to do so.
 
@@ -125,8 +125,8 @@ If #CHROM is **not present** in the VCF file header, the **automated lookup and 
 Chromosomes to be processed are detected from the VCF header lines starting with ##contig=<ID=…,… >, e.g. here:
 
 ```
-##contig=<ID=1,length=195471971>
-##contig=<ID=10,length=130694993>
+##contig=<ID=1,length=195154279>
+##contig=<ID=2,length=181755017>
 …
 ```
 The IDs here are the chromosomes for which variant calls are available, but not necessarily all chromosomes in the genome have to be present here. If there are no variant calls for say “chrY” then the subsequent genome preparation step will simply not introduce any changes but use the reference sequence for “chrY”.
@@ -144,10 +144,11 @@ CHROM  [Col 1]
 POS    [Col 2]
 REF    [Col 4]
 ALT    [Col 5]
-STRAIN [Col 25 (for CAST_EiJ)]
+STRAIN [Col 28 (for CAST_EiJ)]
 ```
 
-Which in our case is (three lines only):
+Which in our case is (three example lines only):
+
 ```
 CHROM	POS	REF	ALT	CAST_EiJ
 1	3050050	C	G	1/1:0,163,255:54:54,0:127:0
@@ -191,7 +192,7 @@ Next we are looking at the FILTER field. If a SNP variant call passed all filter
 1	3050050	C	G	1/1:0,163,255:54:54,0:127:0	
 ```
 
-The second position did not indicate that there was a SNP (**0/0**), so the positions wouldn’t be considered for a single-hybrid genome anyway. However, the filter call for that position was uncertain (FI value = 0), so this position would also not be considered for a SNP position in --dual_hybrid mode even if the other strain had a high confidence SNP at this position (this behaviour was introduced in v0.3.2).
+The second position did not indicate that there was a SNP (**0/0**), so the positions wouldn’t be considered for a single-hybrid genome anyway. However, the filter call for that position was uncertain (FI value = 0), so this position would also not be considered for a SNP position in `--dual_hybrid` mode even if the other strain had a high confidence SNP at this position (this behaviour was introduced in v0.3.2).
 
 ```
 1	3050076	C	T	0/0:0,214,255:71:71,0:127:0
