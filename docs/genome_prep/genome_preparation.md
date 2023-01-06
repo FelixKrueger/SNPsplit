@@ -1,19 +1,26 @@
 # SNPsplit genome preparation
 
-`SNPsplit_genome_preparation` is designed to read in a variant call file from the Mouse Genomes Project (e.g. this [latest v8 file](https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/mgp_REL2021_snps.vcf.gz)) and generate new genome versions where the strain SNPs are either incorporated into the new genome (full sequence) or masked by the ambiguity nucleobase `N` (**N-masking**).
+`SNPsplit_genome_preparation` is designed to read in a variant call file from the Mouse Genomes Project (this [latest v8 file](https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/mgp_REL2021_snps.vcf.gz)) and generate new genome versions where the strain SNPs are either incorporated into the new genome (full sequence) or masked by the ambiguity nucleobase `N` (**N-masking**).
 
 `SNPsplit_genome_preparation` may be run in two different modes:
 
 ### Single strain mode:
-**1)** The VCF file is read and filtered for high-confidence SNPs in the strain specified with   strain <name>
+
+**1)** The VCF file is read and filtered for high-confidence SNPs in the strain specified with `--strain <name>`
+
 **2)** The reference genome (given with `--reference_genome <genome>`) is read into memory, and the filtered high-confidence SNP positions are incorporated either as N-masking (default), or full sequence (option `--full_sequence`)
 
 ### Dual strain mode:
 **1)** The VCF file is read and filtered for high-confidence SNPs in the strain specified with `--strain <name>`
+
 **2)** The reference genome (given with `--reference_genome <genome>`) is read into memory, and the filtered high-confidence SNP positions are incorporated as full sequence and optionally as N-masking
+
 **3)** The VCF file is read one more time and filtered for high-confidence SNPs in strain 2 specified with `--strain2 <name>`
+
 **4)** The filtered high-confidence SNP positions of strain 2 are incorporated as full sequence, and optionally as N-masking
+
 **5)** The SNP information of strain and strain 2 relative to the reference genome build are compared, and a new Ref/SNP annotation is constructed whereby the new Ref/SNP information will be Strain/Strain2 (and no longer the standard reference genome strain Black6 (C57BL/6J))
+
 **6)** The full genome sequence given with `--strain <name>` is read into memory, and the high-confidence SNP positions between Strain and Strain2 are incorporated as full sequence, and optionally as N-masking
 
 The resulting `.fa` files are ready to be indexed with your favourite aligner. Proved and tested aligners include Bowtie2, Tophat, STAR, HISAT2, HiCUP and Bismark. Please note that STAR and HISAT2 may require you to disable soft-clipping, please see above for more details. 
