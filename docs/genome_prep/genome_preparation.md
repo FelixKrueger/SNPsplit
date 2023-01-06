@@ -150,9 +150,9 @@ STRAIN [Col 25 (for CAST_EiJ)]
 Which in our case is (three lines only):
 ```
 CHROM	POS	REF	ALT	CAST_EiJ
-1	3050050	C	G	0/0:0,163,255:54:54,0:127:1	
+1	3050050	C	G	1/1:0,163,255:54:54,0:127:0
+1	3050076	C	T	0/0:0,214,255:71:71,0:127:0	
 1	3050069	C	T	1/1:234,72,0:24:0,24:67:1
-1	3050076	C	T	0/0:0,214,255:71:71,0:127:1	
 ```
 
 Now the STRAIN field contains a lot of information which is specified in the FORMAT field and further ‘explained’ in the VCF header. The format is: 
@@ -188,22 +188,23 @@ For the mouse strains we are working with here we only accept homozygous alterna
 Next we are looking at the FILTER field. If a SNP variant call passed all filters for a given strain it will PASS or get a value of 1. Else it will have a value of 0. In the example above the first position had a genotype of **1/1** but did not pass the Filter for the CAST_EiJ strain (FI value = 0), so this position won’t be included:
 
 ```
-1	3000023	C	A	1/1:15:4:0:79,15,0:67,12,0:2:24:4:0,0,4,0:0:-0.556411:.:0
+1	3050050	C	G	1/1:0,163,255:54:54,0:127:0	
 ```
 
 The second position did not indicate that there was a SNP (**0/0**), so the positions wouldn’t be considered for a single-hybrid genome anyway. However, the filter call for that position was uncertain (FI value = 0), so this position would also not be considered for a SNP position in --dual_hybrid mode even if the other strain had a high confidence SNP at this position (this behaviour was introduced in v0.3.2).
 
 ```
-1	3000126	G	T	0/0:.:5:0:.,.,.:.,.,.:2:47:4:1,0,4,0:0:-0.556411:.:0
+1	3050076	C	T	0/0:0,214,255:71:71,0:127:0
 ```
 
 The third position finally is a high-confidence homozygous SNP which would be included for both single and dual hybrid genomes:
 
 ```
-1	3000185	G	T	1/1:43:12:0:276,43,0:255,36,0:2:54:12:0,0,10,2:0:-0.680642:.:1
+1	3050069	C	T	1/1:234,72,0:24:0,24:67:1
 ```
 	
-## Clearly defined clean genotype	
+## Clearly defined clean genotype
+
 And finally, variants are required to have a clearly defined genotype, e.g. a made-up position:
 ```
 12	45630185	A	T/C
@@ -213,4 +214,4 @@ would not be included as a valid SNP position because the alternative allele is 
 
 
 
-If you are dealing with any other VCF file than the one used as an example here you might need to adapt one or more of the issues addressed here to make it work.
+If you are dealing with any VCF file other than the one used as an example here you might need to adapt one or more of the issues addressed here to make it work.
