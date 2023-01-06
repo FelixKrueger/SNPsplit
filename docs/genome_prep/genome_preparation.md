@@ -19,11 +19,11 @@
 
 **4)** The filtered high-confidence SNP positions of strain 2 are incorporated as full sequence, and optionally as N-masking
 
-**5)** The SNP information of strain and strain 2 relative to the reference genome build are compared, and a new Ref/SNP annotation is constructed whereby the new Ref/SNP information will be Strain/Strain2 (and no longer the standard reference genome strain Black6 (C57BL/6J))
+**5)** The SNP information of strain and strain 2 relative to the reference genome build are compared, and a new Ref/SNP annotation is constructed whereby the new Ref/SNP information will be Strain/Strain2 (and no longer the standard reference genome strain Black6 (C57BL/6J)). Later on, genome 1 will correspond to 'strain', genome 2 to 'strain2'.
 
 **6)** The full genome sequence given with `--strain <name>` is read into memory, and the high-confidence SNP positions between Strain and Strain2 are incorporated as full sequence, and optionally as N-masking
 
-The resulting `.fa` files are ready to be indexed with your favourite aligner. Proved and tested aligners include Bowtie2, Tophat, STAR, HISAT2, HiCUP and Bismark. Please note that STAR and HISAT2 may require you to disable soft-clipping, please see above for more details. 
+The resulting `.fa` files are ready to be indexed with your favourite aligner. Proven and tested aligners include Bowtie2, Tophat, STAR, HISAT2, HiCUP and Bismark. Please note that BWA does not support alignments to N-masked genome (see [here](../SNPsplit/specific_comments.md)).
 
 Both the SNP filtering and the genome preparation write out report files for record keeping.
 
