@@ -2,23 +2,23 @@
 
 ### Paired-end:  
 
-In paired-end mode, both reads are used for the classification. Read pairs with conflicting reads (tag CF) or pairs containing both tags G1 and G2 are considered conflicting and are not reported by default. Reporting of these reads can be enabled using the option `--conflicting`.
+In paired-end mode, both reads are used for the classification. Read pairs with conflicting reads (tag `CF`) or pairs containing both tags `G1` and `G2` are considered conflicting and are not reported by default. Reporting of these reads can be enabled using the option `--conflicting`.
 
 Singleton alignments in the allele-tagged paired-end file (which is the default for e.g. TopHat) are also sorted into the above four files. Specifying `--singletons` will write these alignments to special singleton files instead (ending in `*_st.bam`).
 
 
-### Hi-C data: 
+### Hi-C: 
 
 Assumes data processed with [HiCUP](www.bioinformatics.babraham.ac.uk/projects/hicup/ "HiCUP on the Babraham Bioinformatics website") as input, i.e. the input BAM files are by definition paired-end and Reads 1 and 2 follow each other. Hi-C sorting discriminates several more possible read combinations:
 
-```G1-G1
+```
+G1-G1
 G2-G2
 G1-UA
 G2-UA
 G1-G2
 UA-UA
 ```
-
 
 Again, read pairs containing a conflicting reads (tag `XX:Z:CF`) are not printed out by default, but this may be enabled using the option `--conflicting`. For an example report please see below.
 
