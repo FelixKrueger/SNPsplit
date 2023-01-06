@@ -16,6 +16,7 @@ Mandatory file specifying SNP information for mouse strains from the [Mouse Geno
 `--v7_VCF`
 
 This will use the file 'mgp_REL2005_snps_indels.vcf.gz' instead of the mgp v8 file mentioned above, for backward compatibility reasons. This file contains both SNP and INDEL information, but INDELs are skipped. 
+
 !!! note
     NOTE: The v5 and v7 files work for the GRCm38 (now outdated) genome build!
 
@@ -49,7 +50,9 @@ Optional for constructing dual hybrid genomes (see `--dual_hybrid` for more info
 The path to the reference genome, typically the strain 'Black6' (C57BL/6J), e.g. `--reference_genome /scratch/Genomes/Mouse/GRCm39/`. Expects one or more FastA files in this folder (file extension: `.fa` or `.fasta`).
 
 `--skip_filtering`
+
 This option skips reading and filtering the VCF file. This assumes that a folder named `SNPs_<Strain_Name>` exists in the working directory, and that text files with SNP information are contained therein in the following format:
+
 ```
             SNP-ID     Chromosome  Position    Strand   Ref/SNP
 example:   33941939        9       68878541       1       T/G
@@ -59,15 +62,22 @@ example:   33941939        9       68878541       1       T/G
 
 Write out a genome version for the strain specified where Ref bases are replaced with `N`. In the Ref/SNP example `T/G` the N-masked genome would now carry an `N` instead of the `T`. The N-masked genome is written to a folder called  `<strain_name>_N-masked/`. Default: ON.
 
---full_sequence               Write out a genome version for the strain specified where Ref bases are replaced with the SNP base.
-                              In the Ref/SNP example T/G the full sequence genome would now carry a G instead of the T. The full
-                              sequence genome is written out to folder called '<strain_name>_full_sequence/'. May be set in
-                              addition to '--nmasking'. Default: OFF.
+`--full_sequence`
 
---no_nmasking                 Disable N-masking if it is not desirable. Will automatically set '--full_sequence' instead.
+Write out a genome version for the strain specified where Ref bases are replaced with the SNP base. In the Ref/SNP example `T/G` the full sequence genome would now carry a G instead of the T. The full sequence genome is written out to folder called `<strain_name>_full_sequence/`. May be set in addition to `--nmasking`. Default: OFF.
 
---genome_build [name]         Name of the genome build incorporated into some of the output files. Defaults to 'GRCm39'.
+`--no_nmasking`
 
---help                        Displays this help information and exits.
+Disable N-masking if it is not desirable. Will automatically set `--full_sequence` instead.
 
---version                     Displays version information and exits.
+`--genome_build [name]`
+
+Name of the genome build incorporated into some of the output files. Defaults to 'GRCm39'.
+
+`--help`
+
+Displays this help information and exits
+
+`--version`
+
+Displays version information and exits
