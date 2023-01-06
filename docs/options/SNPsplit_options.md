@@ -1,15 +1,19 @@
-## Full list of options for SNPsplit
+# SNPsplit 
 
+## Full list of options for SNPsplit
 
 **USAGE:** `SNPsplit [options] --snp_file <SNP.file.gz> [input file(s)]`
 
 
 
-`Input file(s)` 
+`Input file(s)`
+
 - Mapping output file in SAM or BAM format. SAM files (ending in `.sam`) will first be converted to BAM files.
 
 `--snp_file`
+
 - Mandatory file specifying SNP positions to be considered, may be a plain text file of gzip compressed. Currently, the SNP file is expected to be in the following format:
+
 ```
    SNP-ID     Chromosome  Position    Strand   Ref/SNP
  33941939           9             68878541       1           T/G
