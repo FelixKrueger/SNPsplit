@@ -23,7 +23,7 @@ use Cwd;
 ## along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.5.1dev';
+my $pipeline_version = '0.6.0';
 my $parent_dir = getcwd;
 my $full_commandline = join (" ","SNPsplit",@ARGV);
 # warn "Full commandline: $full_commandline\n"; sleep(5);
@@ -1788,8 +1788,8 @@ sub process_commandline{
     SNPsplit - Allele-specific alignment sorting
 
 	        Version: $pipeline_version
-	  Copyright 2014-22 Felix Krueger
-             Babraham Bioinformatics
+	  Copyright 2014-23 Felix Krueger
+             Altos Bioinformatics
        https://github.com/FelixKrueger/SNPsplit
 
 
