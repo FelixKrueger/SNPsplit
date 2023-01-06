@@ -41,10 +41,11 @@ nav:
   - SNPsplit:
       - SNPsplit/details.md
       - SNPsplit/specific_comments.md
+  - Examples:
+      - Examples/examples.md
   - Full list of options:
       - options/genome_preparation.md
       - options/alignment.md
-      - options/methylation_extraction.md
 
 markdown_extensions:
   - admonition
