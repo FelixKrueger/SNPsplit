@@ -1,14 +1,14 @@
-## v0.6.0dev
+## v0.6.0 (Release 07 01 2023)
 
-- restructuring docs
+- Restructured the documentation, using `mkdocs`. The new User Guide lives at this address: http://felixkrueger.github.io/SNPsplit/
 
-- adding v8 annotation
+- Reworked all of SNPsplit to reflect changes of the [Mouse Genomes Project](https://www.mousegenomes.org/). This includes the overdue switch-over to the latest v8 annotation (available [here](https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/)) and the GRCm39 mouse genome build
 
-## v0.5.0dev
+- Kept the old v5 (and v7) genome build instructions as [legacy documentation](http://felixkrueger.github.io/SNPsplit/genome_prep/legacy/)
 
 ### SNPsplit
 
-Added an option `--single_end` to skip the paired-end auto-detection entirely (which failed for e.g. alignments with STAR [see here](https://github.com/FelixKrueger/SNPsplit/pull/56)).
+- Added an option `--single_end` to skip the paired-end auto-detection entirely (which failed for e.g. alignments with STAR [see here](https://github.com/FelixKrueger/SNPsplit/pull/56))
 
 ### SNPsplit_genome_preparation
 
