@@ -29,135 +29,80 @@ Both the SNP filtering and the genome preparation write out report files for rec
 
 ## Filtering and processing high confidence SNPs from the VCF file
 
-This section describes in more detail the process of how high confidence SNPs are extracted from the sample VCF file **mgp_REL2021_snps.vcf.gz**. We are first going to paste the start of the VCF file and explain in more detail later the individual steps taken by the SNPsplit genome preparation for the strain CAST_EiJ as an example strain; the PDF version of the user guide had relevant information in the header lines or the variant data itself are marked in dark red, but unfotunately this is not supported in this markdown version, so please look carefully... . This should help you adapt the process to other genomes/VCF files should you wish to do so.
+This section describes in more detail the process of how high confidence SNPs are extracted from the VCF file **mgp_REL2021_snps.vcf.gz**. We are first going to paste the start of the VCF file and explain in more detail later the individual steps taken by the SNPsplit genome preparation for the strain CAST_EiJ as an example; the PDF version of the user guide had relevant information in the header lines or the variant data itself are marked in dark red, but unfotunately this is not supported in this markdown version, so please look carefully... . This should help you adapt the process to other genomes/VCF files should you wish to do so.
 
 ```
-VCF file: mgp.v5.merged.snps_all.dbSNP142.vcf.gz
 ##fileformat=VCFv4.2
 ##FILTER=<ID=PASS,Description="All filters passed">
-##samtoolsVersion=1.1+htslib-1.1
-##bcftools_callVersion=1.1+htslib-1.1
-##reference=ftp://ftp-mouse.sanger.ac.uk/ref/GRCm38_68.fa
-##source_20141009.1=vcf-annotate(r953) -f +/D=50/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: C3H_HeH)
-##source_20141009.1=vcf-annotate(r953) -f +/D=100/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: 129S5SvEvBrd,ZALENDE_EiJ,LEWES_EiJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=200/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: C57BL_10J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=250/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: 129P2_OlaHsd,A_J,CAST_EiJ,LP_J,PWK_PhJ,WSB_EiJ,BUB_BnJ,DBA_1J,I_LnJ,MOLF_EiJ,NZB_B1NJ,SEA_GnJ,RF_J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=300/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: AKR_J,BALB_cJ,C3H_HeJ,C57BL_6NJ,CBA_J,DBA_2J,C57BR_cdJ,C58_J,NZW_LacJ,C57L_J,KK_HiJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=350/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: 129S1_SvImJ,FVB_NJ,NOD_ShiLtJ,NZO_HlLtJ,SPRET_EiJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=400/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: BTBR_T+_Itpr3tf_J,ST_bJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=350/d=5/q=20/w=2/a=5/ (chromosome=MT: LEWES_EiJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=650/d=5/q=20/w=2/a=5/ (chromosome=MT: I_LnJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=850/d=5/q=20/w=2/a=5/ (chromosome=MT: BUB_BnJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=1000/d=5/q=20/w=2/a=5/ (chromosome=MT: SEA_GnJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=1200/d=5/q=20/w=2/a=5/ (chromosome=MT: C57BL_10J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=1300/d=5/q=20/w=2/a=5/ (chromosome=MT: RF_J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=1450/d=5/q=20/w=2/a=5/ (chromosome=MT: KK_HiJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=1550/d=5/q=20/w=2/a=5/ (chromosome=MT: NZB_B1NJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=1800/d=5/q=20/w=2/a=5/ (chromosome=MT: ZALENDE_EiJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=2200/d=5/q=20/w=2/a=5/ (chromosome=MT: C3H_HeH)
-##source_20141009.1=vcf-annotate(r953) -f +/D=2300/d=5/q=20/w=2/a=5/ (chromosome=MT: ST_bJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=3050/d=5/q=20/w=2/a=5/ (chromosome=MT: C57L_J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=3650/d=5/q=20/w=2/a=5/ (chromosome=MT: MOLF_EiJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=4250/d=5/q=20/w=2/a=5/ (chromosome=MT: NZW_LacJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=4650/d=5/q=20/w=2/a=5/ (chromosome=MT: C3H_HeJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=5300/d=5/q=20/w=2/a=5/ (chromosome=MT: C57BR_cdJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=6150/d=5/q=20/w=2/a=5/ (chromosome=MT: DBA_1J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=6200/d=5/q=20/w=2/a=5/ (chromosome=MT: 129S5SvEvBrd,C58_J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=6650/d=5/q=20/w=2/a=5/ (chromosome=MT: C57BL_6NJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=6700/d=5/q=20/w=2/a=5/ (chromosome=MT: WSB_EiJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=6900/d=5/q=20/w=2/a=5/ (chromosome=MT: CBA_J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=7100/d=5/q=20/w=2/a=5/ (chromosome=MT: BALB_cJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=7450/d=5/q=20/w=2/a=5/ (chromosome=MT: NZO_HlLtJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=7650/d=5/q=20/w=2/a=5/ (chromosome=MT: PWK_PhJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=8300/d=5/q=20/w=2/a=5/ (chromosome=MT: SPRET_EiJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=8850/d=5/q=20/w=2/a=5/ (chromosome=MT: CAST_EiJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=9550/d=5/q=20/w=2/a=5/ (chromosome=MT: 129S1_SvImJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=9600/d=5/q=20/w=2/a=5/ (chromosome=MT: LP_J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=9850/d=5/q=20/w=2/a=5/ (chromosome=MT: DBA_2J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=10200/d=5/q=20/w=2/a=5/ (chromosome=MT: BTBR_T__Itpr3tf_J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=11300/d=5/q=20/w=2/a=5/ (chromosome=MT: AKR_J)
-##source_20141009.1=vcf-annotate(r953) -f +/D=11550/d=5/q=20/w=2/a=5/ (chromosome=MT: NOD_ShiLtJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=11700/d=5/q=20/w=2/a=5/ (chromosome=MT: 129P2_OlaHsd)
-##source_20141009.1=vcf-annotate(r953) -f +/D=11750/d=5/q=20/w=2/a=5/ (chromosome=MT: FVB_NJ)
-##source_20141009.1=vcf-annotate(r953) -f +/D=11800/d=5/q=20/w=2/a=5/ (chromosome=MT: A_J)
-##contig=<ID=1,length=195471971>
-##contig=<ID=10,length=130694993>
-##contig=<ID=11,length=122082543>
-##contig=<ID=12,length=120129022>
-##contig=<ID=13,length=120421639>
-##contig=<ID=14,length=124902244>
-##contig=<ID=15,length=104043685>
-##contig=<ID=16,length=98207768>
-##contig=<ID=17,length=94987271>
-##contig=<ID=18,length=90702639>
-##contig=<ID=19,length=61431566>
-##contig=<ID=2,length=182113224>
-##contig=<ID=3,length=160039680>
-##contig=<ID=4,length=156508116>
-##contig=<ID=5,length=151834684>
-##contig=<ID=6,length=149736546>
-##contig=<ID=7,length=145441459>
-##contig=<ID=8,length=129401213>
-##contig=<ID=9,length=124595110>
-##contig=<ID=X,length=171031299>
-##contig=<ID=Y,length=91744698>
-##contig=<ID=MT,length=16299>
-##ALT=<ID=X,Description="Represents allele(s) other than observed.">
-##QUAL=<ID=QUAL,Number=1,Type=Float,Description="The highest QUAL value for a variant location from any of the samples">
+##bcftoolsVersion=1.13+htslib-1.13
+##bcftoolsCommand=mpileup -f Mus_musculus.GRCm39.dna.toplevel.fa.gz -b samples -g 10 -a FORMAT/DP,FORMAT/AD,FORMAT/ADF,FORMAT/ADR,FORMAT/SP,INFO/AD -E -Q 0 -pm 3 -F 0.25 -d 500
+##reference=Mus_musculus.GRCm39.dna.toplevel.fa.gz
+##contig=<ID=1,length=195154279>
+##contig=<ID=2,length=181755017>
+##contig=<ID=3,length=159745316>
+##contig=<ID=4,length=156860686>
+##contig=<ID=5,length=151758149>
+##contig=<ID=6,length=149588044>
+##contig=<ID=7,length=144995196>
+##contig=<ID=8,length=130127694>
+##contig=<ID=9,length=124359700>
+##contig=<ID=10,length=130530862>
+##contig=<ID=11,length=121973369>
+##contig=<ID=12,length=120092757>
+##contig=<ID=13,length=120883175>
+##contig=<ID=14,length=125139656>
+##contig=<ID=15,length=104073951>
+##contig=<ID=16,length=98008968>
+##contig=<ID=17,length=95294699>
+##contig=<ID=18,length=90720763>
+##contig=<ID=19,length=61420004>
+##contig=<ID=X,length=169476592>
+##ALT=<ID=*,Description="Represents allele(s) other than observed.">
 ##INFO=<ID=INDEL,Number=0,Type=Flag,Description="Indicates that the variant is an INDEL.">
+##INFO=<ID=IDV,Number=1,Type=Integer,Description="Maximum number of raw reads supporting an indel">
+##INFO=<ID=IMF,Number=1,Type=Float,Description="Maximum fraction of raw reads supporting an indel">
 ##INFO=<ID=DP,Number=1,Type=Integer,Description="Raw read depth">
-##INFO=<ID=DP4,Number=4,Type=Integer,Description="Total Number of high-quality ref-fwd, ref-reverse, alt-fwd and alt-reverse bases">
-##INFO=<ID=CSQ,Number=.,Type=String,Description="Consequence type from Ensembl 75 as predicted by VEP. Format: Allele|Gene|Feature|Feature_type|Consequence|cDNA_position|CDS_position|Protein_position|Amino_acids|Codons|Existing_variation|DISTANCE|STRAND">
+##FORMAT=<ID=PL,Number=G,Type=Integer,Description="List of Phred-scaled genotype likelihoods">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Number of high-quality bases">
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths (high-quality bases)">
+##INFO=<ID=AD,Number=R,Type=Integer,Description="Total allelic depths (high-quality bases)">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=MinDP,Number=1,Type=Integer,Description="Minimum per-sample depth in this gVCF block">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Phred-scaled Genotype Quality">
-##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Number of high-quality bases">
-##FORMAT=<ID=MQ0F,Number=1,Type=Float,Description="Fraction of MQ0 reads (smaller is better)">
-##FORMAT=<ID=GP,Number=G,Type=Float,Description="Phred-scaled genotype posterior probabilities">
-##FORMAT=<ID=PL,Number=G,Type=Integer,Description="List of Phred-scaled genotype likelihoods">
-##FORMAT=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">
-##FORMAT=<ID=MQ,Number=1,Type=Integer,Description="Average mapping quality">
-##FORMAT=<ID=DV,Number=1,Type=Integer,Description="Number of high-quality non-reference bases">
-##FORMAT=<ID=DP4,Number=4,Type=Integer,Description="Number of high-quality ref-fwd, ref-reverse, alt-fwd and alt-reverse bases">
-##FORMAT=<ID=SP,Number=1,Type=Integer,Description="Phred-scaled strand bias P-value">
-##FORMAT=<ID=SGB,Number=1,Type=Float,Description="Segregation based metric.">
-##FORMAT=<ID=PV4,Number=4,Type=Float,Description="P-values for strand bias, baseQ bias, mapQ bias and tail distance bias">
-##FORMAT=<ID=FI,Number=1,Type=Integer,Description="Whether a sample was a Pass(1) or fail (0) based on FILTER values">
-##FILTER=<ID=StrandBias,Description="Min P-value for strand bias (INFO/PV4) [0.0001]">
-##FILTER=<ID=EndDistBias,Description="Min P-value for end distance bias (INFO/PV4) [0.0001]">
-##FILTER=<ID=MaxDP,Description="Maximum read depth (INFO/DP or INFO/DP4) []">
-##FILTER=<ID=BaseQualBias,Description="Min P-value for baseQ bias (INFO/PV4) [0]">
-##FILTER=<ID=MinMQ,Description="Minimum RMS mapping quality for SNPs (INFO/MQ) [20]">
-##FILTER=<ID=MinAB,Description="Minimum number of alternate bases (INFO/DP4) [5]">
-##FILTER=<ID=Qual,Description="Minimum value of the QUAL field [10]">
-##FILTER=<ID=VDB,Description="Minimum Variant Distance Bias (INFO/VDB) [0]">
-##FILTER=<ID=GapWin,Description="Window size for filtering adjacent gaps [3]">
-##FILTER=<ID=MapQualBias,Description="Min P-value for mapQ bias (INFO/PV4) [0]">
-##FILTER=<ID=SnpGap,Description="SNP within INT bp around a gap to be filtered [2]">
-##FILTER=<ID=RefN,Description="Reference base is N []">
-##FILTER=<ID=MinDP,Description="Minimum read depth (INFO/DP or INFO/DP4) [5]">
-##FILTER=<ID=Het,Description="Genotype call is heterozygous (low quality) []">
-#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  129P2_OlaHsd    129S1_SvImJ     129S5SvEvBrd    AKR_J   A_J     BALB_cJ BTBR_T+_Itpr3tf_J       BUB_BnJ C3H_HeH C3H_HeJ C57BL_10J       C57BL_6NJ       C57BR_cdJ   C57L_J   C58_J   CAST_EiJ        CBA_J   DBA_1J  DBA_2J  FVB_NJ  I_LnJ   KK_HiJ  LEWES_EiJ       LP_J    MOLF_EiJ        NOD_ShiLtJ      NZB_B1NJ        NZO_HlLtJ       NZW_LacJ        PWK_PhJ RF_J    SEA_GnJ SPRET_EiJ       ST_bJ   WSB_EiJ      ZALENDE_EiJ
-1       3000023 .       C       A       153     MinDP;MinAB;Qual;Het    DP=170;DP4=2,0,168,0;CSQ=A||||intergenic_variant||||||||        GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI  1/1:20:8:0:133,20,0:109,11,0:2:29:7:1,0,7,0:0:-0.6364
-26:.:1  1/1:22:6:0.166667:152,22,0:137,18,0:2:36:6:0,0,6,0:0:-0.616816:.:1      1/1:11:4:0:70,11,0:51,4,0:2:24:3:1,0,3,0:0:-0.511536:.:0        1/1:15:4:0.25:80,15,0:68,12,0:2:25:4:0,0,4,0:0:-0.556411:.:0    1/1:11:3:0:72,11,0:63,9,0:2:3
-4:3:0,0,3,0:0:-0.511536:.:0     0/1:3:1:0:40,3,3:37,3,0:2:40:1:0,0,1,0:0:-0.379885:.:0  1/1:36:10:0:194,36,0:174,30,0:2:38:10:0,0,10,0:0:-0.670168:.:1  1/1:22:6:0.333333:111,22,0:96,18,0:2:20:6:0,0,6,0:0:-0.616816:.:1       0/1:3:1:0:35,
-3,3:32,3,0:2:40:1:0,0,1,0:0:-0.379885:.:0       1/1:19:5:0:135,19,0:121,15,0:2:34:5:0,0,5,0:0:-0.590765:.:1     1/1:15:4:0:106,15,0:94,12,0:2:29:4:0,0,4,0:0:-0.556411:.:0      1/1:11:3:0:83,11,0:74,9,0:2:28:3:0,0,3,0:0:-0.511536:.:0    1/1:33:9:0:199,33,0:180,27,0:2:42:9:0,0,9,0:0:-0.662043:.:1      1/1:6:2:0:56,6,0:50,6,0:2:27:2:0,0,2,0:0:-0.453602:.:0  1/1:15:4:0.5:75,15,0:63,12,0:2:25:4:0,0,4,0:0:-0.556411:.:0     1/1:15:4:0:79,15,0:67,12,0:2:24:4:0,0,4,0:0:-0.556411
-:.:0    1/1:22:6:0:133,22,0:118,18,0:2:31:6:0,0,6,0:0:-0.616816:.:1     1/1:15:4:0:108,15,0:96,12,0:2:35:4:0,0,4,0:0:-0.556411:.:0      1/1:15:4:0.25:88,15,0:76,12,0:2:31:4:0,0,4,0:0:-0.556411:.:0    0/0:.:1:0:.,.,.:.,.,.:2:40:1:0,0,1,0:
-0:-0.379885:.:0 1/1:11:3:0:79,11,0:70,9,0:2:31:3:0,0,3,0:0:-0.511536:.:0        1/1:6:2:0.5:48,6,0:42,6,0:2:20:2:0,0,2,0:0:-0.453602:.:0        1/1:15:4:0.5:70,15,0:58,12,0:2:22:4:0,0,4,0:0:-0.556411:.:0     1/1:6:2:0:69,6,0:63,6,0:2:40:
-2:0,0,2,0:0:-0.453602:.:0       1/1:19:5:0.2:94,19,0:80,15,0:2:24:5:0,0,5,0:0:-0.590765:.:1     1/1:15:4:0:87,15,0:75,12,0:2:30:4:0,0,4,0:0:-0.556411:.:0       1/1:26:7:0.142857:150,26,0:134,21,0:2:31:7:0,0,7,0:0:-0.636426:.:1      1/1:1
-9:5:0:132,19,0:118,15,0:2:48:5:0,0,5,0:0:-0.590765:.:1  1/1:30:8:0:171,30,0:153,24,0:2:37:8:0,0,8,0:0:-0.651104:.:1     1/1:11:3:0.333333:72,11,0:63,9,0:2:33:3:0,0,3,0:0:-0.511536:.:0 1/1:19:5:0:137,19,0:123,15,0:2:38:5:0,0,5,0:0:-0.5907
-65:.:1  1/1:22:6:0.166667:137,22,0:122,18,0:2:42:6:0,0,6,0:0:-0.616816:.:1      1/1:33:9:0:140,33,0:121,27,0:2:23:9:0,0,9,0:0:-0.662043:.:1     1/1:33:9:0.111111:170,33,0:151,27,0:2:29:9:0,0,9,0:0:-0.662043:.:1      1/1:26:7:0:140,26,0:1
-24,21,0:2:31:7:0,0,7,0:0:-0.636426:.:1  1/1:6:2:0:48,6,0:42,6,0:2:21:2:0,0,2,0:0:-0.453602:.:0
-1       3000126 rs580370473     G       T       184     MinDP;MinMQ;Het;MinAB;Qual      DP=417;DP4=93,1,210,113;CSQ=T||||intergenic_variant||||||||     GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI  1/1:4:8:0:89,4,1:75,0,1:2:36:5:3,0,4,
-1:0:-0.590765:.:1       1/1:21:12:0:152,21,0:128,12,0:2:55:9:3,0,7,2:0:-0.662043:.:1    0/0:.:2:0:.,.,.:.,.,.:2:16:0:2,0,0,0:0:.:.:0    0/1:9:11:0:91,0,9:82,0,11:2:48:9:2,0,6,3:0:-0.662043:.:0        1/1:6:5:0:67,6,1:51,1,0:2:44:3:2,0,1,
-2:4:-0.511536:.:0       1/1:5:10:0:97,5,1:82,0,0:2:56:8:2,0,7,1:0:-0.651104:.:1 1/1:31:28:0:173,31,0:151,23,0:2:50:21:7,0,6,15:28:-0.692352:.:1 1/1:18:8:0:135,18,0:110,9,0:2:56:6:2,0,3,3:3:-0.616816:.:1      1/1:11:3:0:55,11,0:46,9,0:2:3
-7:3:0,0,1,2:0:-0.511536:.:0     1/1:50:14:0:111,50,0:89,42,0:2:41:14:0,0,14,0:0:-0.686358:.:1   1/1:23:7:0:115,23,0:86,12,0:2:38:6:1,0,1,5:0:-0.616816:.:1      1/1:6:8:0:66,6,1:52,2,0:2:49:5:3,0,5,0:0:-0.590765:.:1  1/1:60:17:0.0588235:2
-17,60,0:193,51,0:2:52:17:0,0,12,5:0:-0.690438:.:1       1/1:75:33:0:244,75,0:211,62,0:2:52:30:3,0,17,13:6:-0.693097:.:1 1/1:47:13:0:217,47,0:195,39,0:2:49:13:0,0,4,9:0:-0.683931:.:1   0/0:.:5:0:.,.,.:.,.,.:2:47:4:1,0,4,0:0:-0.556411:.:01/1:43:12:0:117,43,0:96,36,0:2:47:12:0,0,12,0:0:-0.680642:.:1    1/1:29:8:0:189,29,0:155,15,0:2:53:7:1,0,3,4:0:-0.636426:.:1     1/1:15:4:0:73,15,0:61,12,0:2:59:4:0,0,4,0:0:-0.556411:.:0       0/1:5:6:0:76,1,5:66,0,7:2:50:4:2,0,4,0:0:-0.5
-56411:.:0       1/1:13:9:0:97,13,0:78,7,0:2:45:6:3,0,4,2:3:-0.616816:.:1        1/1:37:15:0.0666667:195,37,0:165,25,0:2:52:13:2,0,7,6:3:-0.683931:.:1   1/1:11:21:0.666667:38,11,0:35,12,0:2:9:6:15,0,3,3:18:-0.616816:.:0      1/1:19:6:0:92
-,19,0:67,10,0:2:47:5:1,0,5,0:0:-0.590765:.:1    1/1:10:30:0.4:101,10,0:88,7,0:2:24:14:16,0,0,14:82:-0.686358:.:1        0/1:21:7:0:51,0,21:46,0,21:2:48:5:2,0,4,1:0:-0.590765:.:0       1/1:14:7:0.142857:80,14,0:60,7,0:2:44:5:1,1,4,1:0:-0.
-590765:.:1      1/1:5:14:0:101,5,1:86,0,0:2:52:9:5,0,9,0:0:-0.662043:.:1        1/1:33:9:0:196,33,0:177,27,0:2:53:9:0,0,6,3:0:-0.662043:.:1     1/1:26:7:0:91,26,0:75,21,0:2:50:7:0,0,7,0:0:-0.636426:.:1       1/1:44:24:0:138,44,0:119,38,0
-:2:45:23:1,0,19,4:0:-0.692717:.:1       1/1:17:8:0:101,17,0:79,9,0:2:53:6:2,0,4,2:0:-0.616816:.:1       0/1:20:11:0.0909091:72,0,20:65,0,21:2:45:7:4,0,7,0:0:-0.636426:.:0      1/1:33:23:0:183,33,0:159,24,0:2:50:18:5,0,6,12:19:-0.691153:.
-:1      1/1:11:7:0:66,11,0:49,6,0:2:54:5:2,0,5,0:0:-0.590765:.:1        1/1:19:5:0:62,19,0:48,15,0:2:54:5:0,0,5,0:0:-0.590765:.:1
-…
+##INFO=<ID=DP4,Number=4,Type=Integer,Description="Number of high-quality ref-forward , ref-reverse, alt-forward and alt-reverse bases">
+##INFO=<ID=MQ,Number=1,Type=Integer,Description="Average mapping quality">
+##bcftools_callCommand=call -mAv -f GQ,GP -p 0.99; Date=Wed Aug 11 21:20:03 2021
+##bcftools_normCommand=norm --fasta-ref Mus_musculus.GRCm39.dna.toplevel.fa.gz -m +indels; Date=Fri Aug 13 11:11:49 2021
+##FORMAT=<ID=FI,Number=1,Type=Integer,Description="High confidence (1) or low confidence (0) based on soft filtering values">
+##FILTER=<ID=LowQual,Description="Low quality variants">
+##VEP="v104" time="2021-08-30 23:27:00" cache="mus_musculus/104_GRCm39" ensembl-funcgen=104.59ae779 ensembl-variation=104.6154f8b ensembl=104.1af1dce ensembl-io=104.1d3bb6e assembly="GRCm39" dbSNP="150" gencode="GENCODE M27" regbuild="1
+.0" sift="sift"
+##INFO=<ID=CSQ,Number=.,Type=String,Description="Consequence annotations from Ensembl VEP. Format: Allele|Consequence|IMPACT|SYMBOL|Gene|Feature_type|Feature|BIOTYPE|EXON|INTRON|HGVSc|HGVSp|cDNA_position|CDS_position|Protein_position|Am
+ino_acids|Codons|Existing_variation|DISTANCE|STRAND|FLAGS|VARIANT_CLASS|SYMBOL_SOURCE|HGNC_ID|SIFT|MOTIF_NAME|MOTIF_POS|HIGH_INF_POS|MOTIF_SCORE_CHANGE|TRANSCRIPTION_FACTORS">
+##bcftools_viewVersion=1.13+htslib-1.13
+##bcftools_viewCommand=view -i 'FORMAT/FI[*] = 1' mgp_REL2021_snps.vcf.gz; Date=Sat Dec 18 19:08:09 2021
+##bcftools_annotateVersion=1.13+htslib-1.13
+##bcftools_annotateCommand=annotate -x INFO/VDB,INFO/SGB,INFO/RPBZ,INFO/MQBZ,INFO/MQBZ,INFO/MQSBZ,INFO/BQBZ,INFO/SCBZ,INFO/FS,INFO/MQOF,INFO/AC,INFO/AN,FORMAT/SP,FORMAT/ADF,FORMAT/ADR,FORMAT/GP; Date=Sat Dec 18 19:08:09 2021
+##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes">
+##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles in called genotypes">
+##bcftools_viewCommand=view -a -Oz -o final_mgp_REL2021_snps.vcf.gz; Date=Sat Dec 18 19:08:09 2021
+##bcftools_annotateCommand=annotate -x INFO/MQ0F -Oz -o final_mgp_REL2021_snps.vcf.gz mgp_REL2021_snps.vcf.gz; Date=Mon Dec 20 07:12:23 2021
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	129P2_OlaHsd	129S1_SvImJ	129S5SvEvBrd	A_J	AKR_J	B10.RIII	BALB_cByJ	BALB_cJ	BTBR_T+_Itpr3tf_J	BUB_BnJ	C3H_HeH	C3H_HeJ	C57BL_10J	C57BL_10SnJ	C57BL_6NJ	C57BR_cdJ	C57L_J	C58_J	CAST_EiJ	CBA_J	CE_J	CZECHII_EiJ	DBA_1J	DBA_2J	FVB_NJ	I_LnJ	JF1_MsJ	KK_HiJ	LEWES_EiJ	LG_J	LP_J	MAMy_J	MOLF_EiJ	NOD_ShiLtJ	NON_LtJ	NZB_B1NJ	NZO_HlLtJ	NZW_LacJ	PL_J	PWK_PhJ	QSi3	QSi5	RF_J	RIIIS_J	SEA_GnJ	SJL_J	SM_J	SPRET_EiJ	ST_bJ	SWR_J	WSB_EiJ	ZALENDE_EiJ
+1	3050050	.	C	G	186.728	PASS	DP=3533;AD=3488,42;DP4=3041,447,44,1;MQ=60;CSQ=G|intergenic_variant|MODIFIER|||||||||||||||||||SNV||||||||,A|intergenic_variant|MODIFIER|||||||||||||||||||SNV||||||||;AC=2;AN=104	GT:PL:DP:AD:GQ:FI	0/0:0,57,168:19:19,0:71:1	0/0:0,108,255:36:36,0:122:1	0/0:0,30,154:10:10,0:44:1	0/0:0,199,255:66:66,0:127:1	0/0:0,84,222:28:28,0:98:1	0/0:0,208,255:69:69,0:127:1	0/0:0,163,255:54:54,
+0:127:1	0/0:0,223,255:74:74,0:127:1	0/0:0,138,255:46:46,0:127:1	0/0:0,93,254:31:31,0:107:1	0/0:0,9,85:3:3,0:23:0	0/0:0,111,242:37:37,0:125:1	0/0:0,120,255:40:40,0:127:1	0/0:0,154,233:51:51,0:127:1	0/0:0,223,25
+5:74:74,0:127:1	0/0:0,255,255:171:171,0:127:0	0/0:0,255,255:213:212,0:127:0	0/0:0,181,255:60:60,0:127:1	0/0:0,163,255:54:54,0:127:1	0/0:0,96,255:32:32,0:110:1	0/0:0,190,255:63:63,0:127:1	0/0:0,255,255:500:499,0:127:
+0	0/0:0,93,255:31:31,0:107:1	0/0:0,96,255:32:32,0:110:1	0/0:0,51,233:17:17,0:65:1	0/0:0,90,255:30:30,0:104:1	0/0:0,255,255:220:220,0:127:0	0/0:0,255,255:106:106,0:127:1	0/0:0,196,255:65:65,0:127:0	0/0:
+0,18,178:6:6,0:32:1	0/0:0,93,231:31:31,0:107:1	0/0:0,69,255:23:23,0:83:1	0/0:0,255,255:208:208,0:127:0	0/0:0,96,255:32:32,0:110:1	0/0:0,81,255:27:27,0:95:1	0/0:0,111,255:37:37,0:125:1	0/0:0,199,255:66:66,
+0:127:1	0/0:0,144,255:49:48,0:127:1	0/0:0,57,255:19:19,0:71:1	0/0:0,255,255:366:366,0:127:0	0/0:0,93,255:31:31,0:107:1	0/0:0,78,255:26:26,0:92:1	0/0:0,69,255:23:23,0:83:1	0/0:0,187,255:62:62,0:127:1	0/0:
+0,166,255:55:55,0:127:1	0/0:0,54,224:18:18,0:68:1	0/0:0,12,122:4:4,0:26:0	1/1:252,126,0:42:0,42:105:1	0/0:0,151,255:50:50,0:127:1	0/0:0,114,255:38:38,0:127:1	0/0:0,226,255:75:75,0:127:1	0/0:0,39,201:13:13,0:53:1
+1	3050069	.	C	T	5422.31	PASS	DP=3674;AD=2868,796;DP4=2447,421,659,147;MQ=60;CSQ=T|intergenic_variant|MODIFIER|||||||||||||||||||SNV||||||||,A|intergenic_variant|MODIFIER|||||||||||||||||||SNV||||||||,G|interge
+nic_variant|MODIFIER|||||||||||||||||||SNV||||||||;AC=45;AN=104	GT:PL:DP:AD:GQ:FI	1/1:198,72,0:24:0,24:67:1	1/1:255,120,0:40:0,40:115:1	1/1:149,27,0:9:0,9:22:1	0/0:0,208,255:69:69,0:127:1	1/1:253,90,0:35:1,34:85:1	0/0:0,226,255:75:75,0:127:1	0/0:0,166,255:55:55,0:127:1	0/0:0,199,255:66:66,0:127:1	1/1:255,160,0:53:0,53:127:1	1/1:255,96,0:32:0,32:91:1	0/0:0,12,119:4:4,0:10:0	0/0:0,129,255:43:43,0:127:1	0/0:0,123,255:41:41,
+0:121:1	0/0:0,148,255:50:49,0:127:1	0/0:0,223,255:74:74,0:127:1	0/1:200,0,255:175:138,37:127:0	0/1:104,0,255:235:190,44:105:0	0/0:0,163,255:54:54,0:127:1	0/1:179,0,226:55:28,27:127:0	0/0:0,93,255:31:31,0:91:1	0/1:
+255,0,255:65:35,30:127:0	0/0:0,255,255:493:467,26:127:0	0/0:0,96,255:32:32,0:94:1	0/0:0,105,255:35:35,0:103:1	1/1:234,72,0:24:0,24:67:1	1/1:255,90,0:30:0,30:85:1	0/0:0,255,255:228:219,8:127:0	0/0:0,255,25
+5:109:109,0:127:1	0/0:0,181,255:61:60,0:127:0	0/0:0,24,170:9:8,0:22:1	1/1:239,96,0:32:0,32:91:1	1/1:252,63,0:22:0,21:58:1	0/0:0,255,255:228:226,1:127:0	1/1:255,105,0:35:0,35:100:1	1/1:255,84,0:28:0,28:79:1	0/1:255,0,178:36:17,19:127:0	0/0:0,208,255:70:69,0:127:1	0/0:0,138,255:46:46,0:127:1	1/1:255,75,0:25:0,25:70:1	0/0:0,255,255:387:368,18:127:0	1/1:255,123,0:41:0,41:118:1	1/1:255,87,0:29:0,29:82:1	0/0:0,81,255
+:27:27,0:79:1	0/0:0,205,255:68:68,0:127:1	0/0:0,172,255:57:57,0:127:1	1/1:222,57,0:19:0,19:52:1	1/1:142,18,0:6:0,6:13:0	0/0:0,114,255:38:38,0:112:1	1/1:255,148,0:49:0,49:127:1	1/1:255,117,0:39:0,39:112:1	0/0:
+0,208,255:70:69,0:127:1	1/1:251,48,0:16:0,16:43:1
 …
 ```
 
@@ -166,10 +111,13 @@ To detect the available strains in the VCF file as well as to determine the colu
 
 `#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT`
 
-The following fields should contain the strains listed in the file, here: 
-`129P2_OlaHsd	129S1_SvImJ	129S5SvEvBrd	AKR_J	A_J	BALB_cJ	BTBR_T+_Itpr3tf_J	BUB_BnJ	C3H_HeH	C3H_HeJ	C57BL_10J	C57BL_6NJ	C57BR_cdJ	C57L_J	C58_J	CAST_EiJ	CBA_J	DBA_1J …`
+The following fields should contain the strains listed in the file, here:
 
-In our example the data for strain *CAST_EiJ* would be found in column 25, or have an index of 24 (the index = column - 1 because index counting starts at 0 and not at 1). 
+```
+129S1_SvImJ	129S5SvEvBrd    A_J	AKR_J	B10.RIII	BALB_cByJ	BALB_cJ	BTBR_T+_Itpr3tf_J	BUB_BnJ	C3H_HeH	C3H_HeJ	C57BL_10J	C57BL_10SnJ	C57BL_6NJ	C57BR_cdJ	C57L_J	C58_J	CAST_EiJ	CBA_J	CE_J	CZECHII_EiJ	DBA_1J	DBA_2J	FVB_NJ	I_LnJ	JF1_MsJ	KK_HiJ	LEWES_EiJ	LG_J	LP_J	MAMy_J	MOLF_EiJ	NOD_ShiLtJ	NON_LtJ	NZB_B1NJ	NZO_HlLtJ	NZW_LacJ	PL_J	PWK_PhJ	QSi3	QSi5	RF_J	RIIIS_J	SEA_GnJ	SJL_J	SM_J	SPRET_EiJ	ST_bJ	SWR_J	WSB_EiJ	ZALENDE_EiJ
+```
+
+In our example the data for strain *CAST_EiJ* would be found in column 28, or have an index of 27 (the index = column - 1 because index counting starts at 0 and not at 1). 
 
 If #CHROM is **not present** in the VCF file header, the **automated lookup and subsequent steps will fail**.
 
@@ -199,17 +147,17 @@ ALT    [Col 5]
 STRAIN [Col 25 (for CAST_EiJ)]
 ```
 
-Which in our case is (first three lines only):
+Which in our case is (three lines only):
 ```
 CHROM	POS	REF	ALT	CAST_EiJ
-1	3000023	C	A	1/1:15:4:0:79,15,0:67,12,0:2:24:4:0,0,4,0:0:-0.556411:.:0
-1	3000126	G	T	0/0:.:5:0:.,.,.:.,.,.:2:47:4:1,0,4,0:0:-0.556411:.:0
-1	3000185	G	T	1/1:43:12:0:276,43,0:255,36,0:2:54:12:0,0,10,2:0:-0.680642:.:1
+1	3050050	C	G	0/0:0,163,255:54:54,0:127:1	
+1	3050069	C	T	1/1:234,72,0:24:0,24:67:1
+1	3050076	C	T	0/0:0,214,255:71:71,0:127:1	
 ```
 
 Now the STRAIN field contains a lot of information which is specified in the FORMAT field and further ‘explained’ in the VCF header. The format is: 
 ```
-GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI
+GT:PL:DP:AD:GQ:FI
 ```
 
 I am not going into the details about all these FORMAT tags (feel free to browse the header section above), but suffice it to say that the SNPsplit genome preparation only cares about the GT (=GENOTYPE) and FI (=FILTER) entry which are defined as:
@@ -218,6 +166,8 @@ I am not going into the details about all these FORMAT tags (feel free to browse
 ```
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ```
+
+### GT (Genotype)
 
 The GT string can be one of the following:
 ```
@@ -229,8 +179,10 @@ The GT string can be one of the following:
 
 For the mouse strains we are working with here we only accept homozygous alternative alleles, so '1/1', ‘2/2’ or ‘3/3’. Any other combination is recorded and mentioned in the final report but not included in the SNP file.
 
+### FI (Filter)
+
 ```
-##FORMAT=<ID=FI,Number=1,Type=Integer,Description="Whether a sample was a Pass(1) or fail (0) based on FILTER values">
+##FORMAT=<ID=FI,Number=1,Type=Integer,Description="High confidence (1) or low confidence (0) based on soft filtering values">
 ```
 
 Next we are looking at the FILTER field. If a SNP variant call passed all filters for a given strain it will PASS or get a value of 1. Else it will have a value of 0. In the example above the first position had a genotype of **1/1** but did not pass the Filter for the CAST_EiJ strain (FI value = 0), so this position won’t be included:
