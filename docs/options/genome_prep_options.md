@@ -15,10 +15,10 @@ Mandatory file specifying SNP information for mouse strains from the [Mouse Geno
 
 `--v7_VCF`
 
-This will use the file 'mgp_REL2005_snps_indels.vcf.gz' instead of the mgp v8 file mentioned above, for backward compatibility reasons. This file contains both SNP and INDEL information, but INDELs are skipped. 
+This will use the file **mgp_REL2005_snps_indels.vcf.gz** instead of the mgp v8 file mentioned above, for backward compatibility reasons. This file contains both SNP and INDEL information, but INDELs are skipped. 
 
 !!! note
-    NOTE: The v5 and v7 files work for the GRCm38 (now outdated) genome build!
+    NOTE: The v5 and v7 files work for the **GRCm38 (now outdated)** genome build!
 
 `--strain <strain_name>`
 
