@@ -1,7 +1,7 @@
 # Legacy (v5/GRCm38)
 
 !!! warning
-    This document references the now outdated mouse genome build GRCm38 and the equally outdated v5 annotation, please consider it as a legacy version only. We do not recommend or support this old version any longer, please go here for the most recent [genome/annotation version](./genome_preparation.md).
+    This document references the now outdated mouse genome build GRCm38 and the equally outdated v5 annotation, please consider it a legacy version only. We do not recommend or support this old version any longer, please go here for the most recent [genome/annotation version](./genome_preparation.md).
 
 `SNPsplit_genome_preparation` is designed to read in a variant call file from the Mouse Genomes Project (e.g. this [v5 file, GRCm38](ftp://ftp-mouse.sanger.ac.uk/current_snps/mgp.v5.merged.snps_all.dbSNP142.vcf.gz)) and generate new genome versions where the strain SNPs are either incorporated into the new genome (full sequence) or masked by the ambiguity nucleobase `N` (**N-masking**).
 
@@ -159,8 +159,7 @@ VCF file: mgp.v5.merged.snps_all.dbSNP142.vcf.gz
 590765:.:1      1/1:5:14:0:101,5,1:86,0,0:2:52:9:5,0,9,0:0:-0.662043:.:1        1/1:33:9:0:196,33,0:177,27,0:2:53:9:0,0,6,3:0:-0.662043:.:1     1/1:26:7:0:91,26,0:75,21,0:2:50:7:0,0,7,0:0:-0.636426:.:1       1/1:44:24:0:138,44,0:119,38,0
 :2:45:23:1,0,19,4:0:-0.692717:.:1       1/1:17:8:0:101,17,0:79,9,0:2:53:6:2,0,4,2:0:-0.616816:.:1       0/1:20:11:0.0909091:72,0,20:65,0,21:2:45:7:4,0,7,0:0:-0.636426:.:0      1/1:33:23:0:183,33,0:159,24,0:2:50:18:5,0,6,12:19:-0.691153:.
 :1      1/1:11:7:0:66,11,0:49,6,0:2:54:5:2,0,5,0:0:-0.590765:.:1        1/1:19:5:0:62,19,0:48,15,0:2:54:5:0,0,5,0:0:-0.590765:.:1
-…
-…
+...
 ```
 
 ## Detecting strains
@@ -190,7 +189,7 @@ If the ##contig=… fields are missing from the VCF file, **subsequent steps are
 `my @chroms = (1..19,’X’,’Y’,’MT’);`
 
 
-### Dealing with Variant Calls
+## Dealing with Variant Calls
 For variant calls the SNPsplit genome preparation extracts the following information from each line:
 
 ```
