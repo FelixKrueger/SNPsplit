@@ -26,7 +26,7 @@ use lib "$Bin/../lib";
 my %counting;
 my %fhs;
 
-my $SNPsplit_version = '0.5.1dev';
+my $SNPsplit_version = '0.6.0';
 my %yaml;
 my $yaml_count = 0;
 
@@ -1196,10 +1196,9 @@ sub process_commandline{
 
                          SNPsplit Sorting Module - tag2sort
                               SNPsplit version: $SNPsplit_version
-                          Copyright 2014-21, Felix Krueger
-                              Babraham Bioinformatics
-                  www.bioinformatics.babraham.ac.uk/projects/SNPsplit/
-                      https://github.com/FelixKrueger/SNPsplit
+                          Copyright 2014-23, Felix Krueger
+                              Altos Bioinformatics
+                     https://github.com/FelixKrueger/SNPsplit
 
 
 

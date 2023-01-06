@@ -34,7 +34,7 @@ use Cwd;
 # https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/  "mgp_REL2021_snps.vcf.gz"
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.5.0dev';
+my $pipeline_version = '0.6.0';
 my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build,$v7) = process_commandline ();
 
@@ -1418,8 +1418,8 @@ sub process_commandline{
 	
                                SNPsplit Genome Preparation
 			           version: $pipeline_version
-                             Copyright 2014-21, Felix Krueger
-                                 Babraham Bioinformatics
+                             Copyright 2014-23, Felix Krueger
+                                  Altos Bioinformatics
                         https://github.com/FelixKrueger/SNPsplit
 
 

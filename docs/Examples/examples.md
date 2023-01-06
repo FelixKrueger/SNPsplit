@@ -1,3 +1,8 @@
+---
+hide:
+  - navigation
+---
+
 ## Paired-end report (2x50bp):
 
 ```
