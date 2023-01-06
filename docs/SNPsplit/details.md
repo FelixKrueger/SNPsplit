@@ -27,14 +27,14 @@ Upon completion, a small allele-specific tagging report is printed to screen and
 Once the tagging has completed, the `tag2sort` module reads in the tagged BAM file and sorts it into various sub-files according to their `XX:Z:` tag. Both single and paired-end files are sorted into the following four categories:
 
 ```
-  UA - Unassigned
-  G1 - Genome 1-specific
-  G2 - Genome 2-specific
-  CF - Conflicting
+UA - Unassigned
+G1 - Genome 1-specific
+G2 - Genome 2-specific
+CF - Conflicting
 ```
 
 Files with conflicting SNP information (tag `XX:Z:CF`) are not written out by default.
 
-#### 6) Sorting report
+## 6) Sorting report
 Upon completion, an allele-specific sorting report is printed out on screen and to a report file for archiving purposes (`*.SNPsplit_sort.txt`). If the sorting was launched by SNPsplit and not run stand-alone (as `tag2sort`) the sorting report is also appended to the main SNPsplit report (`*.SNPsplit_report.txt`).
 
