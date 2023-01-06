@@ -1,13 +1,13 @@
 In the following you can find some additional information for more specific applications or software
 
-## Paired-end:  
+## Paired-end
 
 In paired-end mode, both reads are used for the classification. Read pairs with conflicting reads (tag `CF`) or pairs containing both tags `G1` and `G2` are considered conflicting and are not reported by default. Reporting of these reads can be enabled using the option `--conflicting`.
 
 Singleton alignments in the allele-tagged paired-end file (which is the default for e.g. TopHat) are also sorted into the above four files. Specifying `--singletons` will write these alignments to special singleton files instead (ending in `*_st.bam`).
 
 
-## Hi-C: 
+## Hi-C
 
 Assumes data processed with [HiCUP](www.bioinformatics.babraham.ac.uk/projects/hicup/ "HiCUP on the Babraham Bioinformatics website") as input, i.e. the input BAM files are by definition paired-end and Reads 1 and 2 follow each other. Hi-C sorting discriminates several more possible read combinations:
 
@@ -23,7 +23,7 @@ UA-UA
 Again, read pairs containing a conflicting reads (tag `XX:Z:CF`) are not printed out by default, but this may be enabled using the option `--conflicting`. For an example report please see below.
 
 
-## STAR: 
+## STAR
 
 RNA-seq alignment files produced by the Spliced Transcripts Alignment to a Reference [(STAR) aligner](https://github.com/alexdobin/STAR/ "STAR") also work well with SNPsplit, however a few steps need to be adhered to make this work:
 
@@ -35,7 +35,7 @@ RNA-seq alignment files produced by the Spliced Transcripts Alignment to a Refer
 
 **3)** To save some time and avoid having to sort the reads by name, STAR can be told to leave R1 and R2 following each other in the BAM file using the option: `--outSAMtype BAM Unsorted`
 
-## HISAT2:
+## HISAT2
 
 DNA or RNA alignment files produced by [HISAT2](https://github.com/infphilo/hisat2 "HISAT2") also work well with SNPsplit if you make sure that HISAT2 doesn’t perform soft-clipping. At the time of writing the current version of HISAT2 (2.0.3-beta) does perform soft-clipping (CIGAR operation: S) even though this is not well documented (or in fact the documentation on Github suggests that the default mode is end-to-end which should not perform any soft-clipping whatsoever). Until the end-to-end mode works as expected users will have to set the penalty for soft-clipping so high that it is effectively not performed (`--sp` is the option governing the soft-clipping penalty). We suggest adding the following option to the HISAT2 command: `--sp 1000,1000`
 
@@ -47,7 +47,7 @@ DNA or RNA alignment files produced by [HISAT2](https://github.com/infphilo/hisa
 
 The other very popular Burrows-Wheeler Aligner ([BWA](http://bio-bwa.sourceforge.net/ "BWA homepage at SourceForge")) is unfortunately **not compatible** with SNPsplit alignment sorting as was [disscussed in more detail here](https://github.com/FelixKrueger/SNPsplit/issues/19 "BWA alignments are not compatible with SNPsplit"). Briefly, the reason for this is that BWA randomly replaces the ambiguity nucleobase `N` in the reference by either `C`, `A`, `T` or `G`, thereby rendering an N-masked allele-sorting process impossible.
 
-## Bisulfite-seq data: 
+## Bisulfite-seq data
 
 This mode assumes input data has been processed with the bisulfite mapping tool [Bismark](https://github.com/FelixKrueger/Bismark "Bismark project page on Github"). SNPsplit will run a quick check at the start of a run to see if the file provided appears to be a Bismark file, and set the flags `--bisulfite` and/or `--paired` automatically. In addition it will perform a quick check to see if a paired-end file appears to have been positionally sorted, and if not will set the `--no_sort` flag (this data is extracted from the `@PG` header line). Paired-end (`--paired`) or bisulfite (`--bisulfite`) mode can also be set manually. Paired-end mode requires Read 1 and Read 2 of a pair to follow each other in consecutive lines. Please be aware that files should not be name-sorted using [`Sambamba`](https://github.com/FelixKrueger/Bismark/issues/170).
 
