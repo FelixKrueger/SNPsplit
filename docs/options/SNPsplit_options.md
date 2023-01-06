@@ -2,30 +2,32 @@
 
 ## Full list of options for SNPsplit
 
-**USAGE:** `SNPsplit [options] --snp_file <SNP.file.gz> [input file(s)]`
-
-
+!!! note
+    **USAGE:** `SNPsplit [options] --snp_file <SNP.file.gz> [input file(s)]`
+    
 
 `Input file(s)`
 
-- Mapping output file in SAM or BAM format. SAM files (ending in `.sam`) will first be converted to BAM files.
+Mapping output file in SAM or BAM format. SAM files (ending in `.sam`) will first be converted to BAM files.
 
 `--snp_file`
 
-- Mandatory file specifying SNP positions to be considered, may be a plain text file of gzip compressed. Currently, the SNP file is expected to be in the following format:
+Mandatory file specifying SNP positions to be considered, may be a plain text file of gzip compressed. Currently, the SNP file is expected to be in the following format:
 
 ```
    SNP-ID     Chromosome  Position    Strand   Ref/SNP
  33941939           9             68878541       1           T/G
 ```
 
-	Only the information contained in fields 'Chromosome', 'Position' and 'Ref/SNP base' are being used for analysis. The genome referred to as 'Ref' will be used as genome 1, the genome containing the 'SNP' base as genome 2.
+Only the information contained in fields 'Chromosome', 'Position' and 'Ref/SNP base' are being used for analysis. The genome referred to as 'Ref' will be used as genome 1, the genome containing the 'SNP' base as genome 2.
 
 `--paired`
-- Paired-end mode. (Default: OFF).
+
+Paired-end mode. (Default: OFF).
 
 `-o/--outdir <dir>`
-- Write all output files into this directory. By default the output files will be written into the same folder as the input file(s). If the specified folder does not exist, SNPsplit will attempt to create it first. The path to the output folder can be either relative or absolute.
+
+Write all output files into this directory. By default the output files will be written into the same folder as the input file(s). If the specified folder does not exist, SNPsplit will attempt to create it first. The path to the output folder can be either relative or absolute.
 
 
 `--singletons`
@@ -116,7 +118,9 @@ example:   33941939        9       68878541       1       T/G
 - Name of the mouse genome build, e.g. mm10. Will be incorporated into some of the output files. Defaults to `GRCm38`.
 
 `--help`
-- Displays this help information and exits.
+
+Displays this help information and exits
 
 `--version`
-- Displays version information and exits.
+
+Displays version information and exits

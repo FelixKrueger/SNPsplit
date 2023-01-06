@@ -1,15 +1,15 @@
 # Genome preparation
 
 !!! note
-    ```
-    **USAGE:**   SNPsplit_genome_preparation  [options] --vcf_file <file> --reference_genome /path/to/genome/ --strain <strain_name>
-    ```
+    **USAGE:** `SNPsplit_genome_preparation  [options] --vcf_file <file> --reference_genome /path/to/genome/ --strain <strain_name>`
+    
 
 `--vcf_file <file>`
 
 Mandatory file specifying SNP information for mouse strains from the [Mouse Genomes Project](https://www.mousegenomes.org/): [v8 annotation file](https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/). The file used and approved is called **mgp_REL2021_snps.vcf.gz**. Please note that future versions of this file or entirely different VCF files might not work out-of-the-box but may require some tweaking. SNP calls are read from the VCF files, and high confidence SNPs are written into  a folder in the current working directory called `SNPs_<strain_name>/chr<chromosome>.txt`, in the following format:
 
-```             SNP-ID     Chromosome  Position    Strand   Ref/SNP
+```             
+             SNP-ID     Chromosome  Position    Strand   Ref/SNP
  example:   33941939        9       68878541       1       T/G
 ```
 
