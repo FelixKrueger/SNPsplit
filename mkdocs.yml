@@ -44,8 +44,8 @@ nav:
   - Examples:
       - Examples/examples.md
   - Full list of options:
-      - options/genome_preparation.md
-      - options/alignment.md
+      - options/genome_prep_options.md
+      - options/SNPsplit_options.md
 
 markdown_extensions:
   - admonition
