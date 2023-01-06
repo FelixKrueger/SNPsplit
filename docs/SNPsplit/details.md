@@ -18,12 +18,12 @@ SNP positions are read in from the SNP file (which may be GZIP compressed (endin
 
 Only the information contained in fields *'Chr (Chromosome)'*, *'Position'* and *'Ref/SNP'* base are being used for analysis. The genome containing the 'Ref' base is used for **'genome 1 specific reads (G1)'**, the genome containing the 'SNP' base for **'genome 2 specific reads (G2)'**. If reads do not overlap any SNP positions they are considered **'Unassigned (UA)'**, i.e. they are not informative for one allele or another. In the rare case that a read contains both genome 1- and genome 2-specific base(s), or that the SNP position was deleted the read is regarded as **'Conflicting (CF)'**.
 
-It is probably noteworthy that the determination of overlaps correctly handles the CIGAR operations M (match), D (deletion in the read), I (insertion in the read) and N (skipped regions, used for splice mapping by e.g. HISAT2 or STAR). Other CIGAR operations are currently not supported. This is the reason why SNPsplit does not support soft-clipping.
+It is probably noteworthy that the determination of overlaps correctly handles the CIGAR operations M (match), D (deletion in the read), I (insertion in the read) and N (skipped regions, used for splice mapping by e.g. HISAT2 or STAR). Furthermore, soft-clipping (operation S) is also supported. Other CIGAR operations are currently not supported and cause SNPsplit to die.
 
 ## 4) Tagging report
 Upon completion, a small allele-specific tagging report is printed to screen and to a report file (`.SNPsplit_report.txt`) for archiving purposes. 
 
-## 5) tag2sort
+## 5) `tag2sort`
 Once the tagging has completed, the `tag2sort` module reads in the tagged BAM file and sorts it into various sub-files according to their `XX:Z:` tag. Both single and paired-end files are sorted into the following four categories:
 
 ```
@@ -36,5 +36,5 @@ Once the tagging has completed, the `tag2sort` module reads in the tagged BAM fi
 Files with conflicting SNP information (tag `XX:Z:CF`) are not written out by default.
 
 #### 6) Sorting report
-Upon completion, an allele-specific sorting report is printed out on screen and to a report file for archiving purposes (`*.SNPsplit_sort.txt`). If the sorting was launched by SNPsplit and not run stand-alone (as `tag2sort`) the sorting report will also be written into the main SNPsplit report (`*.SNPsplit_report.txt`).
+Upon completion, an allele-specific sorting report is printed out on screen and to a report file for archiving purposes (`*.SNPsplit_sort.txt`). If the sorting was launched by SNPsplit and not run stand-alone (as `tag2sort`) the sorting report is also appended to the main SNPsplit report (`*.SNPsplit_report.txt`).
 
