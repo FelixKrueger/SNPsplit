@@ -1,0 +1,1093 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://felixkrueger.github.io/SNPsplit/genome_prep/legacy/">
+      
+      
+        <link rel="prev" href="../genome_preparation/">
+      
+      
+        <link rel="next" href="../../SNPsplit/details/">
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.0.2">
+    
+    
+      
+        <title>Legacy (v5/GRCm38) - SNPsplit</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.f56500e0.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.2505c338.min.css">
+      
+      
+
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Noto+Sans:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Noto Sans";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+      
+        <meta  property="og:type"  content="website" >
+      
+        <meta  property="og:title"  content="Legacy (v5/GRCm38) - SNPsplit" >
+      
+        <meta  property="og:description"  content="None" >
+      
+        <meta  property="og:image"  content="https://felixkrueger.github.io/SNPsplit/assets/images/social/genome_prep/legacy.png" >
+      
+        <meta  property="og:image:type"  content="image/png" >
+      
+        <meta  property="og:image:width"  content="1200" >
+      
+        <meta  property="og:image:height"  content="630" >
+      
+        <meta  property="og:url"  content="https://felixkrueger.github.io/SNPsplit/genome_prep/legacy/" >
+      
+        <meta  name="twitter:card"  content="summary_large_image" >
+      
+        <meta  name="twitter:title"  content="Legacy (v5/GRCm38) - SNPsplit" >
+      
+        <meta  name="twitter:description"  content="None" >
+      
+        <meta  name="twitter:image"  content="https://felixkrueger.github.io/SNPsplit/assets/images/social/genome_prep/legacy.png" >
+      
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="blue">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#legacy-v5grcm38" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SNPsplit" class="md-header__button md-logo" aria-label="SNPsplit" data-md-component="logo">
+      
+  <img src="../../images/SNPsplit.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SNPsplit
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Legacy (v5/GRCm38)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      <form class="md-header__option" data-md-component="palette">
+        
+          
+          <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+          
+            <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_2" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3 3.19.09m3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95 2.06.05m-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31Z"/></svg>
+            </label>
+          
+        
+          
+          <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_2">
+          
+            <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5c-.84 0-1.65.15-2.39.42L12 2M3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29L3.34 7m.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14L3.36 17M20.65 7l-1.77 3.79a7.023 7.023 0 0 0-2.38-4.15l4.15.36m-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29L20.64 17M12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44L12 22Z"/></svg>
+            </label>
+          
+        
+      </form>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/FelixKrueger/SNPsplit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    FelixKrueger/SNPsplit
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-tabs__inner md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../.." class="md-tabs__link">
+      Overview
+    </a>
+  </li>
+
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../../workflow/" class="md-tabs__link">
+      SNPsplit workflow
+    </a>
+  </li>
+
+      
+        
+  
+  
+    
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../genome_preparation/" class="md-tabs__link md-tabs__link--active">
+        Genome preparation
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../SNPsplit/details/" class="md-tabs__link">
+        SNPsplit
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../Examples/examples/" class="md-tabs__link">
+        Examples
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../options/genome_prep_options/" class="md-tabs__link">
+        Full list of options
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SNPsplit" class="md-nav__button md-logo" aria-label="SNPsplit" data-md-component="logo">
+      
+  <img src="../../images/SNPsplit.png" alt="logo">
+
+    </a>
+    SNPsplit
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/FelixKrueger/SNPsplit" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    FelixKrueger/SNPsplit
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../workflow/" class="md-nav__link">
+        SNPsplit workflow
+      </a>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
+          Genome preparation
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Genome preparation" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
+          Genome preparation
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../genome_preparation/" class="md-nav__link">
+        SNPsplit genome preparation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Legacy (v5/GRCm38)
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Legacy (v5/GRCm38)
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#single-strain-mode" class="md-nav__link">
+    Single strain mode:
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dual-strain-mode" class="md-nav__link">
+    Dual strain mode:
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filtering-high-confidence-snps-from-the-vcf-file" class="md-nav__link">
+    Filtering high confidence SNPs from the VCF file
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detecting-strains" class="md-nav__link">
+    Detecting strains
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detecting-chromosomes" class="md-nav__link">
+    Detecting chromosomes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dealing-with-variant-calls" class="md-nav__link">
+    Dealing with Variant Calls
+  </a>
+  
+    <nav class="md-nav" aria-label="Dealing with Variant Calls">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gt-genotype" class="md-nav__link">
+    GT (Genotype)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fi-filter" class="md-nav__link">
+    FI (Filter)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clearly-defined-clean-genotype" class="md-nav__link">
+    Clearly defined clean genotype
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
+          SNPsplit
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="SNPsplit" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
+          SNPsplit
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SNPsplit/details/" class="md-nav__link">
+        The SNPsplit workflow in more detail
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SNPsplit/specific_comments/" class="md-nav__link">
+        Specific comments
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_5" type="checkbox" id="__nav_5" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_5">
+          Examples
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Examples" data-md-level="1">
+        <label class="md-nav__title" for="__nav_5">
+          <span class="md-nav__icon md-icon"></span>
+          Examples
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Examples/examples/" class="md-nav__link">
+        Examples
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6">
+          Full list of options
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Full list of options" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
+          Full list of options
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../options/genome_prep_options/" class="md-nav__link">
+        Genome preparation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../options/SNPsplit_options/" class="md-nav__link">
+        SNPsplit
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#single-strain-mode" class="md-nav__link">
+    Single strain mode:
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dual-strain-mode" class="md-nav__link">
+    Dual strain mode:
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filtering-high-confidence-snps-from-the-vcf-file" class="md-nav__link">
+    Filtering high confidence SNPs from the VCF file
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detecting-strains" class="md-nav__link">
+    Detecting strains
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detecting-chromosomes" class="md-nav__link">
+    Detecting chromosomes
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dealing-with-variant-calls" class="md-nav__link">
+    Dealing with Variant Calls
+  </a>
+  
+    <nav class="md-nav" aria-label="Dealing with Variant Calls">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gt-genotype" class="md-nav__link">
+    GT (Genotype)
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fi-filter" class="md-nav__link">
+    FI (Filter)
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clearly-defined-clean-genotype" class="md-nav__link">
+    Clearly defined clean genotype
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+
+<h1 id="legacy-v5grcm38">Legacy (v5/GRCm38)</h1>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This document references the now outdated mouse genome build GRCm38 and the equally outdated v5 annotation, please consider it a legacy version only. We do not recommend or support this old version any longer, please go here for the most recent <a href="../genome_preparation/">genome/annotation version</a>.</p>
+</div>
+<p><code>SNPsplit_genome_preparation</code> is designed to read in a variant call file from the Mouse Genomes Project (e.g. this <a href="ftp://ftp-mouse.sanger.ac.uk/current_snps/mgp.v5.merged.snps_all.dbSNP142.vcf.gz">v5 file, GRCm38</a>) and generate new genome versions where the strain SNPs are either incorporated into the new genome (full sequence) or masked by the ambiguity nucleobase <code>N</code> (<strong>N-masking</strong>).</p>
+<p><code>SNPsplit_genome_preparation</code> may be run in two different modes:</p>
+<h2 id="single-strain-mode">Single strain mode:</h2>
+<p><strong>1)</strong> The VCF file is read and filtered for high-confidence SNPs in the strain specified with <code>--strain &lt;name&gt;</code></p>
+<p><strong>2)</strong> The reference genome (given with <code>--reference_genome &lt;genome&gt;</code>) is read into memory, and the filtered high-confidence SNP positions are incorporated either as N-masking (default), or full sequence (option <code>--full_sequence</code>)</p>
+<h2 id="dual-strain-mode">Dual strain mode:</h2>
+<p><strong>1)</strong> The VCF file is read and filtered for high-confidence SNPs in the strain specified with <code>--strain &lt;name&gt;</code></p>
+<p><strong>2)</strong> The reference genome (given with <code>--reference_genome &lt;genome&gt;</code>) is read into memory, and the filtered high-confidence SNP positions are incorporated as full sequence and optionally as N-masking</p>
+<p><strong>3)</strong> The VCF file is read one more time and filtered for high-confidence SNPs in strain 2 specified with <code>--strain2 &lt;name&gt;</code></p>
+<p><strong>4)</strong> The filtered high-confidence SNP positions of strain 2 are incorporated as full sequence, and optionally as N-masking</p>
+<p><strong>5)</strong> The SNP information of strain and strain 2 relative to the reference genome build are compared, and a new Ref/SNP annotation is constructed whereby the new Ref/SNP information will be Strain/Strain2 (and no longer the standard reference genome strain Black6 (C57BL/6J))</p>
+<p><strong>6)</strong> The full genome sequence given with <code>--strain &lt;name&gt;</code> is read into memory, and the high-confidence SNP positions between Strain and Strain2 are incorporated as full sequence, and optionally as N-masking</p>
+<p>The resulting <code>.fa</code> files are ready to be indexed with your favourite aligner. Proved and tested aligners include Bowtie2, Tophat, STAR, HISAT2, HiCUP and Bismark. Please note that STAR and HISAT2 may require you to disable soft-clipping, please see above for more details.</p>
+<p>Both the SNP filtering and the genome preparation write out report files for record keeping.</p>
+<h2 id="filtering-high-confidence-snps-from-the-vcf-file">Filtering high confidence SNPs from the VCF file</h2>
+<p>This section describes in more detail the process of how high confidence SNPs are extracted from the sample VCF file <strong>mgp.v5.merged.snps_all.dbSNP142.vcf.gz</strong>. We are first going to paste the start of the VCF file and explain in more detail later the individual steps taken by the SNPsplit genome preparation for the strain CAST_EiJ as an example strain; the PDF version of the user guide had relevant information in the header lines or the variant data itself are marked in dark red, but unfotunately this is not supported in this markdown version, so please look carefully... . This should help you adapt the process to other genomes/VCF files should you wish to do so.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>VCF file: mgp.v5.merged.snps_all.dbSNP142.vcf.gz
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>##fileformat=VCFv4.2
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>##FILTER=&lt;ID=PASS,Description=&quot;All filters passed&quot;&gt;
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>##samtoolsVersion=1.1+htslib-1.1
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>##bcftools_callVersion=1.1+htslib-1.1
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>##reference=ftp://ftp-mouse.sanger.ac.uk/ref/GRCm38_68.fa
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=50/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: C3H_HeH)
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=100/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: 129S5SvEvBrd,ZALENDE_EiJ,LEWES_EiJ)
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=200/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: C57BL_10J)
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=250/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: 129P2_OlaHsd,A_J,CAST_EiJ,LP_J,PWK_PhJ,WSB_EiJ,BUB_BnJ,DBA_1J,I_LnJ,MOLF_EiJ,NZB_B1NJ,SEA_GnJ,RF_J)
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=300/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: AKR_J,BALB_cJ,C3H_HeJ,C57BL_6NJ,CBA_J,DBA_2J,C57BR_cdJ,C58_J,NZW_LacJ,C57L_J,KK_HiJ)
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=350/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: 129S1_SvImJ,FVB_NJ,NOD_ShiLtJ,NZO_HlLtJ,SPRET_EiJ)
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=400/d=5/q=20/w=2/a=5/ (chromosomes=1-19,X,Y: BTBR_T+_Itpr3tf_J,ST_bJ)
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=350/d=5/q=20/w=2/a=5/ (chromosome=MT: LEWES_EiJ)
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=650/d=5/q=20/w=2/a=5/ (chromosome=MT: I_LnJ)
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=850/d=5/q=20/w=2/a=5/ (chromosome=MT: BUB_BnJ)
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=1000/d=5/q=20/w=2/a=5/ (chromosome=MT: SEA_GnJ)
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=1200/d=5/q=20/w=2/a=5/ (chromosome=MT: C57BL_10J)
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=1300/d=5/q=20/w=2/a=5/ (chromosome=MT: RF_J)
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=1450/d=5/q=20/w=2/a=5/ (chromosome=MT: KK_HiJ)
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=1550/d=5/q=20/w=2/a=5/ (chromosome=MT: NZB_B1NJ)
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=1800/d=5/q=20/w=2/a=5/ (chromosome=MT: ZALENDE_EiJ)
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=2200/d=5/q=20/w=2/a=5/ (chromosome=MT: C3H_HeH)
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=2300/d=5/q=20/w=2/a=5/ (chromosome=MT: ST_bJ)
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=3050/d=5/q=20/w=2/a=5/ (chromosome=MT: C57L_J)
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=3650/d=5/q=20/w=2/a=5/ (chromosome=MT: MOLF_EiJ)
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=4250/d=5/q=20/w=2/a=5/ (chromosome=MT: NZW_LacJ)
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=4650/d=5/q=20/w=2/a=5/ (chromosome=MT: C3H_HeJ)
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=5300/d=5/q=20/w=2/a=5/ (chromosome=MT: C57BR_cdJ)
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=6150/d=5/q=20/w=2/a=5/ (chromosome=MT: DBA_1J)
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=6200/d=5/q=20/w=2/a=5/ (chromosome=MT: 129S5SvEvBrd,C58_J)
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=6650/d=5/q=20/w=2/a=5/ (chromosome=MT: C57BL_6NJ)
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=6700/d=5/q=20/w=2/a=5/ (chromosome=MT: WSB_EiJ)
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=6900/d=5/q=20/w=2/a=5/ (chromosome=MT: CBA_J)
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=7100/d=5/q=20/w=2/a=5/ (chromosome=MT: BALB_cJ)
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=7450/d=5/q=20/w=2/a=5/ (chromosome=MT: NZO_HlLtJ)
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=7650/d=5/q=20/w=2/a=5/ (chromosome=MT: PWK_PhJ)
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=8300/d=5/q=20/w=2/a=5/ (chromosome=MT: SPRET_EiJ)
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=8850/d=5/q=20/w=2/a=5/ (chromosome=MT: CAST_EiJ)
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=9550/d=5/q=20/w=2/a=5/ (chromosome=MT: 129S1_SvImJ)
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=9600/d=5/q=20/w=2/a=5/ (chromosome=MT: LP_J)
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=9850/d=5/q=20/w=2/a=5/ (chromosome=MT: DBA_2J)
+<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=10200/d=5/q=20/w=2/a=5/ (chromosome=MT: BTBR_T__Itpr3tf_J)
+<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=11300/d=5/q=20/w=2/a=5/ (chromosome=MT: AKR_J)
+<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=11550/d=5/q=20/w=2/a=5/ (chromosome=MT: NOD_ShiLtJ)
+<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=11700/d=5/q=20/w=2/a=5/ (chromosome=MT: 129P2_OlaHsd)
+<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=11750/d=5/q=20/w=2/a=5/ (chromosome=MT: FVB_NJ)
+<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>##source_20141009.1=vcf-annotate(r953) -f +/D=11800/d=5/q=20/w=2/a=5/ (chromosome=MT: A_J)
+<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>##contig=&lt;ID=1,length=195471971&gt;
+<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>##contig=&lt;ID=10,length=130694993&gt;
+<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>##contig=&lt;ID=11,length=122082543&gt;
+<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>##contig=&lt;ID=12,length=120129022&gt;
+<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>##contig=&lt;ID=13,length=120421639&gt;
+<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>##contig=&lt;ID=14,length=124902244&gt;
+<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>##contig=&lt;ID=15,length=104043685&gt;
+<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>##contig=&lt;ID=16,length=98207768&gt;
+<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>##contig=&lt;ID=17,length=94987271&gt;
+<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>##contig=&lt;ID=18,length=90702639&gt;
+<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>##contig=&lt;ID=19,length=61431566&gt;
+<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a>##contig=&lt;ID=2,length=182113224&gt;
+<a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a>##contig=&lt;ID=3,length=160039680&gt;
+<a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a>##contig=&lt;ID=4,length=156508116&gt;
+<a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>##contig=&lt;ID=5,length=151834684&gt;
+<a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a>##contig=&lt;ID=6,length=149736546&gt;
+<a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a>##contig=&lt;ID=7,length=145441459&gt;
+<a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>##contig=&lt;ID=8,length=129401213&gt;
+<a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a>##contig=&lt;ID=9,length=124595110&gt;
+<a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>##contig=&lt;ID=X,length=171031299&gt;
+<a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a>##contig=&lt;ID=Y,length=91744698&gt;
+<a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a>##contig=&lt;ID=MT,length=16299&gt;
+<a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a>##ALT=&lt;ID=X,Description=&quot;Represents allele(s) other than observed.&quot;&gt;
+<a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a>##QUAL=&lt;ID=QUAL,Number=1,Type=Float,Description=&quot;The highest QUAL value for a variant location from any of the samples&quot;&gt;
+<a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a>##INFO=&lt;ID=INDEL,Number=0,Type=Flag,Description=&quot;Indicates that the variant is an INDEL.&quot;&gt;
+<a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a>##INFO=&lt;ID=DP,Number=1,Type=Integer,Description=&quot;Raw read depth&quot;&gt;
+<a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a>##INFO=&lt;ID=DP4,Number=4,Type=Integer,Description=&quot;Total Number of high-quality ref-fwd, ref-reverse, alt-fwd and alt-reverse bases&quot;&gt;
+<a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a>##INFO=&lt;ID=CSQ,Number=.,Type=String,Description=&quot;Consequence type from Ensembl 75 as predicted by VEP. Format: Allele|Gene|Feature|Feature_type|Consequence|cDNA_position|CDS_position|Protein_position|Amino_acids|Codons|Existing_variation|DISTANCE|STRAND&quot;&gt;
+<a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a>##FORMAT=&lt;ID=GT,Number=1,Type=String,Description=&quot;Genotype&quot;&gt;
+<a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a>##FORMAT=&lt;ID=GQ,Number=1,Type=Integer,Description=&quot;Phred-scaled Genotype Quality&quot;&gt;
+<a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a>##FORMAT=&lt;ID=DP,Number=1,Type=Integer,Description=&quot;Number of high-quality bases&quot;&gt;
+<a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a>##FORMAT=&lt;ID=MQ0F,Number=1,Type=Float,Description=&quot;Fraction of MQ0 reads (smaller is better)&quot;&gt;
+<a id="__codelineno-0-81" name="__codelineno-0-81" href="#__codelineno-0-81"></a>##FORMAT=&lt;ID=GP,Number=G,Type=Float,Description=&quot;Phred-scaled genotype posterior probabilities&quot;&gt;
+<a id="__codelineno-0-82" name="__codelineno-0-82" href="#__codelineno-0-82"></a>##FORMAT=&lt;ID=PL,Number=G,Type=Integer,Description=&quot;List of Phred-scaled genotype likelihoods&quot;&gt;
+<a id="__codelineno-0-83" name="__codelineno-0-83" href="#__codelineno-0-83"></a>##FORMAT=&lt;ID=AN,Number=1,Type=Integer,Description=&quot;Total number of alleles in called genotypes&quot;&gt;
+<a id="__codelineno-0-84" name="__codelineno-0-84" href="#__codelineno-0-84"></a>##FORMAT=&lt;ID=MQ,Number=1,Type=Integer,Description=&quot;Average mapping quality&quot;&gt;
+<a id="__codelineno-0-85" name="__codelineno-0-85" href="#__codelineno-0-85"></a>##FORMAT=&lt;ID=DV,Number=1,Type=Integer,Description=&quot;Number of high-quality non-reference bases&quot;&gt;
+<a id="__codelineno-0-86" name="__codelineno-0-86" href="#__codelineno-0-86"></a>##FORMAT=&lt;ID=DP4,Number=4,Type=Integer,Description=&quot;Number of high-quality ref-fwd, ref-reverse, alt-fwd and alt-reverse bases&quot;&gt;
+<a id="__codelineno-0-87" name="__codelineno-0-87" href="#__codelineno-0-87"></a>##FORMAT=&lt;ID=SP,Number=1,Type=Integer,Description=&quot;Phred-scaled strand bias P-value&quot;&gt;
+<a id="__codelineno-0-88" name="__codelineno-0-88" href="#__codelineno-0-88"></a>##FORMAT=&lt;ID=SGB,Number=1,Type=Float,Description=&quot;Segregation based metric.&quot;&gt;
+<a id="__codelineno-0-89" name="__codelineno-0-89" href="#__codelineno-0-89"></a>##FORMAT=&lt;ID=PV4,Number=4,Type=Float,Description=&quot;P-values for strand bias, baseQ bias, mapQ bias and tail distance bias&quot;&gt;
+<a id="__codelineno-0-90" name="__codelineno-0-90" href="#__codelineno-0-90"></a>##FORMAT=&lt;ID=FI,Number=1,Type=Integer,Description=&quot;Whether a sample was a Pass(1) or fail (0) based on FILTER values&quot;&gt;
+<a id="__codelineno-0-91" name="__codelineno-0-91" href="#__codelineno-0-91"></a>##FILTER=&lt;ID=StrandBias,Description=&quot;Min P-value for strand bias (INFO/PV4) [0.0001]&quot;&gt;
+<a id="__codelineno-0-92" name="__codelineno-0-92" href="#__codelineno-0-92"></a>##FILTER=&lt;ID=EndDistBias,Description=&quot;Min P-value for end distance bias (INFO/PV4) [0.0001]&quot;&gt;
+<a id="__codelineno-0-93" name="__codelineno-0-93" href="#__codelineno-0-93"></a>##FILTER=&lt;ID=MaxDP,Description=&quot;Maximum read depth (INFO/DP or INFO/DP4) []&quot;&gt;
+<a id="__codelineno-0-94" name="__codelineno-0-94" href="#__codelineno-0-94"></a>##FILTER=&lt;ID=BaseQualBias,Description=&quot;Min P-value for baseQ bias (INFO/PV4) [0]&quot;&gt;
+<a id="__codelineno-0-95" name="__codelineno-0-95" href="#__codelineno-0-95"></a>##FILTER=&lt;ID=MinMQ,Description=&quot;Minimum RMS mapping quality for SNPs (INFO/MQ) [20]&quot;&gt;
+<a id="__codelineno-0-96" name="__codelineno-0-96" href="#__codelineno-0-96"></a>##FILTER=&lt;ID=MinAB,Description=&quot;Minimum number of alternate bases (INFO/DP4) [5]&quot;&gt;
+<a id="__codelineno-0-97" name="__codelineno-0-97" href="#__codelineno-0-97"></a>##FILTER=&lt;ID=Qual,Description=&quot;Minimum value of the QUAL field [10]&quot;&gt;
+<a id="__codelineno-0-98" name="__codelineno-0-98" href="#__codelineno-0-98"></a>##FILTER=&lt;ID=VDB,Description=&quot;Minimum Variant Distance Bias (INFO/VDB) [0]&quot;&gt;
+<a id="__codelineno-0-99" name="__codelineno-0-99" href="#__codelineno-0-99"></a>##FILTER=&lt;ID=GapWin,Description=&quot;Window size for filtering adjacent gaps [3]&quot;&gt;
+<a id="__codelineno-0-100" name="__codelineno-0-100" href="#__codelineno-0-100"></a>##FILTER=&lt;ID=MapQualBias,Description=&quot;Min P-value for mapQ bias (INFO/PV4) [0]&quot;&gt;
+<a id="__codelineno-0-101" name="__codelineno-0-101" href="#__codelineno-0-101"></a>##FILTER=&lt;ID=SnpGap,Description=&quot;SNP within INT bp around a gap to be filtered [2]&quot;&gt;
+<a id="__codelineno-0-102" name="__codelineno-0-102" href="#__codelineno-0-102"></a>##FILTER=&lt;ID=RefN,Description=&quot;Reference base is N []&quot;&gt;
+<a id="__codelineno-0-103" name="__codelineno-0-103" href="#__codelineno-0-103"></a>##FILTER=&lt;ID=MinDP,Description=&quot;Minimum read depth (INFO/DP or INFO/DP4) [5]&quot;&gt;
+<a id="__codelineno-0-104" name="__codelineno-0-104" href="#__codelineno-0-104"></a>##FILTER=&lt;ID=Het,Description=&quot;Genotype call is heterozygous (low quality) []&quot;&gt;
+<a id="__codelineno-0-105" name="__codelineno-0-105" href="#__codelineno-0-105"></a>#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  129P2_OlaHsd    129S1_SvImJ     129S5SvEvBrd    AKR_J   A_J     BALB_cJ BTBR_T+_Itpr3tf_J       BUB_BnJ C3H_HeH C3H_HeJ C57BL_10J       C57BL_6NJ       C57BR_cdJ   C57L_J   C58_J   CAST_EiJ        CBA_J   DBA_1J  DBA_2J  FVB_NJ  I_LnJ   KK_HiJ  LEWES_EiJ       LP_J    MOLF_EiJ        NOD_ShiLtJ      NZB_B1NJ        NZO_HlLtJ       NZW_LacJ        PWK_PhJ RF_J    SEA_GnJ SPRET_EiJ       ST_bJ   WSB_EiJ      ZALENDE_EiJ
+<a id="__codelineno-0-106" name="__codelineno-0-106" href="#__codelineno-0-106"></a>1       3000023 .       C       A       153     MinDP;MinAB;Qual;Het    DP=170;DP4=2,0,168,0;CSQ=A||||intergenic_variant||||||||        GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI  1/1:20:8:0:133,20,0:109,11,0:2:29:7:1,0,7,0:0:-0.6364
+<a id="__codelineno-0-107" name="__codelineno-0-107" href="#__codelineno-0-107"></a>26:.:1  1/1:22:6:0.166667:152,22,0:137,18,0:2:36:6:0,0,6,0:0:-0.616816:.:1      1/1:11:4:0:70,11,0:51,4,0:2:24:3:1,0,3,0:0:-0.511536:.:0        1/1:15:4:0.25:80,15,0:68,12,0:2:25:4:0,0,4,0:0:-0.556411:.:0    1/1:11:3:0:72,11,0:63,9,0:2:3
+<a id="__codelineno-0-108" name="__codelineno-0-108" href="#__codelineno-0-108"></a>4:3:0,0,3,0:0:-0.511536:.:0     0/1:3:1:0:40,3,3:37,3,0:2:40:1:0,0,1,0:0:-0.379885:.:0  1/1:36:10:0:194,36,0:174,30,0:2:38:10:0,0,10,0:0:-0.670168:.:1  1/1:22:6:0.333333:111,22,0:96,18,0:2:20:6:0,0,6,0:0:-0.616816:.:1       0/1:3:1:0:35,
+<a id="__codelineno-0-109" name="__codelineno-0-109" href="#__codelineno-0-109"></a>3,3:32,3,0:2:40:1:0,0,1,0:0:-0.379885:.:0       1/1:19:5:0:135,19,0:121,15,0:2:34:5:0,0,5,0:0:-0.590765:.:1     1/1:15:4:0:106,15,0:94,12,0:2:29:4:0,0,4,0:0:-0.556411:.:0      1/1:11:3:0:83,11,0:74,9,0:2:28:3:0,0,3,0:0:-0.511536:.:0    1/1:33:9:0:199,33,0:180,27,0:2:42:9:0,0,9,0:0:-0.662043:.:1      1/1:6:2:0:56,6,0:50,6,0:2:27:2:0,0,2,0:0:-0.453602:.:0  1/1:15:4:0.5:75,15,0:63,12,0:2:25:4:0,0,4,0:0:-0.556411:.:0     1/1:15:4:0:79,15,0:67,12,0:2:24:4:0,0,4,0:0:-0.556411
+<a id="__codelineno-0-110" name="__codelineno-0-110" href="#__codelineno-0-110"></a>:.:0    1/1:22:6:0:133,22,0:118,18,0:2:31:6:0,0,6,0:0:-0.616816:.:1     1/1:15:4:0:108,15,0:96,12,0:2:35:4:0,0,4,0:0:-0.556411:.:0      1/1:15:4:0.25:88,15,0:76,12,0:2:31:4:0,0,4,0:0:-0.556411:.:0    0/0:.:1:0:.,.,.:.,.,.:2:40:1:0,0,1,0:
+<a id="__codelineno-0-111" name="__codelineno-0-111" href="#__codelineno-0-111"></a>0:-0.379885:.:0 1/1:11:3:0:79,11,0:70,9,0:2:31:3:0,0,3,0:0:-0.511536:.:0        1/1:6:2:0.5:48,6,0:42,6,0:2:20:2:0,0,2,0:0:-0.453602:.:0        1/1:15:4:0.5:70,15,0:58,12,0:2:22:4:0,0,4,0:0:-0.556411:.:0     1/1:6:2:0:69,6,0:63,6,0:2:40:
+<a id="__codelineno-0-112" name="__codelineno-0-112" href="#__codelineno-0-112"></a>2:0,0,2,0:0:-0.453602:.:0       1/1:19:5:0.2:94,19,0:80,15,0:2:24:5:0,0,5,0:0:-0.590765:.:1     1/1:15:4:0:87,15,0:75,12,0:2:30:4:0,0,4,0:0:-0.556411:.:0       1/1:26:7:0.142857:150,26,0:134,21,0:2:31:7:0,0,7,0:0:-0.636426:.:1      1/1:1
+<a id="__codelineno-0-113" name="__codelineno-0-113" href="#__codelineno-0-113"></a>9:5:0:132,19,0:118,15,0:2:48:5:0,0,5,0:0:-0.590765:.:1  1/1:30:8:0:171,30,0:153,24,0:2:37:8:0,0,8,0:0:-0.651104:.:1     1/1:11:3:0.333333:72,11,0:63,9,0:2:33:3:0,0,3,0:0:-0.511536:.:0 1/1:19:5:0:137,19,0:123,15,0:2:38:5:0,0,5,0:0:-0.5907
+<a id="__codelineno-0-114" name="__codelineno-0-114" href="#__codelineno-0-114"></a>65:.:1  1/1:22:6:0.166667:137,22,0:122,18,0:2:42:6:0,0,6,0:0:-0.616816:.:1      1/1:33:9:0:140,33,0:121,27,0:2:23:9:0,0,9,0:0:-0.662043:.:1     1/1:33:9:0.111111:170,33,0:151,27,0:2:29:9:0,0,9,0:0:-0.662043:.:1      1/1:26:7:0:140,26,0:1
+<a id="__codelineno-0-115" name="__codelineno-0-115" href="#__codelineno-0-115"></a>24,21,0:2:31:7:0,0,7,0:0:-0.636426:.:1  1/1:6:2:0:48,6,0:42,6,0:2:21:2:0,0,2,0:0:-0.453602:.:0
+<a id="__codelineno-0-116" name="__codelineno-0-116" href="#__codelineno-0-116"></a>1       3000126 rs580370473     G       T       184     MinDP;MinMQ;Het;MinAB;Qual      DP=417;DP4=93,1,210,113;CSQ=T||||intergenic_variant||||||||     GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI  1/1:4:8:0:89,4,1:75,0,1:2:36:5:3,0,4,
+<a id="__codelineno-0-117" name="__codelineno-0-117" href="#__codelineno-0-117"></a>1:0:-0.590765:.:1       1/1:21:12:0:152,21,0:128,12,0:2:55:9:3,0,7,2:0:-0.662043:.:1    0/0:.:2:0:.,.,.:.,.,.:2:16:0:2,0,0,0:0:.:.:0    0/1:9:11:0:91,0,9:82,0,11:2:48:9:2,0,6,3:0:-0.662043:.:0        1/1:6:5:0:67,6,1:51,1,0:2:44:3:2,0,1,
+<a id="__codelineno-0-118" name="__codelineno-0-118" href="#__codelineno-0-118"></a>2:4:-0.511536:.:0       1/1:5:10:0:97,5,1:82,0,0:2:56:8:2,0,7,1:0:-0.651104:.:1 1/1:31:28:0:173,31,0:151,23,0:2:50:21:7,0,6,15:28:-0.692352:.:1 1/1:18:8:0:135,18,0:110,9,0:2:56:6:2,0,3,3:3:-0.616816:.:1      1/1:11:3:0:55,11,0:46,9,0:2:3
+<a id="__codelineno-0-119" name="__codelineno-0-119" href="#__codelineno-0-119"></a>7:3:0,0,1,2:0:-0.511536:.:0     1/1:50:14:0:111,50,0:89,42,0:2:41:14:0,0,14,0:0:-0.686358:.:1   1/1:23:7:0:115,23,0:86,12,0:2:38:6:1,0,1,5:0:-0.616816:.:1      1/1:6:8:0:66,6,1:52,2,0:2:49:5:3,0,5,0:0:-0.590765:.:1  1/1:60:17:0.0588235:2
+<a id="__codelineno-0-120" name="__codelineno-0-120" href="#__codelineno-0-120"></a>17,60,0:193,51,0:2:52:17:0,0,12,5:0:-0.690438:.:1       1/1:75:33:0:244,75,0:211,62,0:2:52:30:3,0,17,13:6:-0.693097:.:1 1/1:47:13:0:217,47,0:195,39,0:2:49:13:0,0,4,9:0:-0.683931:.:1   0/0:.:5:0:.,.,.:.,.,.:2:47:4:1,0,4,0:0:-0.556411:.:01/1:43:12:0:117,43,0:96,36,0:2:47:12:0,0,12,0:0:-0.680642:.:1    1/1:29:8:0:189,29,0:155,15,0:2:53:7:1,0,3,4:0:-0.636426:.:1     1/1:15:4:0:73,15,0:61,12,0:2:59:4:0,0,4,0:0:-0.556411:.:0       0/1:5:6:0:76,1,5:66,0,7:2:50:4:2,0,4,0:0:-0.5
+<a id="__codelineno-0-121" name="__codelineno-0-121" href="#__codelineno-0-121"></a>56411:.:0       1/1:13:9:0:97,13,0:78,7,0:2:45:6:3,0,4,2:3:-0.616816:.:1        1/1:37:15:0.0666667:195,37,0:165,25,0:2:52:13:2,0,7,6:3:-0.683931:.:1   1/1:11:21:0.666667:38,11,0:35,12,0:2:9:6:15,0,3,3:18:-0.616816:.:0      1/1:19:6:0:92
+<a id="__codelineno-0-122" name="__codelineno-0-122" href="#__codelineno-0-122"></a>,19,0:67,10,0:2:47:5:1,0,5,0:0:-0.590765:.:1    1/1:10:30:0.4:101,10,0:88,7,0:2:24:14:16,0,0,14:82:-0.686358:.:1        0/1:21:7:0:51,0,21:46,0,21:2:48:5:2,0,4,1:0:-0.590765:.:0       1/1:14:7:0.142857:80,14,0:60,7,0:2:44:5:1,1,4,1:0:-0.
+<a id="__codelineno-0-123" name="__codelineno-0-123" href="#__codelineno-0-123"></a>590765:.:1      1/1:5:14:0:101,5,1:86,0,0:2:52:9:5,0,9,0:0:-0.662043:.:1        1/1:33:9:0:196,33,0:177,27,0:2:53:9:0,0,6,3:0:-0.662043:.:1     1/1:26:7:0:91,26,0:75,21,0:2:50:7:0,0,7,0:0:-0.636426:.:1       1/1:44:24:0:138,44,0:119,38,0
+<a id="__codelineno-0-124" name="__codelineno-0-124" href="#__codelineno-0-124"></a>:2:45:23:1,0,19,4:0:-0.692717:.:1       1/1:17:8:0:101,17,0:79,9,0:2:53:6:2,0,4,2:0:-0.616816:.:1       0/1:20:11:0.0909091:72,0,20:65,0,21:2:45:7:4,0,7,0:0:-0.636426:.:0      1/1:33:23:0:183,33,0:159,24,0:2:50:18:5,0,6,12:19:-0.691153:.
+<a id="__codelineno-0-125" name="__codelineno-0-125" href="#__codelineno-0-125"></a>:1      1/1:11:7:0:66,11,0:49,6,0:2:54:5:2,0,5,0:0:-0.590765:.:1        1/1:19:5:0:62,19,0:48,15,0:2:54:5:0,0,5,0:0:-0.590765:.:1
+<a id="__codelineno-0-126" name="__codelineno-0-126" href="#__codelineno-0-126"></a>...
+</code></pre></div>
+<h2 id="detecting-strains">Detecting strains</h2>
+<p>To detect the available strains in the VCF file as well as to determine the column number of a desired strain in the file we skim through the header lines until we find a line starting with #CHROM. In terms of the strains in the file the next eight fields are irrelevant: </p>
+<p><code>#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT</code></p>
+<p>The following fields should contain the strains listed in the file, here: 
+<code>129P2_OlaHsd   129S1_SvImJ 129S5SvEvBrd    AKR_J   A_J BALB_cJ BTBR_T+_Itpr3tf_J   BUB_BnJ C3H_HeH C3H_HeJ C57BL_10J   C57BL_6NJ   C57BR_cdJ   C57L_J  C58_J   CAST_EiJ    CBA_J   DBA_1J …</code></p>
+<p>In our example the data for strain <em>CAST_EiJ</em> would be found in column 25, or have an index of 24 (the index = column - 1 because index counting starts at 0 and not at 1). </p>
+<p>If #CHROM is <strong>not present</strong> in the VCF file header, the <strong>automated lookup and subsequent steps will fail</strong>.</p>
+<h2 id="detecting-chromosomes">Detecting chromosomes</h2>
+<p>Chromosomes to be processed are detected from the VCF header lines starting with ##contig=<ID=…,… >, e.g. here:</p>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>##contig=&lt;ID=1,length=195471971&gt;
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>##contig=&lt;ID=10,length=130694993&gt;
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>…
+</code></pre></div>
+The IDs here are the chromosomes for which variant calls are available, but not necessarily all chromosomes in the genome have to be present here. If there are no variant calls for say “chrY” then the subsequent genome preparation step will simply not introduce any changes but use the reference sequence for “chrY”.</p>
+<p>If the ##contig=… fields are missing from the VCF file, <strong>subsequent steps are probably going to fail</strong>; as a way around this you might get away with defining the chromosome array manually, e.g. like so:</p>
+<p><code>my @chroms = (1..19,’X’,’Y’,’MT’);</code></p>
+<h2 id="dealing-with-variant-calls">Dealing with Variant Calls</h2>
+<p>For variant calls the SNPsplit genome preparation extracts the following information from each line:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>CHROM  [Col 1]
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>POS    [Col 2]
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>REF    [Col 4]
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>ALT    [Col 5]
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>STRAIN [Col 25 (for CAST_EiJ)]
+</code></pre></div>
+<p>Which in our case is (first three lines only):
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>CHROM   POS REF ALT CAST_EiJ
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>1   3000023 C   A   1/1:15:4:0:79,15,0:67,12,0:2:24:4:0,0,4,0:0:-0.556411:.:0
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>1   3000126 G   T   0/0:.:5:0:.,.,.:.,.,.:2:47:4:1,0,4,0:0:-0.556411:.:0
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>1   3000185 G   T   1/1:43:12:0:276,43,0:255,36,0:2:54:12:0,0,10,2:0:-0.680642:.:1
+</code></pre></div></p>
+<p>Now the STRAIN field contains a lot of information which is specified in the FORMAT field and further ‘explained’ in the VCF header. The format is: 
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>GT:GQ:DP:MQ0F:GP:PL:AN:MQ:DV:DP4:SP:SGB:PV4:FI
+</code></pre></div></p>
+<p>I am not going into the details about all these FORMAT tags (feel free to browse the header section above), but suffice it to say that the SNPsplit genome preparation only cares about the GT (=GENOTYPE) and FI (=FILTER) entry which are defined as:</p>
+<h3 id="gt-genotype">GT (Genotype)</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>##FORMAT=&lt;ID=GT,Number=1,Type=String,Description=&quot;Genotype&quot;&gt;
+</code></pre></div>
+<p>The GT string can be one of the following:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>&#39;.&#39;    = no genotype call was made
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>&#39;0/0&#39;  = genotype is the same as the reference genome
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>&#39;1/1&#39;  = homozygous alternative allele; can also be &#39;2/2&#39;, &#39;3/3&#39;, etc. if more than one alternative allele is present.
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>&#39;0/1&#39;  = heterozygous genotype; can also be &#39;1/2&#39;, &#39;0/2&#39;, etc.
+</code></pre></div></p>
+<p>For the mouse strains we are working with here we only accept homozygous alternative alleles, so '1/1', ‘2/2’ or ‘3/3’. Any other combination is recorded and mentioned in the final report but not included in the SNP file.</p>
+<h3 id="fi-filter">FI (Filter)</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>##FORMAT=&lt;ID=FI,Number=1,Type=Integer,Description=&quot;Whether a sample was a Pass(1) or fail (0) based on FILTER values&quot;&gt;
+</code></pre></div>
+<p>Next we are looking at the FILTER field. If a SNP variant call passed all filters for a given strain it will PASS or get a value of 1. Else it will have a value of 0. In the example above the first position had a genotype of <strong>1/1</strong> but did not pass the Filter for the CAST_EiJ strain (FI value = 0), so this position won’t be included:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>1   3000023 C   A   1/1:15:4:0:79,15,0:67,12,0:2:24:4:0,0,4,0:0:-0.556411:.:0
+</code></pre></div>
+<p>The second position did not indicate that there was a SNP (<strong>0/0</strong>), so the positions wouldn’t be considered for a single-hybrid genome anyway. However, the filter call for that position was uncertain (FI value = 0), so this position would also not be considered for a SNP position in --dual_hybrid mode even if the other strain had a high confidence SNP at this position (this behaviour was introduced in v0.3.2).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>1   3000126 G   T   0/0:.:5:0:.,.,.:.,.,.:2:47:4:1,0,4,0:0:-0.556411:.:0
+</code></pre></div>
+<p>The third position finally is a high-confidence homozygous SNP which would be included for both single and dual hybrid genomes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>1   3000185 G   T   1/1:43:12:0:276,43,0:255,36,0:2:54:12:0,0,10,2:0:-0.680642:.:1
+</code></pre></div>
+<h2 id="clearly-defined-clean-genotype">Clearly defined clean genotype</h2>
+<p>And finally, variants are required to have a clearly defined genotype, e.g. a made-up position:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>12  45630185    A   T/C
+</code></pre></div></p>
+<p>would not be included as a valid SNP position because the alternative allele is not clearly defined (unless the genotype would be 2/2 here, in which case the reference would be ‘A’ and the alternative allele would be ‘C’).</p>
+<p>If you are dealing with any other VCF file than the one used as an example here you might need to adapt one or more of the issues addressed here to make it work.</p>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tabs"], "search": "../../assets/javascripts/workers/search.12658920.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.5cf534bf.min.js"></script>
+      
+    
+  </body>
+</html>
