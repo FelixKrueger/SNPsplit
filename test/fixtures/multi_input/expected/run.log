@@ -134,7 +134,7 @@ Reads had a deletion of the N-masked position (and were thus called Conflicting)
 Of which had multiple deletions of N-masked positions within the same read:	0 (0.00%)
 
 Of valid N containing reads,
-N was present in the list of known SNPs:	3 (100.00%)
+N was present in the list of known SNPs:	1 (100.00%)
 N was not present in the list of SNPs:		0 (0.00%)
 
 Finished allele-tagging for file <<< 'multi_input_2.bam' >>> 

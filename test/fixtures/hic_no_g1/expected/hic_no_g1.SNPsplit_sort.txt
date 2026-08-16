@@ -13,7 +13,7 @@ Allele-specific Hi-C paired-end sorting report
 =========================================
 Read pairs processed in total:				2
 Read pairs were unassignable (UA/UA):			1 (50.00%)
-Read pairs were specific for genome 1 (G1/G1):		 (0.00%)
+Read pairs were specific for genome 1 (G1/G1):		0 (0.00%)
 Read pairs were specific for genome 2 (G2/G2):		1 (50.00%)
 Read pairs were a mix of G1 and UA:			0 (0.00%). Of these,
 			were G1/UA: 0

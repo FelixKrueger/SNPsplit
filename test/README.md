@@ -48,6 +48,7 @@ Create `fixtures/<name>/` containing:
 | `feed_sam` | no | Marker: pass the input as `.sam` instead of converting to BAM |
 | `poison_shim` | no | Marker: install a failing bare `samtools` first on `PATH` |
 | `allow_empty` | no | Marker: this fixture legitimately produces no alignments |
+| `break_tag2sort` | no | Marker: stage a sorter that always fails, to test the abort |
 | `exclude` | no | Glob per line: present in `manifest`, content not compared |
 
 Prefer adding reads to `test/bin/make_fixtures.pl` rather than editing `input.sam` by hand, so MD tags
@@ -73,7 +74,8 @@ samtools unchanged. Counter reconciliation cannot catch a tag that is self-consi
 the wrong coordinate, because the counters reconcile perfectly around a wrong answer.
 
 So `make_fixtures.pl` writes SAM records with correct POS/CIGAR/SEQ against a committed N-masked
-reference and lets `samtools calmd` derive MD.
+reference and lets `samtools calmd` derive MD. The runner re-derives them again on every run and dies on
+any mismatch, so a hand-edited `input.sam` is caught rather than quietly recorded.
 
 The reference and `snps.txt` can be checked against each other: every position masked to `N` in
 `chr1.fa` is either listed in `snps.txt` or is one of the positions deliberately left out of it. Most
@@ -116,23 +118,24 @@ Two things look like bugs and are not:
   `unmapped` is in the report, `hardclipped` is stderr-only, and reads with no `MD:Z` tag are counted
   nowhere at all.
 
-## Fixtures that pin known defects
+## Fixtures worth knowing about
 
-These assert current behaviour deliberately. Fixing any of them changes the expected output, which is a
-real change to record, not a test failure.
+**`cigar_eqx`** asserts that `=` and `X` CIGAR operations abort the run. `H` is filtered out earlier but
+these are not, so output from an aligner run with `--eqx` cannot be processed. Fixing that would change
+the expected output, which is a real change to record rather than a test failure.
 
-| Fixture | Pinned behaviour | Issue |
-|---|---|---|
-| `hic_no_g1` | Hi-C with no G1/G1 pair prints a blank count and writes an empty YAML value | #90 |
-| `output_dir` | `--output_dir` skips the sorting-report merge and leaves `SNPsplit_sort.yaml` behind | #91 |
-| `multi_input` | `$snp_found`/`$no_snp_found` and `tag2sort`'s `%yaml` carry over between input files | #92 |
-| `sam_output` | `--sam` produces no sorted output, because `tag2sort` only accepts `.bam` | #93 |
-| `cigar_eqx` | `=`/`X` CIGAR operations abort the run; `H` is filtered but these are not | — |
+**`tag2sort_fails`** replaces the staged sorter with one that always exits non-zero, so it tests that
+SNPsplit aborts when the sorting stage fails, whatever the reason. It is written that way deliberately:
+that behaviour used to be covered only as a side effect of `--sam` being broken, and the coverage
+disappeared the moment `--sam` was fixed. Coverage that depends on a bug still being present is coverage
+on loan.
 
-`--sam` is broken end to end: `SNPsplit` writes `.allele_flagged.sam` and `tag2sort` accepts only
-`.bam`. The `sam_output` fixture pins that, and is also the only fixture where the sorting stage fails,
-so it is what tests SNPsplit aborting rather than reporting success. `sam_input` is a different
-mechanism — `sam2bam_convert`, triggered by the input filename, not by `--sam`.
+**`sam_input` and `sam_output`** cover two different mechanisms. `sam_input` exercises
+`sam2bam_convert`, triggered by the input *filename*; `sam_output` exercises `--sam`, which sets the
+output format.
+
+`hic_no_g1`, `output_dir`, `multi_input` and `sam_output` used to pin defects and now assert correct
+behaviour, since #90 to #93 are fixed.
 
 ## Environment
 

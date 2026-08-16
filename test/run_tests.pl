@@ -88,8 +88,18 @@ sub run_fixture {
     make_path($bin);
     my $staged_impl = File::Spec->catfile($bin, 'SNPsplit');
     copy($impl, $staged_impl)                                  or die "copy $impl: $!\n";
-    copy($tag2sort, File::Spec->catfile($bin, 'tag2sort'))      or die "copy $tag2sort: $!\n";
-    chmod 0755, $staged_impl, File::Spec->catfile($bin, 'tag2sort');
+    my $staged_sorter = File::Spec->catfile($bin, 'tag2sort');
+    copy($tag2sort, $staged_sorter)                            or die "copy $tag2sort: $!\n";
+
+    ### Replacing the staged sorter with one that always fails tests the contract "SNPsplit aborts when
+    ### the sorting stage fails" on its own terms. Relying on a real failure means the coverage
+    ### disappears the moment that failure is fixed.
+    if (-e File::Spec->catfile($dir, 'break_tag2sort')) {
+        open my $fh, '>', $staged_sorter or die "write failing sorter: $!\n";
+        print {$fh} "#!/bin/sh\necho 'tag2sort: deliberate failure' >&2\nexit 3\n";
+        close $fh;
+    }
+    chmod 0755, $staged_impl, $staged_sorter;
 
     copy(File::Spec->catfile($dir, 'snps.txt'), File::Spec->catfile($scratch, 'snps.txt'))
         or die "$name: fixture has no readable snps.txt: $!\n";
@@ -156,6 +166,7 @@ sub prepare_inputs {
     my @inputs;
     my $n = 0;
     for my $src (@src) {
+        check_md_tags($name, $dir, $src);
         $n++;
         my $stem = $n == 1 ? $name : "${name}_$n";
         if ($feed_sam) {
@@ -175,6 +186,50 @@ sub prepare_inputs {
         }
     }
     return @inputs;
+}
+
+### The expected output is only as trustworthy as the MD tags, and nothing in samtools validates one:
+### a tag that is self-consistent but names the wrong coordinate would pin the wrong behaviour and look
+### exactly like a correct fixture. Re-deriving from the committed reference means a hand-edited
+### input.sam cannot get that far.
+sub check_md_tags {
+    my ($name, $dir, $src) = @_;
+
+    my $fa = File::Spec->catfile($dir, 'chr1.fa');
+    return unless -e $fa;
+
+    my %committed;
+    for my $line (split /^/, slurp($src)) {
+        next if $line =~ /^\@/;
+        my @f = split /\t/, $line;
+        my ($md) = map { /^MD:Z:(\S+)/ ? $1 : () } @f[11 .. $#f];
+        $committed{ $f[0] . "\t" . $f[3] } = $md if defined $md;
+    }
+    return unless %committed;
+
+    ### calmd wants a faidx-able reference and writes its own index beside it.
+    my $q_fa  = shell_quote($fa);
+    my $q_src = shell_quote($src);
+    system("$samtools faidx $q_fa 2>/dev/null") == 0
+        or die "$name: could not index $fa\n";
+    my $rederived = `$samtools calmd $q_src $q_fa 2>/dev/null`;
+    unlink "$fa.fai";
+    die "$name: calmd could not re-derive MD tags from chr1.fa\n" if $? != 0 || !length $rederived;
+
+    for my $line (split /^/, $rederived) {
+        next if $line =~ /^\@/;
+        my @f = split /\t/, $line;
+        my ($md) = map { /^MD:Z:(\S+)/ ? $1 : () } @f[11 .. $#f];
+        next unless defined $md;
+        my $key = $f[0] . "\t" . $f[3];
+        next unless exists $committed{$key};       # reads with MD deliberately stripped
+        next if $committed{$key} eq $md;
+        die "$name: MD tag in " . basename($src) . " does not match chr1.fa\n"
+          . "  read $f[0] at position $f[3]\n"
+          . "  committed:  MD:Z:$committed{$key}\n"
+          . "  reference:  MD:Z:$md\n"
+          . "  Re-author with test/bin/make_fixtures.pl rather than editing input.sam by hand.\n";
+    }
 }
 
 ###############################################################################

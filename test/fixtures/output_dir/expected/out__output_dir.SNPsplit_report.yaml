@@ -32,4 +32,15 @@ Tagging:
   percent_N_was_known_SNP: 90.00
   N_not_known: 1
   percent_N_not_known: 10.00
+Sorting:
+  tagged_infile: output_dir.allele_flagged.bam
+  SE_total_reads: 9
+  SE_unassignable: 3
+  SE_percent_unassignable: 33.33
+  SE_genome1: 3
+  SE_percent_genome1: 33.33
+  SE_genome2: 2
+  SE_percent_genome2: 22.22
+  SE_conflicting: 1
+  SE_percent_conflicting: 11.11
 ...

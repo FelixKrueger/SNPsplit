@@ -225,13 +225,30 @@ $F{sam_input} = {
     reads    => $F{se_basic}{reads},
 };
 
-### --sam makes SNPsplit hand tag2sort a .allele_flagged.sam, which tag2sort rejects. That is the only
-### way the suite can reach a failing sorting stage, so this is what tests the abort-on-failure check.
-### It pins D4 at the same time.
+### --sam has to work end to end: SAM in, SAM out, sorting report merged, no intermediate left behind.
 $F{sam_output} = {
     args  => '--single_end --sam',
-    notes => 'tag2sort rejects the .sam handoff, so SNPsplit aborts instead of reporting success',
+    notes => 'SAM output throughout, including the sorting report merge and cleanup',
     reads => $F{se_basic}{reads},
+};
+
+### The sorting stage is replaced with one that always fails, so this tests the abort itself rather
+### than any particular reason for failing.
+$F{tag2sort_fails} = {
+    args         => '--single_end',
+    notes        => 'a failing sorting stage aborts the run instead of being reported as success',
+    break_sorter => 1,
+    allow_empty  => 1,
+    reads        => $F{se_basic}{reads},
+};
+
+### Auto-detection has two arms. A Bismark @PG without -1/-2 infers single-end and still sets
+### --bisulfite, which no other fixture reaches.
+$F{bismark_autodetect_se} = {
+    args  => '',
+    notes => 'ID:Bismark @PG without -1/-2 infers single-end and auto-sets --bisulfite',
+    pg    => qq(\@PG\tID:Bismark\tPN:Bismark\tVN:0.24.0\tCL:"bismark --genome /g reads.fq"),
+    reads => [ { q => 'a_single', pos => 6, subs => { 30 => 'A' }, tags => $OT } ],
 };
 
 $F{skip_tag2sort} = {
@@ -311,9 +328,10 @@ for my $name (sort keys %F) {
     write_file(File::Spec->catfile($dir, 'args'),   ($spec->{args} || '') . "\n");
     write_file(File::Spec->catfile($dir, 'README'), "$spec->{notes}\n");
 
-    for my $marker (qw(poison_shim feed_sam allow_empty)) {
+    my %marker_key = (poison_shim => 'poison', break_tag2sort => 'break_sorter');
+    for my $marker (qw(poison_shim feed_sam allow_empty break_tag2sort)) {
         my $f = File::Spec->catfile($dir, $marker);
-        $spec->{ $marker eq 'poison_shim' ? 'poison' : $marker } ? write_file($f, '') : unlink $f;
+        $spec->{ $marker_key{$marker} || $marker } ? write_file($f, '') : unlink $f;
     }
     my $exc = File::Spec->catfile($dir, 'exclude');
     $spec->{exclude} ? write_file($exc, join("\n", @{ $spec->{exclude} }) . "\n") : unlink $exc;

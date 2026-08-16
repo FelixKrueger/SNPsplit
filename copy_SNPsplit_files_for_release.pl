@@ -12,7 +12,8 @@ unless (-d $dir){
   mkdir $dir or die "Failed to create directory: $!\n\n";
 }
 
-my @files = ('CHANGELOG.md','SNPsplit','tag2sort','SNPsplit_User_Guide.pdf','license.txt','SNPsplit_genome_preparation');
+# The User Guide is published from docs/ rather than shipped as a PDF
+my @files = ('CHANGELOG.md','SNPsplit','tag2sort','LICENSE','SNPsplit_genome_preparation');
 
 foreach my $file (@files){
   copy_and_warn($file);

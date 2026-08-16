@@ -37,7 +37,7 @@ Sorting:
   HiC_total_pairs: 2
   HiC_unassignable_UA_UA: 1
   HiC_percent_unassignable_UA_UA: 50.00
-  HiC_genome1_G1_G1: 
+  HiC_genome1_G1_G1: 0
   HiC_percent_genome1_G1_G1: 0.00
   HiC_genome2_G2_G2: 1
   HiC_percent_genome2_G2_G2: 50.00

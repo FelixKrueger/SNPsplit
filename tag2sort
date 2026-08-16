@@ -26,7 +26,7 @@ use lib "$Bin/../lib";
 my %counting;
 my %fhs;
 
-my $SNPsplit_version = '0.6.0';
+my $SNPsplit_version = '0.7.0';
 my %yaml;
 my $yaml_count = 0;
 
@@ -36,6 +36,9 @@ my ($unassigned,$genome1,$genome2,$conflicting,$snp_found,$no_snp_found,$bizarre
 my $report_file;
 
 foreach my $file (@ARGV){
+  %yaml       = ();
+  $yaml_count = 0;
+
   warn "\nSummary of parameters for SNPsplit-sort:\n";
   warn '='x40,"\n";
   warn "SNPsplit tagged infile:\t\t$file\n";
@@ -248,8 +251,7 @@ sub process_HiC_paired_end{
 
   my ($g1_ua , $ua_g1 , $g2_ua , $ua_g2, $g1_g2 , $g2_g1) = (0,0,0,0,0,0);
   my ($g1_g1 , $g2_g2) = (0,0);
-  # $genome1 and $genome2 are not reset here and stay undef if no such pair is seen
-  ($unassigned,$conflicting) = (0,0);
+  ($unassigned,$genome1,$genome2,$conflicting) = (0,0,0,0);
 
   my $count = 0;
 
@@ -863,13 +865,13 @@ sub princess_paired_end{
 sub open_output_filehandles{
 
   my $infile = my $file = shift;
-  $file =~ s/allele_flagged\.bam$/bam/;
+  # Normalised to .bam either way, so every output name below derives from one stem
+  $file =~ s/allele_flagged\.[bs]am$/bam/;
 
   my $genome1_file = my $genome2_file = my $unassigned_file = my $conflicting_file = $report_file = my $yaml_file = $file;
   my $genome1_file_st = my $genome2_file_st = my $unassigned_file_st = my $conflicting_file_st = $file;
 
   my $g1_ua_file = my $g2_ua_file = my $g1_g2_file = $file;
-  # the input file needs to end in .bam (we tested this in while checking the command line options)
 
   # using different filenames for Hi-C data altogether
   if ($hic){
@@ -1190,9 +1192,8 @@ VERSION
       unless(-e "$output_dir$file"){
 	  die "Input file '$output_dir$file' doesn't exist in the input folder. Please check filenames and try again!\n\n";
       }
-      # --sam makes SNPsplit pass a .sam file here, which this rejects
-      unless ($file =~ /\.bam$/){
-	  die "Supplied file needs to be a SNPsplit tagged BAM file (ending in .bam). Please respecify!\n";
+      unless ($file =~ /\.[bs]am$/){
+	  die "Supplied file needs to be a SNPsplit tagged BAM or SAM file (ending in .bam or .sam). Please respecify!\n";
       }
   }
 

@@ -51,6 +51,41 @@ N was not present in the list of SNPs:		1 (10.00%)
 
 Finished allele-tagging for file <<< 'sam_output.bam' >>> 
 
-Supplied file needs to be a SNPsplit tagged BAM file (ending in .bam). Please respecify!
-Allele-specific sorting (tag2sort) failed with exit status 255
+
+Summary of parameters for SNPsplit-sort:
+========================================
+SNPsplit tagged infile:		sam_output.allele_flagged.sam
+Output directory:		><
+Parent directory:		><scratch><
+Samtools path:			<samtools>
+Output format:			SAM
+Input format:			Single-End
+
+
+Now processing input file <<< sam_output.allele_flagged.sam >>>
+
+Writing YAML report to sam_output.SNPsplit_sort.yaml
+
+Input file:						'sam_output.allele_flagged.sam'
+Writing SNPsplit-sort report to:			'sam_output.SNPsplit_sort.txt'
+Writing unassigned reads to:				'sam_output.unassigned.sam'
+Writing genome 1-specific reads to:			'sam_output.genome1.sam'
+Writing genome 2-specific reads to:			'sam_output.genome2.sam'
+
+
+Allele-specific single-end sorting report
+=========================================
+Read alignments processed in total:		9
+Reads were unassignable:			3 (33.33%)
+Reads were specific for genome 1:		3 (33.33%)
+Reads were specific for genome 2:		2 (22.22%)
+Reads contained conflicting SNP information:	1 (11.11)
+
+
+Sorting finished successfully
+
+Appending sorting report to tagging report...
+
+
+SNPsplit processing finished... [Allele-tagging + tag2sort]
 
