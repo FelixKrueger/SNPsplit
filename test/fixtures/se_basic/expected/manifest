@@ -1,0 +1,11 @@
+se_basic.SNPsplit_report.txt
+se_basic.SNPsplit_report.yaml
+se_basic.SNPsplit_sort.txt
+se_basic.allele_flagged.bam
+se_basic.bam
+se_basic.genome1.bam
+se_basic.genome2.bam
+se_basic.unassigned.bam
+snps.txt
+stderr.log
+stdout.log

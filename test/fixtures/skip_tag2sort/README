@@ -1,0 +1,1 @@
+tagging only: SNPsplit exits before the sorting stage, so no genome*.bam appear

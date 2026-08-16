@@ -1,0 +1,4 @@
+@HD	VN:1.6	SO:unsorted
+@SQ	SN:chr1	LN:320
+@PG	ID:bowtie2	PN:bowtie2	VN:2.4.5	CL:"synthetic fixture"
+@PG	ID:samtools	PN:samtools	PP:bowtie2	VN:1.21	CL:samtools calmd .raw.sam chr1.fa

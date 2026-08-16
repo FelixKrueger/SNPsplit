@@ -1,0 +1,11 @@
+header_only.SNPsplit_report.txt
+header_only.SNPsplit_report.yaml
+header_only.SNPsplit_sort.txt
+header_only.allele_flagged.bam
+header_only.bam
+header_only.genome1.bam
+header_only.genome2.bam
+header_only.unassigned.bam
+snps.txt
+stderr.log
+stdout.log

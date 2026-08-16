@@ -1,0 +1,11 @@
+bisulfite_se.SNPsplit_report.txt
+bisulfite_se.SNPsplit_report.yaml
+bisulfite_se.SNPsplit_sort.txt
+bisulfite_se.allele_flagged.bam
+bisulfite_se.bam
+bisulfite_se.genome1.bam
+bisulfite_se.genome2.bam
+bisulfite_se.unassigned.bam
+snps.txt
+stderr.log
+stdout.log

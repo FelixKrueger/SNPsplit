@@ -1,0 +1,6 @@
+@HD	VN:1.6	SO:unsorted
+@SQ	SN:chr1	LN:320
+@PG	ID:bowtie2	PN:bowtie2	VN:<masked>	CL:<masked>
+@PG	ID:samtools	PN:samtools	PP:bowtie2	VN:<masked>	CL:<masked>
+@PG	ID:samtools.1	PN:samtools	PP:samtools	VN:<masked>	CL:<masked>
+@PG	ID:samtools.2	PN:samtools	PP:samtools.1	VN:<masked>	CL:<masked>

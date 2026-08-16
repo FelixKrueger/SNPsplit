@@ -1,0 +1,12 @@
+pe_basic.SNPsplit_report.txt
+pe_basic.SNPsplit_report.yaml
+pe_basic.SNPsplit_sort.txt
+pe_basic.allele_flagged.bam
+pe_basic.bam
+pe_basic.conflicting.bam
+pe_basic.genome1.bam
+pe_basic.genome2.bam
+pe_basic.unassigned.bam
+snps.txt
+stderr.log
+stdout.log

@@ -1,0 +1,15 @@
+hic.G1_G1.bam
+hic.G1_G2.bam
+hic.G1_UA.bam
+hic.G2_G2.bam
+hic.G2_UA.bam
+hic.SNPsplit_report.txt
+hic.SNPsplit_report.yaml
+hic.SNPsplit_sort.txt
+hic.UA_UA.bam
+hic.allele_flagged.bam
+hic.bam
+hic.conflicting.bam
+snps.txt
+stderr.log
+stdout.log

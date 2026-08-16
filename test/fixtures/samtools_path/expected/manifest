@@ -1,0 +1,12 @@
+poison_calls
+samtools_path.SNPsplit_report.txt
+samtools_path.SNPsplit_report.yaml
+samtools_path.SNPsplit_sort.txt
+samtools_path.allele_flagged.bam
+samtools_path.bam
+samtools_path.genome1.bam
+samtools_path.genome2.bam
+samtools_path.unassigned.bam
+snps.txt
+stderr.log
+stdout.log
