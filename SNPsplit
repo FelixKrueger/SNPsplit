@@ -172,7 +172,7 @@ while (@ARGV){
 
     if (%snps){ # not necessary to read SNPs a second time
 		warn "Using already stored SNP information\n";
-		sleep (1);
+		pause(1);
     }
     else{
 		### READ IN SNP FILE
@@ -652,7 +652,7 @@ sub determine_N_position{
     my ($chr,$start,$cigar,$sequence,$md_tag,$line) = @_;
     my ($genome1,$genome2,$irrelevant,$ct_unassigned) = (0,0,0,0); # determining number of SNPs that can be used to assign a certain allele
 
-    if ($verbose){ warn "Now looking at the following read:\n$chr\t$start\t$cigar\t$sequence\t$md_tag\n";sleep(1);}
+    if ($verbose){ warn "Now looking at the following read:\n$chr\t$start\t$cigar\t$sequence\t$md_tag\n";pause(1);}
     # parsing CIGAR string
     my @len = split (/\D+/,$cigar); # storing the length per operation
     my @ops = split (/\d+/,$cigar); # storing the operation
@@ -663,7 +663,7 @@ sub determine_N_position{
 	
 	if (scalar @ops == 1 and $ops[0] eq 'M'){
 
-		if ($verbose){ warn "Read is a single continuous match: $cigar\n"; sleep(1);}
+		if ($verbose){ warn "Read is a single continuous match: $cigar\n"; pause(1);}
 		# adjusting the read mapping position by the SNP position
 
 		if ($verbose){
@@ -693,12 +693,12 @@ sub determine_N_position{
 				}
 				if ($verbose){ warn "now adjusting for the number of elements in the array, adding ",(scalar @array-1),"\n"};
 				$pos += (scalar @array) - 1;
-				if ($verbose){ warn "pos right now: $pos\n\n"; sleep(1)};
+				if ($verbose){ warn "pos right now: $pos\n\n"; pause(1)};
 			}
 			else{ # element is a digit, so we can just add it to the position
 				if ($verbose){ warn "element is $ns[$index]\n"};
 				$pos += $ns[$index];
-				if ($verbose){ warn "Start: $start\tpos: $pos\n"; sleep(1);};
+				if ($verbose){ warn "Start: $start\tpos: $pos\n"; pause(1);};
 			}
 
 			my $genomic_pos = $pos + $start;
@@ -832,7 +832,7 @@ sub determine_N_position{
 					}
 					else{
 						# this might give us a clue of which other characters might turn up in the MD-tag
-						if ($verbose){ warn "The character was no deletion: $ns[$index]\n"; sleep(1);}
+						if ($verbose){ warn "The character was no deletion: $ns[$index]\n"; pause(1);}
 					}
 				}
 				else{
@@ -940,7 +940,7 @@ sub determine_N_position{
 			my $operation_length = 0;
 			if ($verbose){
 				warn "Chromosome is $chr\n";
-				warn "Position within the read is: $temp_pos. MD-tag is: $md_tag\n"; sleep(1);
+				warn "Position within the read is: $temp_pos. MD-tag is: $md_tag\n"; pause(1);
 				warn "To start with, genomic position is: $genomic_pos\n";
 				warn "To start with, operation length is $operation_length\n\n";
 			}
@@ -1021,7 +1021,7 @@ sub determine_N_position{
 			}
 
 			### STEP IV: determining if the SNP is present in the SNP position list, and whether the position in the read was the reference or SNP base
-			if ($verbose){   warn "Found a match, genomic position should be: $genomic_pos\n~~~~~~~~~~~~~~\n\n"; sleep(1);}
+			if ($verbose){   warn "Found a match, genomic position should be: $genomic_pos\n~~~~~~~~~~~~~~\n\n"; pause(1);}
 			if (exists $snps{$chr}->{$genomic_pos}){
 				++$snp_found;
 
@@ -1076,6 +1076,11 @@ sub determine_N_position{
 ###
 ###################################################################################################################
 
+# Pauses are skipped entirely when SNPSPLIT_NO_SLEEP is set
+sub pause{
+    sleep($_[0]) unless $ENV{SNPSPLIT_NO_SLEEP};
+}
+
 
 
 sub score_bisulfite_SNPs{
@@ -1119,7 +1124,7 @@ sub score_bisulfite_SNPs{
 
     ### if the SNP in question involves a genomic C position we potentially need to allow both C or T as C (G/A for the reverse strand)
 
-    if ($verbose){ warn "Reference base is $snps{$chr}->{$genomic_pos}->{ref}\tSNP base:\t$snps{$chr}->{$genomic_pos}->{snp}\tRead base:\t$read_base\n"; sleep(1);}
+    if ($verbose){ warn "Reference base is $snps{$chr}->{$genomic_pos}->{ref}\tSNP base:\t$snps{$chr}->{$genomic_pos}->{snp}\tRead base:\t$read_base\n"; pause(1);}
 
     ### REFERENCE STRAIN = C
     if ( $snps{$chr}->{$genomic_pos}->{ref} eq 'C'){    # the position is a C in the reference genome
@@ -1404,16 +1409,16 @@ sub sam2bam_convert{
     my $file = shift;
 
     warn "File appears to be in SAM format and needs conversion into BAM format first\n";
-    sleep (3);
+    pause(3);
     my $bamfile = $file;
     $bamfile =~ s/sam$/bam/;
     warn "Now converting '$file' to '$bamfile' ...\n";
-    sleep (3);
+    pause(3);
 
     system ("$samtools_path view -bS $file > $bamfile");
 
     warn "BAM conversion finished\n\n";
-    sleep (3);
+    pause(3);
     return $bamfile;  # setting bamfile as new input file
 
 }
@@ -1430,7 +1435,7 @@ sub sort_by_name_paired_end{
     system ("$samtools_path sort -n -o $sorted $file");  # removed -O again because it doesn't seem to be working... 09 Jan 2017
     $file = $sorted; # setting sorted BAM file as new $file
     warn "Finished sorting BAM file into new file '$file'\n\n";
-    sleep (1);
+    pause(1);
     return $file;
 
 }
@@ -1447,7 +1452,7 @@ sub read_snps{
     ### READING FROM SNP FILE
 
     warn "Storing SNP positions provided in '$snp_file'\n";
-    sleep(1);
+    pause(1);
 
     my $snp_count = 0;
 
@@ -1672,7 +1677,7 @@ sub test_positional_sorting{
     my $filename = shift;
     my $samtools_path = shift;
     warn "\nNow testing Bismark result file $filename for positional sorting\n";
-    sleep(1);
+    pause(1);
 
     if ($filename =~ /\.gz$/) {
 	open (TEST,"gunzip -c $filename |") or die "Can't open gzipped file $filename: $!\n";
@@ -1870,7 +1875,7 @@ VERSION
 		}
 
 		unless ($paired){
-			warn "The option --singletons only makes sense for paired-end files. Simply ignoring it in single-end mode...\n"; sleep(1);
+			warn "The option --singletons only makes sense for paired-end files. Simply ignoring it in single-end mode...\n"; pause(1);
 			$singletons = undef;
 		}
     }
@@ -1879,7 +1884,7 @@ VERSION
 		warn "Hi-C data specified. This assumes that the data has been processed with HiCUP, is paired-end and does not require positional sorting.\nSetting '--paired' and '--no_sort'...\n\n";
 		$paired = 1;
 		$no_sort = 1;
-		sleep(1);
+		pause(1);
     }
 
     ### OUTPUT DIRECTORY PATH
