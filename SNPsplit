@@ -31,6 +31,7 @@ my $full_commandline = join (" ","SNPsplit",@ARGV);
 my ($snp_file,$no_sort,$verbose,$samtools_path,$bam,$paired,$hic,$conflict,$output_dir,$singletons,$bisulfite,$skip_tag2sort) = process_commandline ();
 my %snps; # storing SNP position and sequence information for all SNPs
 
+# Not reset between input files, unlike %yaml and %meta
 my $snp_found = 0;
 my $no_snp_found = 0;
 my $count_SNPs_stored = 0;
@@ -225,13 +226,19 @@ while (@ARGV){
 		push @args, '--singletons';
     }
 
-    system ("$RealBin/tag2sort @args $outfile");
+    if (system ("$RealBin/tag2sort @args $outfile") != 0){
+		my $why = $? == -1        ? "could not be started: $!"
+		        : ($? & 127)      ? 'was killed by signal ' . ($? & 127)
+		        :                   'failed with exit status ' . ($? >> 8);
+		die "Allele-specific sorting (tag2sort) $why\n\n";
+    }
 
     ####
 
     my $sortfile = my $sort_yaml_file = $outfile;
 
     if ($sortfile =~ s/allele_flagged\.bam$/SNPsplit_sort.txt/){
+		# Unprefixed by ${output_dir}, unlike the open below
 		if (-e $sortfile){
 
 			open (SORT,"${output_dir}$sortfile") or die "Failed to read sorting report from '${output_dir}$sortfile': $!\n";
@@ -282,6 +289,7 @@ sub print_YAML{
 	# Sorting stats
 	if ($sort_yaml_file){
 		if ($sort_yaml_file =~ s/allele_flagged\.bam$/SNPsplit_sort.yaml/){
+			# Unprefixed by ${output_dir}, unlike the open below
 			if (-e $sort_yaml_file){
 				# warn "Found sorting YAML file ($sort_yaml_file). Printing that too\n";
 				print YAML "Sorting:\n";
@@ -294,6 +302,7 @@ sub print_YAML{
 				}
 
 				close SORTYAML or die $!;
+				# Unprefixed by ${output_dir}, unlike the open above
 				if (unlink $sort_yaml_file){ 
 					# removing the sort.yaml file to avoid duplication
 				}
@@ -1440,6 +1449,7 @@ sub sort_by_name_paired_end{
 
 }
 
+# Stores all SNP types; bisulfite C>T/G>A rejection is strand-specific and lives in score_bisulfite_SNPs
 sub read_snps{
 
     if ($snp_file =~ /\.gz$/){
@@ -1469,86 +1479,6 @@ sub read_snps{
     }
     warn "Stored $snp_count positions in total\n\n";
     return ($snp_count);
-
-}
-
-sub read_snps_bisulfite{
-
-    warn "Processing SNPs provided in '$snp_file' in a bisulfite-aware fashion...\n";
-
-    if ($snp_file =~ /\.gz$/){
-	open (SNP,"gunzip -c $snp_file |") or die "Failed to read from zgipped $snp_file: $!\n\n";
-    }
-    else{
-	open (SNP,$snp_file) or die "Failed to read from $snp_file: $!\n\n";
-    }
-
-    ### READING FROM SNP FILE
-    my $snp_count = 0;
-    my $total     = 0;
-    my $ct_snp    = 0;
-    my $ga_snp    = 0;
-
-    while (<SNP>){
-	chomp;
-	my ($chr,$pos,$diff)  = (split /\t/)[1,2,4];
-	my ($ref,$snp) = (split /\//,$diff);
-	# print "$chr\t$pos\t$ref\t$snp\n";
-	++$total;
-
-	if ($ref eq 'C' and $snp eq 'T'){
-	    $ct_snp++;
-	    next;
-	}
-	if ($ref eq 'T' and $snp eq 'C'){
-	    $ct_snp++;
-	    next;
-	}
-
-	if ($ref eq 'G' and $snp eq 'A'){
-	    $ga_snp++;
-	    next;
-	}
-	if ($ref eq 'A' and $snp eq 'G'){
-	    $ga_snp++;
-	    next;
-	}
-
-	#sleep(1);
-
-	++$snp_count;
-
-	### for N-masked genomes the SNPs are stored in an. hashes
-	$snps{$chr}->{$pos}->{ref} = $ref;
-	$snps{$chr}->{$pos}->{snp} = $snp;
-    }
-
-    my $perc_CT = sprintf("%.2f",$ct_snp/$total *100);
-    my $perc_GA = sprintf("%.2f",$ga_snp/$total *100);
-    my $perc_stored = sprintf("%.2f",$snp_count/$total *100);
-
-    warn "Stored positions in total:\t\t$snp_count ($perc_stored%)\n";
-    warn "Excluded C>T positions in total:\t$ct_snp ($perc_CT%)\n";
-    warn "Excluded G>A positions in total:\t$ga_snp ($perc_GA%)\n\n";
-
-    print REPORT "Stored positions in total:\t\t$snp_count ($perc_stored%)\n";
-    print REPORT "Excluded C>T positions in total:\t$ct_snp ($perc_CT%)\n";
-    print REPORT "Excluded G>A positions in total:\t$ga_snp ($perc_GA%)\n\n";
-
-    return ($snp_count);
-
-}
-
-
-sub sort_snps{
-
-    warn "Sorting SNP positions\n";
-
-    foreach my $chr (keys %snps){
-	warn "Sorting SNP positions on chromosome $chr...\n";
-	@{$snps{$chr}} =  sort {$a->{pos}<=>$b->{pos}} @{$snps{$chr}};
-    }
-    warn "Finished sorting SNP positions\n\n\n";
 
 }
 
@@ -1698,6 +1628,7 @@ sub test_positional_sorting{
 
     while (<TEST>) {
 	if (/^\@/) {	     # testing header lines if they contain the @SO flag (for being sorted)
+	    # No SAM header line starts with @SO; the sort order lives on @HD as SO:
 	    if (/^\@SO/) {
 		warn "SAM header line '$_' indicates that the Bismark aligment file has been sorted by chromosomal positions. Paired-end files will be sorted by name before proceeding with the SNPsplit tagging process\n\n";
 		return 0;
