@@ -1,0 +1,25 @@
+Testing if input file 'cigar_eqx.bam' looks like a Bisulfite-Seq file
+Now starting to process file <<< 'cigar_eqx.bam' >>> 
+
+Input file:					'cigar_eqx.bam'
+Writing SNPplit-tag report to:			'cigar_eqx.SNPsplit_report.txt'
+Writing allele-flagged output file to:		'cigar_eqx.allele_flagged.bam'
+
+
+Summary of parameters for SNPsplit-tag:
+========================================
+SNPsplit infile:		cigar_eqx.bam
+SNP annotation file:		snps.txt
+Output directory:		><
+Parent directory:		><scratch><
+Samtools path:			<samtools>
+Output format:			BAM (default)
+Input format:			Single-End
+
+
+File specified as single-end BAM file
+Storing SNP positions provided in 'snps.txt'
+Stored 4 positions in total
+
+Reading from sorted mapping file 'cigar_eqx.bam'
+Found CIGAR operations other than M, I, D, S or N: '='. Not allowed at the moment

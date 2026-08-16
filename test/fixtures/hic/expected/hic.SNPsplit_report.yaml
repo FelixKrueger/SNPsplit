@@ -1,0 +1,58 @@
+---
+Meta:
+  tool: SNPsplit
+  version: <masked>
+  infile: hic.bam
+  date_run: <masked>
+  mode: Hi-C
+  library: paired-end
+  command: <masked>
+Tagging:
+  total_reads: 20
+  unaligned: 0
+  percent_unaligned: 0.00
+  g1: 6
+  percent_g1: 30.00
+  g2: 6
+  percent_g2: 30.00
+  unassignable: 7
+  percent_unassignable: 35.00
+  no_snp: 0
+  percent_no_snp: 0.00
+  bizarre: 1
+  percent_bizarre: 5.00
+  SNP_annotation: snps.txt
+  SNPs_stored: 4
+  N_containing_reads: 13
+  non_N_containing_reads: 7
+  N_deletion: 0
+  percent_N_deletion: 0.00
+  multi_N_deletion: 0
+  N_was_known_SNP: 14
+  percent_N_was_known_SNP: 100.00
+  N_not_known: 0
+  percent_N_not_known: 0.00
+Sorting:
+  tagged_infile: hic.allele_flagged.bam
+  HiC_total_pairs: 10
+  HiC_unassignable_UA_UA: 1
+  HiC_percent_unassignable_UA_UA: 10.00
+  HiC_genome1_G1_G1: 1
+  HiC_percent_genome1_G1_G1: 10.00
+  HiC_genome2_G2_G2: 1
+  HiC_percent_genome2_G2_G2: 10.00
+  HiC_G1_UA_total: 2
+  HiC_percent_G1_UA_total: 20.00
+  HiC_G1_UA: 1
+  HiC_UA_G1: 1
+  HiC_G2_UA_total: 2
+  HiC_percent_G2_UA_total: 20.00
+  HiC_G2_UA: 1
+  HiC_UA_G2: 1
+  HiC_G1_G2_total: 2
+  HiC_percent_G1_G2_total: 20.00
+  HiC_G1_G2: 1
+  HiC_G2_G1: 1
+  HiC_conflicting: 1
+  HiC_percent_conflicting: 10.00
+...

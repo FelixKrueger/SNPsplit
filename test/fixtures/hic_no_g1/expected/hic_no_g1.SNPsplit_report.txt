@@ -1,0 +1,57 @@
+Input file:					'hic_no_g1.bam'
+Writing allele-flagged output file to:		'hic_no_g1.allele_flagged.bam'
+
+
+Allele-tagging report
+=====================
+Processed 4 read alignments in total
+Reads were unaligned and hence skipped: 0 (0.00%)
+2 reads were unassignable (50.00%)
+0 reads were specific for genome 1 (0.00%)
+2 reads were specific for genome 2 (50.00%)
+0 reads did not contain one of the expected bases at known SNP positions (0.00%)
+0 contained conflicting allele-specific SNPs (0.00%)
+
+
+SNP coverage report
+===================
+SNP annotation file:	snps.txt
+SNPs stored in total:	4
+N-containing reads:	2
+non-N:			2
+total:			4
+Reads had a deletion of the N-masked position (and were thus dropped):	0 (0.00%)
+Of which had multiple deletions of N-masked positions within the same read:	0
+
+Of valid N containing reads,
+N was present in the list of known SNPs:	2 (100.00%)
+N was not present in the list of SNPs:		0 (0.00%)
+
+Input file:						'hic_no_g1.allele_flagged.bam'
+Writing unassigned reads to:				'hic_no_g1.UA_UA.bam'
+Writing genome 1-specific reads to:			'hic_no_g1.G1_G1.bam'
+Writing genome 2-specific reads to:			'hic_no_g1.G2_G2.bam'
+Writing G1/UA reads to:					'hic_no_g1.G1_UA.bam'
+Writing G2/UA reads to:					'hic_no_g1.G2_UA.bam'
+Writing G1/G2 reads to:					'hic_no_g1.G1_G2.bam'
+Writing reads with conflicting number of SNPs to:	'hic_no_g1.conflicting.bam'
+
+
+
+Allele-specific Hi-C paired-end sorting report
+=========================================
+Read pairs processed in total:				2
+Read pairs were unassignable (UA/UA):			1 (50.00%)
+Read pairs were specific for genome 1 (G1/G1):		 (0.00%)
+Read pairs were specific for genome 2 (G2/G2):		1 (50.00%)
+Read pairs were a mix of G1 and UA:			0 (0.00%). Of these,
+			were G1/UA: 0
+			were UA/G1: 0
+Read pairs were a mix of G2 and UA:			0 (0.00%). Of these,
+			were G2/UA: 0
+			were UA/G2: 0
+Read pairs were a mix of G1 and G2:			0 (0.00%). Of these,
+			were G1/G2: 0
+			were G2/G1: 0
+Read pairs contained conflicting SNP information:	0 (0.00%)
+

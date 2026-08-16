@@ -1,0 +1,27 @@
+name: test
+on:
+  push:
+    branches:
+      - master
+      - dev
+  pull_request:
+    branches:
+      - master
+      - dev
+jobs:
+  fixtures:
+    # Pinned rather than ubuntu-latest: the expected output contains samtools-rendered SAM text, and
+    # ubuntu-latest moves between images carrying different samtools versions without warning.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install samtools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y samtools
+      - name: Record versions
+        run: |
+          samtools --version | head -2
+          perl --version | sed -n '2p'
+      - name: Run fixture suite
+        run: test/run_tests.pl --verbose

@@ -1,0 +1,16 @@
+pe_singletons.SNPsplit_report.txt
+pe_singletons.SNPsplit_report.yaml
+pe_singletons.SNPsplit_sort.txt
+pe_singletons.allele_flagged.bam
+pe_singletons.bam
+pe_singletons.conflicting.bam
+pe_singletons.conflicting_st.bam
+pe_singletons.genome1.bam
+pe_singletons.genome1_st.bam
+pe_singletons.genome2.bam
+pe_singletons.genome2_st.bam
+pe_singletons.unassigned.bam
+pe_singletons.unassigned_st.bam
+snps.txt
+stderr.log
+stdout.log

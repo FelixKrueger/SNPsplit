@@ -1,0 +1,1 @@
+ID:Bismark @PG auto-sets --bisulfite, infers --paired from -1/-2, and sets --no_sort

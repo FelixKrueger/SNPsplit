@@ -1,0 +1,11 @@
+cigar_complex.SNPsplit_report.txt
+cigar_complex.SNPsplit_report.yaml
+cigar_complex.SNPsplit_sort.txt
+cigar_complex.allele_flagged.bam
+cigar_complex.bam
+cigar_complex.genome1.bam
+cigar_complex.genome2.bam
+cigar_complex.unassigned.bam
+snps.txt
+stderr.log
+stdout.log

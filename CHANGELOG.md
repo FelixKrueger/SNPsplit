@@ -1,3 +1,15 @@
+## Unreleased
+
+- Added a fixture-based regression test suite (`test/`) covering SNPsplit and tag2sort, run in CI
+
+### SNPsplit
+
+- **Breaking:** a failing `tag2sort` stage now aborts the run instead of reporting success
+
+### tag2sort
+
+- Fixed `--samtools_path` being ignored when reading BAM files
+
 ## v0.6.0 (Release 07 01 2023)
 
 - Restructured the documentation, using `mkdocs`. The new User Guide lives at this address: http://felixkrueger.github.io/SNPsplit/

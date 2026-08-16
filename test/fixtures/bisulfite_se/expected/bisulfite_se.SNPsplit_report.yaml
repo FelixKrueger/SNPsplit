@@ -1,0 +1,48 @@
+---
+Meta:
+  tool: SNPsplit
+  version: <masked>
+  infile: bisulfite_se.bam
+  date_run: <masked>
+  mode: bisulfite
+  library: single-end
+  command: <masked>
+Tagging:
+  total_reads: 57
+  unaligned: 0
+  percent_unaligned: 0.00
+  g1: 18
+  percent_g1: 31.58
+  g2: 16
+  percent_g2: 28.07
+  unassignable: 23
+  percent_unassignable: 40.35
+  unassigned_but_ct: 13
+  no_snp: 10
+  percent_no_snp: 17.54
+  bizarre: 0
+  percent_bizarre: 0.00
+  SNP_annotation: snps.txt
+  SNPs_stored: 9
+  N_containing_reads: 57
+  non_N_containing_reads: 0
+  N_deletion: 0
+  percent_N_deletion: 0.00
+  multi_N_deletion: 0
+  N_was_known_SNP: 57
+  percent_N_was_known_SNP: 100.00
+  CT_positions_skipped: 13
+  N_not_known: 0
+  percent_N_not_known: 0.00
+Sorting:
+  tagged_infile: bisulfite_se.allele_flagged.bam
+  SE_total_reads: 57
+  SE_unassignable: 23
+  SE_percent_unassignable: 40.35
+  SE_genome1: 18
+  SE_percent_genome1: 31.58
+  SE_genome2: 16
+  SE_percent_genome2: 28.07
+  SE_conflicting: 0
+  SE_percent_conflicting: 0.00
+...

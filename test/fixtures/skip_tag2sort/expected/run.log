@@ -1,0 +1,58 @@
+Testing if input file 'skip_tag2sort.bam' looks like a Bisulfite-Seq file
+Now starting to process file <<< 'skip_tag2sort.bam' >>> 
+
+Input file:					'skip_tag2sort.bam'
+Writing SNPplit-tag report to:			'skip_tag2sort.SNPsplit_report.txt'
+Writing allele-flagged output file to:		'skip_tag2sort.allele_flagged.bam'
+
+
+Summary of parameters for SNPsplit-tag:
+========================================
+SNPsplit infile:		skip_tag2sort.bam
+SNP annotation file:		snps.txt
+Output directory:		><
+Parent directory:		><scratch><
+Samtools path:			<samtools>
+No allele-specific sorting:	Yes (allele-tagging only)
+Output format:			BAM (default)
+Input format:			Single-End
+
+
+File specified as single-end BAM file
+Storing SNP positions provided in 'snps.txt'
+Stored 4 positions in total
+
+Reading from sorted mapping file 'skip_tag2sort.bam'
+
+Allele-tagging report
+=====================
+Processed 9 read alignments in total
+Reads were unaligned and hence skipped: 0 (0.00%)
+Reads were hard-clipped (CIGAR: H) and skipped: 0
+3 reads were unassignable (33.33%)
+3 reads were specific for genome 1 (33.33%)
+2 reads were specific for genome 2 (22.22%)
+2 reads did not contain one of the expected bases at known SNP positions (22.22%)
+1 contained conflicting allele-specific SNPs (11.11%)
+
+
+SNP coverage report
+===================
+SNP annotation file:	snps.txt
+SNPs stored in total:	4
+N-containing reads:	8
+non-N:			1
+total:			9
+Reads had a deletion of the N-masked position (and were thus called Conflicting):	0 (0.00%)
+Of which had multiple deletions of N-masked positions within the same read:	0 (0.00%)
+
+Of valid N containing reads,
+N was present in the list of known SNPs:	9 (90.00%)
+N was not present in the list of SNPs:		1 (10.00%)
+
+Finished allele-tagging for file <<< 'skip_tag2sort.bam' >>> 
+
+Skip tag2sort selected to allow de-duplicating the allele-tagged BAM file
+
+SNPsplit run complete...
+

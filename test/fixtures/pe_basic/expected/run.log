@@ -1,0 +1,101 @@
+Testing if input file 'pe_basic.bam' looks like a Bisulfite-Seq file
+Now starting to process file <<< 'pe_basic.bam' >>> 
+
+Input file:					'pe_basic.bam'
+Writing SNPplit-tag report to:			'pe_basic.SNPsplit_report.txt'
+Writing allele-flagged output file to:		'pe_basic.allele_flagged.bam'
+
+
+Summary of parameters for SNPsplit-tag:
+========================================
+SNPsplit infile:		pe_basic.bam
+SNP annotation file:		snps.txt
+Output directory:		><
+Parent directory:		><scratch><
+Samtools path:			<samtools>
+Output format:			BAM (default)
+Input format:			Paired-end (not relevant for tagging process)
+
+
+File was specified to be sorted (i.e. Read 1 and Read 2 are following each other in the paired-end BAM file), thus skipping the sorting step
+
+Storing SNP positions provided in 'snps.txt'
+Stored 4 positions in total
+
+Reading from sorted mapping file 'pe_basic.bam'
+
+Allele-tagging report
+=====================
+Processed 15 read alignments in total
+Reads were unaligned and hence skipped: 0 (0.00%)
+Reads were hard-clipped (CIGAR: H) and skipped: 0
+5 reads were unassignable (33.33%)
+6 reads were specific for genome 1 (40.00%)
+2 reads were specific for genome 2 (13.33%)
+0 reads did not contain one of the expected bases at known SNP positions (0.00%)
+2 contained conflicting allele-specific SNPs (13.33%)
+
+
+SNP coverage report
+===================
+SNP annotation file:	snps.txt
+SNPs stored in total:	4
+N-containing reads:	10
+non-N:			5
+total:			15
+Reads had a deletion of the N-masked position (and were thus called Conflicting):	0 (0.00%)
+Of which had multiple deletions of N-masked positions within the same read:	0 (0.00%)
+
+Of valid N containing reads,
+N was present in the list of known SNPs:	12 (100.00%)
+N was not present in the list of SNPs:		0 (0.00%)
+
+Finished allele-tagging for file <<< 'pe_basic.bam' >>> 
+
+
+Summary of parameters for SNPsplit-sort:
+========================================
+SNPsplit tagged infile:		pe_basic.allele_flagged.bam
+Output directory:		><
+Parent directory:		><scratch><
+Samtools path:			<samtools>
+Output format:			BAM (default)
+Input format:			Paired-end
+
+
+Writing YAML report to pe_basic.SNPsplit_sort.yaml
+
+Input file:						'pe_basic.allele_flagged.bam'
+Writing SNPsplit-sort report to:			'pe_basic.SNPsplit_sort.txt'
+Writing unassigned reads to:				'pe_basic.unassigned.bam'
+Writing genome 1-specific reads to:			'pe_basic.genome1.bam'
+Writing genome 2-specific reads to:			'pe_basic.genome2.bam'
+Writing reads with conflicting number of SNPs to:	'pe_basic.conflicting.bam'
+
+
+
+Allele-specific paired-end sorting report
+=========================================
+Read pairs/singletons processed in total:		10
+	thereof were read pairs:			5
+	thereof were singletons:			5
+Reads were unassignable (not overlapping SNPs):		2 (20.00%)
+	thereof were read pairs:	1
+	thereof were singletons:	1
+Reads were specific for genome 1:			4 (40.00%)
+	thereof were read pairs:	2
+	thereof were singletons:	2
+Reads were specific for genome 2:			1 (10.00%)
+	thereof were read pairs:	0
+	thereof were singletons:	1
+Reads contained conflicting SNP information:		3 (30.00%)
+	thereof were read pairs:	2
+	thereof were singletons:	1
+
+Sorting finished successfully
+
+Appending sorting report to tagging report...
+
+
+SNPsplit processing finished... [Allele-tagging + tag2sort]
+

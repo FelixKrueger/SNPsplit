@@ -1,0 +1,91 @@
+Testing if input file 'header_only.bam' looks like a Bisulfite-Seq file
+Now starting to process file <<< 'header_only.bam' >>> 
+
+Input file:					'header_only.bam'
+Writing SNPplit-tag report to:			'header_only.SNPsplit_report.txt'
+Writing allele-flagged output file to:		'header_only.allele_flagged.bam'
+
+
+Summary of parameters for SNPsplit-tag:
+========================================
+SNPsplit infile:		header_only.bam
+SNP annotation file:		snps.txt
+Output directory:		><
+Parent directory:		><scratch><
+Samtools path:			<samtools>
+Output format:			BAM (default)
+Input format:			Single-End
+
+
+File specified as single-end BAM file
+Storing SNP positions provided in 'snps.txt'
+Stored 4 positions in total
+
+Reading from sorted mapping file 'header_only.bam'
+
+Allele-tagging report
+=====================
+Processed 0 read alignments in total
+Reads were unaligned and hence skipped: 0 (N/A%)
+Reads were hard-clipped (CIGAR: H) and skipped: 0
+0 reads were unassignable (N/A%)
+0 reads were specific for genome 1 (N/A%)
+0 reads were specific for genome 2 (N/A%)
+0 reads did not contain one of the expected bases at known SNP positions (N/A%)
+0 contained conflicting allele-specific SNPs (N/A%)
+
+
+SNP coverage report
+===================
+SNP annotation file:	snps.txt
+SNPs stored in total:	4
+N-containing reads:	0
+non-N:			0
+total:			0
+Reads had a deletion of the N-masked position (and were thus called Conflicting):	0 (N/A%)
+Of which had multiple deletions of N-masked positions within the same read:	0 (N/A%)
+
+Of valid N containing reads,
+N was present in the list of known SNPs:	0 (N/A%)
+N was not present in the list of SNPs:		0 (N/A%)
+
+Finished allele-tagging for file <<< 'header_only.bam' >>> 
+
+
+Summary of parameters for SNPsplit-sort:
+========================================
+SNPsplit tagged infile:		header_only.allele_flagged.bam
+Output directory:		><
+Parent directory:		><scratch><
+Samtools path:			<samtools>
+Output format:			BAM (default)
+Input format:			Single-End
+
+
+Now processing input file <<< header_only.allele_flagged.bam >>>
+
+Writing YAML report to header_only.SNPsplit_sort.yaml
+
+Input file:						'header_only.allele_flagged.bam'
+Writing SNPsplit-sort report to:			'header_only.SNPsplit_sort.txt'
+Writing unassigned reads to:				'header_only.unassigned.bam'
+Writing genome 1-specific reads to:			'header_only.genome1.bam'
+Writing genome 2-specific reads to:			'header_only.genome2.bam'
+
+
+Allele-specific single-end sorting report
+=========================================
+Read alignments processed in total:		0
+Reads were unassignable:			0 (N/A%)
+Reads were specific for genome 1:		0 (N/A%)
+Reads were specific for genome 2:		0 (N/A%)
+Reads contained conflicting SNP information:	0 (N/A)
+
+
+Sorting finished successfully
+
+Appending sorting report to tagging report...
+
+
+SNPsplit processing finished... [Allele-tagging + tag2sort]
+

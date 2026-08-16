@@ -1,0 +1,3 @@
+Input file:					'cigar_eqx.bam'
+Writing allele-flagged output file to:		'cigar_eqx.allele_flagged.bam'
+

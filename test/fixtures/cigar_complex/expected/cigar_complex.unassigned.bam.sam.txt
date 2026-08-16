@@ -1,0 +1,12 @@
+@HD	VN:1.6	SO:unsorted
+@SQ	SN:chr1	LN:320
+@PG	ID:bowtie2	PN:bowtie2	VN:<masked>	CL:<masked>
+@PG	ID:samtools	PN:samtools	PP:bowtie2	VN:<masked>	CL:<masked>
+@PG	ID:samtools.1	PN:samtools	PP:samtools	VN:<masked>	CL:<masked>
+@PG	ID:samtools.2	PN:samtools	PP:samtools.1	VN:<masked>	CL:<masked>
+@PG	ID:samtools.3	PN:samtools	PP:samtools.2	VN:<masked>	CL:<masked>
+@PG	ID:samtools.4	PN:samtools	PP:samtools.3	VN:<masked>	CL:<masked>
+@PG	ID:samtools.5	PN:samtools	PP:samtools.4	VN:<masked>	CL:<masked>
+@PG	ID:samtools.6	PN:samtools	PP:samtools.5	VN:<masked>	CL:<masked>
+r_ins_third	0	chr1	6	42	25M3I22M	*	0	0	CCGGCATGTTACACATCTACAAACCAAATGATGGTTGTACCGCATACCAC	IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII	NM:i:4	MD:Z:24N22	XX:Z:UA
+r_ins_unl	0	chr1	256	42	25M3I22M	*	0	0	GGTACAGACGTCAACCTTCATGTAGAAAGAACAGAAACTCGAGCGGATAG	IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII	NM:i:4	MD:Z:24N22	XX:Z:UA
