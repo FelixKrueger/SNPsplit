@@ -6,6 +6,8 @@
 
 - Progress pauses are now skipped when `SNPSPLIT_NO_SLEEP` is set, matching SNPsplit and tag2sort
 
+- A FastA entry with a header but no sequence no longer produces uninitialised-value warnings before the real diagnostic
+
 ## v0.7.0 (Release 16 08 2026)
 
 - Added a fixture-based regression test suite (`test/`) covering SNPsplit and tag2sort, run in CI
