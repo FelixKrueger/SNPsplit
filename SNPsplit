@@ -1424,11 +1424,25 @@ sub read_snps{
     pause(1);
 
     my $snp_count = 0;
+    my $skipped   = 0;
 
     while (<SNP>){
-	++$snp_count;
 	$_ =~ s/\r|\n//g; # removing CR and LF line endings
-	my ($chr,$pos,$diff)  = (split /\t/)[1,2,4];
+	next unless length $_;
+
+	### The per-chromosome files written by SNPsplit_genome_preparation open with a >chr header line
+	next if (substr($_,0,1) eq '>');
+
+	### Five tab-separated fields, the fifth of the form Ref/SNP. Without this a malformed line was
+	### stored under an empty chromosome name and counted as a SNP
+	my @fields = split (/\t/);
+	unless (scalar @fields >= 5 and defined $fields[4] and $fields[4] =~ /\//){
+	    ++$skipped;
+	    next;
+	}
+
+	++$snp_count;
+	my ($chr,$pos,$diff)  = @fields[1,2,4];
 	my ($ref,$snp) = (split /\//,$diff);
 	# print "$chr\t$pos\t$ref\t$snp\n";
 
@@ -1437,6 +1451,9 @@ sub read_snps{
 	$snps{$chr}->{$pos}->{snp} = $snp;
     }
     warn "Stored $snp_count positions in total\n\n";
+    if ($skipped){
+	warn "Skipped $skipped line(s) in '$snp_file' that did not look like SNP annotations (expected: ID, chromosome, position, strand, Ref/SNP)\n\n";
+    }
     return ($snp_count);
 
 }

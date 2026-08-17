@@ -8,7 +8,7 @@ Point `--impl` at any implementation to diff it against the same expected output
 
 | Runner | Tools | Fixtures | Needs |
 |---|---|---|---|
-| `run_tests.pl` | `SNPsplit`, `tag2sort` | `fixtures/`, 23 | `samtools`, `gzip` |
+| `run_tests.pl` | `SNPsplit`, `tag2sort` | `fixtures/`, 24 | `samtools`, `gzip` |
 | `run_genome_tests.pl` | `SNPsplit_genome_preparation` | `genome_fixtures/`, 29 | `gzip` only |
 
 Two runners rather than one: the tools disagree on nearly every tool-specific decision a runner makes.

@@ -1,0 +1,44 @@
+Input file:					'gp_per_chrom.bam'
+Writing allele-flagged output file to:		'gp_per_chrom.allele_flagged.bam'
+
+
+Allele-tagging report
+=====================
+Processed 8 read alignments in total
+Reads were unaligned and hence skipped: 0 (0.00%)
+2 reads were unassignable (25.00%)
+3 reads were specific for genome 1 (37.50%)
+2 reads were specific for genome 2 (25.00%)
+1 reads did not contain one of the expected bases at known SNP positions (12.50%)
+1 contained conflicting allele-specific SNPs (12.50%)
+
+
+SNP coverage report
+===================
+SNP annotation file:	snps.txt
+SNPs stored in total:	4
+N-containing reads:	7
+non-N:			1
+total:			8
+Reads had a deletion of the N-masked position (and were thus dropped):	0 (0.00%)
+Of which had multiple deletions of N-masked positions within the same read:	0
+
+Of valid N containing reads,
+N was present in the list of known SNPs:	9 (100.00%)
+N was not present in the list of SNPs:		0 (0.00%)
+
+Input file:						'gp_per_chrom.allele_flagged.bam'
+Writing unassigned reads to:				'gp_per_chrom.unassigned.bam'
+Writing genome 1-specific reads to:			'gp_per_chrom.genome1.bam'
+Writing genome 2-specific reads to:			'gp_per_chrom.genome2.bam'
+
+
+Allele-specific single-end sorting report
+=========================================
+Read alignments processed in total:		8
+Reads were unassignable:			2 (25.00%)
+Reads were specific for genome 1:		3 (37.50%)
+Reads were specific for genome 2:		2 (25.00%)
+Reads contained conflicting SNP information:	1 (12.50)
+
+

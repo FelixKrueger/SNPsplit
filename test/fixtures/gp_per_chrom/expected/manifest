@@ -1,0 +1,11 @@
+gp_per_chrom.SNPsplit_report.txt
+gp_per_chrom.SNPsplit_report.yaml
+gp_per_chrom.SNPsplit_sort.txt
+gp_per_chrom.allele_flagged.bam
+gp_per_chrom.bam
+gp_per_chrom.genome1.bam
+gp_per_chrom.genome2.bam
+gp_per_chrom.unassigned.bam
+snps.txt
+stderr.log
+stdout.log

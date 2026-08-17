@@ -2,6 +2,10 @@
 
 - Added a fixture-based regression test suite for SNPsplit_genome_preparation (`test/run_genome_tests.pl`, 29 fixtures), run in CI
 
+### SNPsplit
+
+- `--SNP_file` now accepts the per-chromosome `SNPs_<strain>/chr*.txt` files written by the genome preparation, whose header line was previously read as a SNP, and reports lines it cannot parse ([#107](https://github.com/FelixKrueger/SNPsplit/issues/107))
+
 ### SNPsplit_genome_preparation
 
 - **Breaking:** a chromosome naming mismatch between the VCF and the reference genome now aborts instead of writing an unmodified genome ([#102](https://github.com/FelixKrueger/SNPsplit/issues/102))
@@ -11,6 +15,8 @@
 - **Breaking:** a missing `--reference_genome` now exits non-zero, and the help and version options now exit 0 ([#105](https://github.com/FelixKrueger/SNPsplit/issues/105))
 
 - `--skip_filtering` now honours `--strain2` and `--dual_hybrid` instead of silently discarding them ([#106](https://github.com/FelixKrueger/SNPsplit/issues/106))
+
+- `<strain>_specific_SNPs.<build>.txt` now has the same five columns as every other SNP annotation, so it can be passed to SNPsplit ([#107](https://github.com/FelixKrueger/SNPsplit/issues/107))
 
 - SNP lists and strain comparison files are now written in sorted order, so two runs on the same input produce identical output ([#104](https://github.com/FelixKrueger/SNPsplit/issues/104))
 
