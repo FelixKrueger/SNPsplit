@@ -1305,7 +1305,8 @@ sub read_genome_into_memory{
 	$first_line =~ s/\r//;
 	### Extracting chromosome name from the FastA header
 	my $chromosome_name = extract_chromosome_name($first_line);
-	my $sequence;
+	### A header with no sequence lines leaves this untouched, and the length checks below read it
+	my $sequence = '';
 
 	while (<CHR_IN>){
 		chomp;

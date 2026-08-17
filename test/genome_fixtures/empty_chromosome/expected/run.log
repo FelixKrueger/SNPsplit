@@ -40,9 +40,7 @@ Finished filtering and writing out SNPs for strain STRAIN_A
 
 Now reading in and storing sequence information of the genome specified in: <scratch>/genome/
 
-Use of uninitialized value $sequence in numeric eq (==) at <scratch>/bin/SNPsplit_genome_preparation line <n>, <CHR_IN> line 1.
 Chromosome 1 in the file 1.fa did not contain any sequence information!
-Use of uninitialized value in print at <scratch>/bin/SNPsplit_genome_preparation line <n>, <CHR_IN> line 1.
 Processing chromosome 1 (for strain STRAIN_A)
 
 The chromosome name given in the VCF file was '1' and was not found in the reference genome.
