@@ -187,7 +187,7 @@ git diff test/genome_fixtures      # READ THIS
 | `README` | yes | One line naming the code paths pinned |
 | `genome/` | no | Reference FastA files, copied verbatim. Omitted by fixtures that abort before reading it |
 | `<name>.vcf` | no | Staged under its own basename, so `vcf_v7` can be called `mgp_REL2005_snps_indels.vcf` |
-| `snps_in/` | no | Copied to the scratch root: a pre-made `SNPs_<strain>/` tree for `--skip_filtering` |
+| `snps_in/` | no | Copied to the scratch root: a pre-made `SNPs_<strain>/` tree for `--skip_filtering`. A file here named `*.gz` holds **plain text** and is compressed on the way in, so no binary lands in the repository |
 | `pre_existing` | no | Filename per line, created empty before the run |
 | `gzip_vcf` | no | Marker: stage the VCF gzipped |
 | `poison_gzip` | no | Marker: install a failing `gzip` first on `PATH` |
@@ -216,8 +216,10 @@ Beyond the shared masking: `*.txt.gz` is decompressed and recorded under a `.txt
 `.bam` → `.sam.txt` precedent, and `manifest` still pins the archive's existence separately from its
 content.
 
-**Six output files are written from Perl hashes, so their line order differs on every run.** They are
-sorted before comparison, and the dual-hybrid annotation additionally has its ID column's digits masked:
+**Six output files used to be written straight out of Perl hashes, so their line order differed on
+every run** (#104). The source sorts them now, but the runner still sorts before comparison, so `--impl`
+stays usable against an implementation with its own ideas about iteration order. The dual-hybrid
+annotation additionally has its ID column's digits masked:
 
 | Output | Cause |
 |---|---|
@@ -245,20 +247,26 @@ Each fixture's own staged `genome/` and VCF are recorded into `expected/` **deli
 
 ## Fixtures worth knowing about
 
-Three pin behaviour that is plainly wrong, deliberately:
+Four were written to pin behaviour that was wrong and now assert the fix, since #102, #103, #105 and
+#106 are resolved:
 
-- **`chrom_name_mismatch`** — an Ensembl-style VCF against a UCSC-style reference exits 0, writes
-  `chrchr1.N-masked.fa` containing zero Ns, and reports "All done". The nine-line Ensembl-versus-UCSC
-  explanation the script carries for exactly this case never fires, because the loop iterates the
-  reference's chromosomes and silently skips any the VCF does not mention.
-- **`poison_gzip`** — a failing `gzip` leaves a zero-byte archive and the run still reports success.
-  Downstream `SNPsplit` then loads zero SNPs.
-- **`skip_filtering_strain2`** — `--skip_filtering` accepts `--strain2` and discards it without a word,
-  because the promotion to `--dual_hybrid` sits inside the block `--skip_filtering` skips.
+- **`chrom_name_mismatch`** — an Ensembl-style VCF against a UCSC-style reference used to exit 0 and
+  write `chrchr1.N-masked.fa` containing zero Ns. The per-chromosome check could not catch it, because
+  the loop iterates the reference's chromosomes and skips any the VCF does not mention. Now checked once
+  after both name sets are known, printing both lists. Partial overlap is still legal, which
+  `multi_chrom` asserts.
+- **`poison_gzip`** — a failing `gzip` used to leave a zero-byte archive and report success. `open` on a
+  pipe returns before the shell runs, so the `close` is the only place it can be noticed.
+- **`missing_genome`** — a missing `--reference_genome` used to exit 0.
+- **`skip_filtering_dual`** — `--skip_filtering` used to accept `--strain2` and discard it, because both
+  the promotion to `--dual_hybrid` and its implied `--full_sequence` sat inside the block
+  `--skip_filtering` skips. It now builds all six genomes from committed SNP files with no VCF at all,
+  which is the only fixture reaching `read_snp_files` against pre-made archives.
 
-**`empty_chromosome`** reaches that same Ensembl-versus-UCSC abort from the other direction: a
-header-only FastA entry is stored as the empty string, which is falsy, so the check fires for a
+**`empty_chromosome`** reaches the Ensembl-versus-UCSC abort from the other direction: a header-only
+FastA entry is stored as the empty string, which is falsy, so the per-chromosome check fires for a
 chromosome that *is* present — reporting it as not found and then listing it among the names it found.
+That path is unchanged and still worth knowing about.
 
 **`no_format_column`** renames the `FORMAT` column rather than deleting it. Deleting it leaves nine
 columns, `detect_strains` skips indices up to 8, and the run dies earlier on an empty strain list, which
@@ -280,10 +288,19 @@ hand:
 ```sh
 # the normalisation is doing work, not getting lucky
 for seed in 1 4242; do PERL_HASH_SEED=$seed PERL_PERTURB_KEYS=2 test/run_genome_tests.pl; done
+
+# the tool itself produces byte-identical output on identical input
+test/bin/check_reproducible.pl
 ```
 
-CI runs that loop too. It proves the normalised output is seed-independent; the ≥5-record rule above is
-what makes the raw output actually differ between seeds, and without that the check is vacuous.
+CI runs both. The seed loop proves the normalised output is seed-independent; the ≥5-record rule above
+is what makes the raw output differ when it should, and without that the check is vacuous.
+
+`check_reproducible.pl` exists because **the suite cannot catch a reproducibility regression**: it sorts
+those six outputs before comparing, so it passes whether or not the source sorts them. That script
+compares the raw output of two runs under different hash seeds instead, and fails naming the files that
+differ. Run against `SNPsplit_genome_preparation` as of `dev` before #104 was fixed, it names exactly
+those six.
 
 Mutation testing is the other half — change one line, confirm a *named* set of fixtures fails, revert:
 

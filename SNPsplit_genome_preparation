@@ -129,6 +129,8 @@ else{
 my %chromosomes; # genomic sequence
 read_genome_into_memory($parent_dir);
 
+check_chromosome_names_agree();
+
 ### Create modified genome
 my $new_n_total = 0;
 my $new_snp_total = 0;
@@ -288,6 +290,24 @@ warn "All done. Genome(s) are now ready to be indexed with your favourite aligne
 #############################################################
 ### SUBROUTINES
 #############################################################
+
+### The per-chromosome check inside create_modified_chromosome cannot catch a wholesale naming
+### mismatch: the loop iterates the reference's chromosomes and skips any the VCF does not mention, so
+### an Ensembl VCF against a UCSC genome matches nothing and writes the reference back out unmodified
+sub check_chromosome_names_agree {
+
+    foreach my $chr (keys %chromosomes){
+	return if exists $chroms{$chr};
+    }
+
+    warn "\nNone of the chromosome names in the VCF file were found in the reference genome.\nA rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)\nbut the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)\n";
+    warn "The chromosome names in the SNP annotation were:\n";
+    warn "$_\n" foreach (sort keys %chroms);
+    warn "The chromosome names in the reference genome folder were:\n";
+    warn "$_\n" foreach (sort keys %chromosomes);
+    die "[FATAL ERROR] Please ensure that the same version of the genome is used for both VCF annotations and reference genome (FastA files). Exiting...\n\n";
+
+}
 
 sub read_new_snp_annotation {
     
@@ -507,8 +527,8 @@ sub read_snp_files{
     
     warn "Finally, looking at new reference [$strain] specific reads...\n"; pause(1);
     
-    foreach my $chr (keys %snps){
-	foreach my $pos (keys %{$snps{$chr}}){
+    foreach my $chr (sort keys %snps){
+	foreach my $pos (sort {$a <=> $b} keys %{$snps{$chr}}){
 	    my $location = join (':',$chr,$pos);
 	    
 	    if ($snps{$chr}->{$pos}->{read} == 0){ # present only for Strain 1
@@ -694,7 +714,7 @@ sub create_modified_chromosome_dual_hybrid {
     my $new_n = 0;
     my $new_snp = 0;
 
-   foreach my $pos (keys %{$snps_dual_genome{$chr}}) {
+   foreach my $pos (sort {$a <=> $b} keys %{$snps_dual_genome{$chr}}) {
 
        # Apply the SNP
        ++$count;
@@ -1192,12 +1212,15 @@ sub filter_relevant_SNP_calls_from_VCF{
 	warn "File '$all_SNPs' existed in the folder already, overwriting it...\n\n";
     }
     open (ALLSNP,"| gzip -c - > $all_SNPs") or die "Failed to write to file $all_SNPs: $!\n";
-    
-    foreach my $location (keys %all_SNPs){
+
+    ### Sorted so the file is reproducible and diffable; hash order made it differ between runs
+    foreach my $location (sort by_location keys %all_SNPs){
 	print ALLSNP "$all_SNPs{$location}\n";
     }
+    ### open on a pipe succeeds as soon as the shell is spawned, so this close is the only place a
+    ### failing gzip can be noticed. SNPsplit reads this file and would otherwise load no SNPs at all
+    close ALLSNP or die "Failed to write the SNP list to $all_SNPs via gzip: the file is incomplete\n";
     warn "complete\n\n";
-    close ALLSNP;   
 }
 
 
@@ -1367,6 +1390,13 @@ sub extract_chromosome_name {
     }
 }
 
+# Locations are chr:pos strings, so a plain sort would place position 100 before position 30
+sub by_location {
+    my ($chr_a,$pos_a) = split (/:/,$a);
+    my ($chr_b,$pos_b) = split (/:/,$b);
+    return ($chr_a cmp $chr_b or $pos_a <=> $pos_b);
+}
+
 # Pauses are skipped entirely when SNPSPLIT_NO_SLEEP is set
 sub pause{
     sleep($_[0]) unless $ENV{SNPSPLIT_NO_SLEEP};
@@ -1467,6 +1497,34 @@ VERSION
 		}
     }
 
+    ### Option implications, before the strain lookup: only the lookup needs the VCF, so keeping these
+    ### inside the block below meant --skip_filtering accepted --strain2 and discarded it, and left
+    ### --dual_hybrid without the full-sequence genome its third step reads back
+    if (defined $strain2 and not $dual_hybrid){
+		warn "Strain 2 specified, setting option '--dual_hybrid'\n";
+		$dual_hybrid = 1;
+    }
+    if ($dual_hybrid){
+		warn "Dual Hybrid strain selected\n";
+		$full_sequence = 1; # the third genome is built from strain 1's full sequence
+
+		unless (defined $strain2){
+			die "\n'--dual_hybrid' needs a second strain. Please respecify using '--strain2 NAME'\n\n";
+		}
+		unless (defined $strain){
+			die "\n'--dual_hybrid' needs a first strain. Please respecify using '--strain NAME'\n\n";
+		}
+		if ($strain eq $strain2){
+			die "Strain 1 [$strain] and Strain 2 [$strain2] must be different from each other. Please respecify!\n\n";
+		}
+    }
+
+    ### Every output file is named after the strain, so an undefined one silently produces filenames
+    ### such as '_N-masked/' instead of aborting
+    if ($skip_filtering and not defined $strain){
+		die "\nYou need to name the strain whose SNP folder should be used, with '--strain NAME'\n\n";
+    }
+
     my $strain_index;
     my $strain2_index;
     unless($skip_filtering){
@@ -1475,7 +1533,7 @@ VERSION
 		if ($list_strains){
 			warn "\nAvailable genomes to choose from are:\n";
 			warn "="x37,"\n";
-			foreach my $strain(keys %strains){
+			foreach my $strain(sort keys %strains){
 			print "$strain\n";
 			}
 			warn "="x37,"\n";
@@ -1493,7 +1551,7 @@ VERSION
 				warn "Strain name specified [$strain] does not match any of the available strain names!\n";
 				warn "\nAvailable genomes to choose from are:\n";
 				warn "="x37,"\n";	
-				foreach my $strain(keys %strains){
+				foreach my $strain(sort keys %strains){
 					print "$strain\n";
 				}
 				warn "="x37,"\n";
@@ -1504,26 +1562,15 @@ VERSION
 			warn "No strain specified!\n";
 			warn "\nAvailable genomes to choose from are:\n";
 			warn "="x37,"\n";	
-			foreach my $strain(keys %strains){
+			foreach my $strain(sort keys %strains){
 				print "$strain\n";
 			}
 			warn "="x37,"\n";
 			die "\nPlease choose one of the available strains using '--strain NAME' and try again\n\n";
 		}
 	
-		### Strain 2 (optional)
-		if (defined $strain2){
-			unless ($dual_hybrid){
-				warn "Strain 2 specified, setting option '--dual_hybrid'\n";
-				$dual_hybrid = 1;
-			}
-		}
+		### Strain 2 (optional); the name lookup needs the VCF, the option handling does not
 		if ($dual_hybrid){
-			warn "Dual Hybrid strain selected\n";
-
-			# this automatically sets the full_sequence option
-			$full_sequence = 1;
-
 			if (defined $strain2){
 				if (exists $strains{$strain2}){
 					$strain2_index = $strains{$strain2};
@@ -1533,7 +1580,7 @@ VERSION
 					warn "Strain2 name specified [$strain2] does not match any of the available strain names!\n";
 					warn "\nAvailable genomes to choose from are:\n";
 					warn "="x37,"\n";	
-					foreach my $strain(keys %strains){
+					foreach my $strain(sort keys %strains){
 						print "$strain\n";
 					}
 				warn "="x37,"\n";
@@ -1544,25 +1591,18 @@ VERSION
 				warn "No strain 2 specified!\n";
 				warn "\nAvailable genomes to choose from are:\n";
 				warn "="x37,"\n";	
-				foreach my $strain(keys %strains){
+				foreach my $strain(sort keys %strains){
 					print "$strain\n";
 				}
 				warn "="x37,"\n";
 				die "\nPlease choose one of the available strains using '--strain2 NAME' and try again\n\n";
-			}
-	    
-			# make sure that Strain 1 and Strain 2 are different from each other
-			if ($strain eq $strain2){
-				die "Strain 1 [$strain] and Strain 2 [$strain2] must be different from each other. Please respecify!\n\n"; 
 			}
 		}
     }
 
     ### GENOME FOLDER
     unless ($genome_folder){
-	warn "Reference genome folder was not specified! Please use --reference_genome </genome/folder/>\n";
-	# print_helpfile();
-	exit;
+	die "Reference genome folder was not specified! Please use --reference_genome </genome/folder/>\n";
     }
     my $parent_dir = getcwd();    
 
@@ -1714,6 +1754,6 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 
 EOF
     ;
-  exit 1;
+  exit 0;
 }
 

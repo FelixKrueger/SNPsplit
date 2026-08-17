@@ -1,1 +1,1 @@
-Ensembl-style VCF chromosome names against UCSC-style reference names: exit 0, zero Ns introduced, and an output file called chrchr1
+Ensembl-style VCF chromosome names against UCSC-style reference names abort with both name lists, before an unmodified genome can be written

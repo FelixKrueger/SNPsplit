@@ -40,13 +40,13 @@ Finished filtering and writing out SNPs for strain STRAIN_A
 
 Now reading in and storing sequence information of the genome specified in: <scratch>/genome/
 
-Writing modified chromosome (N-masking)
-Writing N-masked output to: <scratch>/STRAIN_A_N-masked/chrchr1.N-masked.fa
 
-
-Summary
-0 Ns were newly introduced into the N-masked genome for strain STRAIN_A in total
-
-All done. Genome(s) are now ready to be indexed with your favourite aligner!
-FYI, aligners shown to work with SNPsplit are Bowtie2, STAR, HISAT2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)
+None of the chromosome names in the VCF file were found in the reference genome.
+A rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)
+but the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)
+The chromosome names in the SNP annotation were:
+1
+The chromosome names in the reference genome folder were:
+chr1
+[FATAL ERROR] Please ensure that the same version of the genome is used for both VCF annotations and reference genome (FastA files). Exiting...
 

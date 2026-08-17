@@ -1,6 +1,6 @@
-Strain defined as 'STRAIN_A' (strain index: 9)
 Strain 2 specified, setting option '--dual_hybrid'
 Dual Hybrid strain selected
+Strain defined as 'STRAIN_A' (strain index: 9)
 Strain2 defined as 'STRAIN_B' (strain2 index: 10)
 Reference genome folder provided is genome/	(absolute path is '<scratch>/genome/)'
 

@@ -4,6 +4,18 @@
 
 ### SNPsplit_genome_preparation
 
+- **Breaking:** a chromosome naming mismatch between the VCF and the reference genome now aborts instead of writing an unmodified genome ([#102](https://github.com/FelixKrueger/SNPsplit/issues/102))
+
+- **Breaking:** a failing `gzip` now aborts instead of leaving a zero-byte SNP list and reporting success ([#103](https://github.com/FelixKrueger/SNPsplit/issues/103))
+
+- **Breaking:** a missing `--reference_genome` now exits non-zero, and the help and version options now exit 0 ([#105](https://github.com/FelixKrueger/SNPsplit/issues/105))
+
+- `--skip_filtering` now honours `--strain2` and `--dual_hybrid` instead of silently discarding them ([#106](https://github.com/FelixKrueger/SNPsplit/issues/106))
+
+- SNP lists and strain comparison files are now written in sorted order, so two runs on the same input produce identical output ([#104](https://github.com/FelixKrueger/SNPsplit/issues/104))
+
+- `--skip_filtering` without `--strain` now aborts instead of writing files with a blank strain name
+
 - Progress pauses are now skipped when `SNPSPLIT_NO_SLEEP` is set, matching SNPsplit and tag2sort
 
 - A FastA entry with a header but no sequence no longer produces uninitialised-value warnings before the real diagnostic
