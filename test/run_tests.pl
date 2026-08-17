@@ -243,7 +243,10 @@ sub normalise {
     my @present  = collect_files($scratch);
 
     my %out;
-    $out{'exit_status'} = "$exit\n";
+    ### Only whether the run aborted, not the number. Perl's die exits with $!, which reflects the last
+    ### failed syscall and therefore varies with whatever ran before; the die message itself is pinned
+    ### in run.log, so the number carried no information and made the fixture intermittent.
+    $out{'exit_status'} = $exit == 0 ? "0\n" : "nonzero\n";
     $out{'manifest'}    = join('', map { "$_\n" } @present);
 
     for my $rel (@present) {

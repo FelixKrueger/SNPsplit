@@ -4,7 +4,7 @@
 
 ### SNPsplit
 
-- **Breaking:** a failing `tag2sort` stage now aborts the run instead of reporting success
+- **Breaking:** a failing `tag2sort` stage, or a failing SAM to BAM conversion, now aborts the run instead of reporting success
 
 - Fixed `--output_dir` skipping the sorting report, which also left a stray `SNPsplit_sort.yaml` behind ([#91](https://github.com/FelixKrueger/SNPsplit/issues/91))
 
@@ -29,6 +29,12 @@
 ### SNPsplit_genome_preparation
 
 - No functional changes; version raised in step with the other scripts
+
+### Other
+
+- Removed `copy_SNPsplit_files_for_release.pl`, which is no longer used
+
+- Fixed two HiCUP links in the documentation that were missing their `https://`
 
 ## v0.6.0 (Release 07 01 2023)
 

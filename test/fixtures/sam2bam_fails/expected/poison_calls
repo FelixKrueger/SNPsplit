@@ -1,0 +1,2 @@
+bare samtools invoked: view -bS -
+bare samtools invoked: view -bS sam2bam_fails.sam

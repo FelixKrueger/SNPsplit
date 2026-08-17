@@ -1378,7 +1378,12 @@ sub sam2bam_convert{
     warn "Now converting '$file' to '$bamfile' ...\n";
     pause(3);
 
-    system ("$samtools_path view -bS $file > $bamfile");
+    if (system ("$samtools_path view -bS $file > $bamfile") != 0){
+		my $why = $? == -1        ? "could not be started: $!"
+		        : ($? & 127)      ? 'was killed by signal ' . ($? & 127)
+		        :                   'failed with exit status ' . ($? >> 8);
+		die "SAM to BAM conversion $why\n\n";
+    }
 
     warn "BAM conversion finished\n\n";
     pause(3);

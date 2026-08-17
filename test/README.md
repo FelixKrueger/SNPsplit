@@ -97,7 +97,9 @@ The expected output is normalised text, not raw files:
   suite cannot distinguish a hard-clip skip from an unmapped skip.
 - **`manifest`** → sorted list of files produced. This is what pins `--conflicting`, `--singletons` and
   `--skip_tag2sort`, all of which gate whole files rather than content.
-- **`exit_status`** → the run's exit code.
+- **`exit_status`** → `0` or `nonzero`, not the number. Perl's `die` exits with `$!`, which reflects the
+  last failed syscall and so changes depending on what ran before; the die message itself is compared as
+  part of `run.log`, so the number carried no information and made fixtures intermittent.
 
 An unreadable or empty BAM normalises to `<unreadable>` rather than aborting the suite, so a fixture
 can judge deliberately-broken output.
