@@ -609,6 +609,41 @@ fixture(
     );
 }
 
+### The two skips create_modified_chromosome counts. This is the one fixture that deliberately writes a
+### SNP file disagreeing with its reference, so it bypasses the derive-never-type rule on purpose - and
+### it is the only way to reach either counter, because a derived annotation always matches.
+###
+###   valid    : ref allele matches the reference, snp allele does not  -> applied
+###   already  : snp allele already present in the reference            -> skipped, counted
+###   mismatch : neither allele matches the reference                   -> skipped, counted
+{
+    my @valid = (30, 60, 130);
+    my $already_pos  = 200;
+    my $mismatch_pos = 250;
+
+    my @rows = map {
+        my $ref = substr($SEQ, $_ - 1, 1);
+        [ $_, 1, "$ref/" . alt_for($ref) ]
+    } @valid;
+
+    ### snp allele equal to the reference base, so the position looks already incorporated
+    my $ar = substr($SEQ, $already_pos - 1, 1);
+    push @rows, [ $already_pos, 1, alt_for($ar) . "/$ar" ];
+
+    ### neither allele equal to the reference base
+    my $mr = substr($SEQ, $mismatch_pos - 1, 1);
+    my @other = grep { $_ ne $mr } qw(A C G T);
+    push @rows, [ $mismatch_pos, 1, "$other[0]/$other[1]" ];
+
+    fixture(
+        name    => 'ref_mismatch',
+        args    => '--skip_filtering --reference_genome genome --strain STRAIN_A --full_sequence',
+        readme  => 'A SNP annotation that disagrees with its reference: one position already carrying the SNP base and one matching neither allele are both skipped, and both are now reported instead of only showing up as the SNP total exceeding the positions changed',
+        genome  => { '1.fa' => fasta('1', $SEQ) },
+        snps_in => { 'SNPs_STRAIN_A/chr1.txt' => snp_file('1', @rows) },
+    );
+}
+
 ### An existing SNP folder suppresses the creating-it-for-you notice, and an existing archive triggers
 ### the overwrite notice. The only two messages about clobbering the user's own files.
 fixture(

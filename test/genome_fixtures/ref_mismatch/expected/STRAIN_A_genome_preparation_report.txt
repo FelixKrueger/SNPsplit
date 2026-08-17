@@ -1,0 +1,9 @@
+1 positions on chromosome 1 already carried the SNP base and were left alone
+1 positions on chromosome 1 were skipped because the reference base did not match the annotation
+3 positions on chromosome 1 were changed to 'N'
+3 reference positions on chromosome 1 were changed to the SNP alternative base
+
+
+Summary
+3 Ns were newly introduced into the N-masked genome for strain STRAIN_A in total
+3 SNPs were newly introduced into the full sequence genome version for strain STRAIN_A in total

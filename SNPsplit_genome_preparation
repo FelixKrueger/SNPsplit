@@ -34,7 +34,7 @@ use Cwd;
 # https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/  "mgp_REL2021_snps.vcf.gz"
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.7.0';
+my $pipeline_version = '0.8.0';
 my $parent_dir = getcwd();
 my ($vcf_file,$strain,$strain2,$strain_index,$strain2_index,$genome_folder,$skip_filtering,$nmasking,$full_sequence,$dual_hybrid,$genome_build,$v7) = process_commandline ();
 
@@ -683,6 +683,7 @@ sub create_modified_chromosome {
     }
     
     warn "$count SNPs total for chromosome $chr\n";
+    report_skipped_positions($chr,$already,$warn);
     if ($nmasking){ # default
 		warn "$new_n positions on chromosome $chr were changed to 'N'\n";
 		print REPORT "$new_n positions on chromosome $chr were changed to 'N'\n";
@@ -692,6 +693,24 @@ sub create_modified_chromosome {
 		print REPORT "$new_snp reference positions on chromosome $chr were changed to the SNP alternative base\n\n";
     }
     warn "\n";
+
+}
+
+### Both skips were counted and never mentioned, so the only sign of them was the SNP total not
+### matching the number of positions changed. A reference base that disagrees with the annotation is
+### the one worth seeing: it means the VCF and the genome are not the same sequence
+sub report_skipped_positions {
+
+    my ($chr,$already,$mismatched) = @_;
+
+    if ($already){
+	warn "$already positions on chromosome $chr already carried the SNP base and were left alone\n";
+	print REPORT "$already positions on chromosome $chr already carried the SNP base and were left alone\n";
+    }
+    if ($mismatched){
+	warn "$mismatched positions on chromosome $chr were skipped because the reference base did not match the annotation\n";
+	print REPORT "$mismatched positions on chromosome $chr were skipped because the reference base did not match the annotation\n";
+    }
 
 }
 
@@ -774,6 +793,7 @@ sub create_modified_chromosome_dual_hybrid {
     }
     
     warn "$count SNPs total for chromosome $chr\n";
+    report_skipped_positions($chr,$already,$warn);
     if ($nmasking){ # default
 	warn "$new_n positions on chromosome $chr were changed to 'N'\n";
 	print REPORT "$new_n positions on chromosome $chr were changed to 'N'\n";
