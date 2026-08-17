@@ -1,0 +1,11 @@
+gp_generated.SNPsplit_report.txt
+gp_generated.SNPsplit_report.yaml
+gp_generated.SNPsplit_sort.txt
+gp_generated.allele_flagged.bam
+gp_generated.bam
+gp_generated.genome1.bam
+gp_generated.genome2.bam
+gp_generated.unassigned.bam
+snps.txt
+stderr.log
+stdout.log
