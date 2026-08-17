@@ -44,6 +44,8 @@
 
 - SNP lists and strain comparison files are now written in sorted order, so two runs on the same input produce identical output ([#104](https://github.com/FelixKrueger/SNPsplit/issues/104))
 
+- SNP positions skipped because the reference base disagrees with the annotation, or because the reference already carries the SNP base, are now reported instead of only showing up as a discrepancy between two counts ([#112](https://github.com/FelixKrueger/SNPsplit/issues/112))
+
 - Progress pauses are now skipped when `SNPSPLIT_NO_SLEEP` is set, matching SNPsplit and tag2sort
 
 - A FastA entry with a header but no sequence no longer produces uninitialised-value warnings before the real diagnostic

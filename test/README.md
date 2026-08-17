@@ -9,7 +9,7 @@ Point `--impl` at any implementation to diff it against the same expected output
 | Runner | Tools | Fixtures | Needs |
 |---|---|---|---|
 | `run_tests.pl` | `SNPsplit`, `tag2sort` | `fixtures/`, 24 | `samtools`, `gzip` |
-| `run_genome_tests.pl` | `SNPsplit_genome_preparation` | `genome_fixtures/`, 29 | `gzip` only |
+| `run_genome_tests.pl` | `SNPsplit_genome_preparation` | `genome_fixtures/`, 30 | `gzip` only |
 
 Two runners rather than one: the tools disagree on nearly every tool-specific decision a runner makes.
 Genome preparation needs no samtools, takes a VCF plus a reference *directory* instead of alignments,
@@ -276,6 +276,11 @@ would make the fixture a duplicate of `strain_not_in_vcf`.
 The in-loop check one screen above ends in an exclamation mark and needs a *third* occurrence of the
 name, because it runs before the previous chromosome has been stored. The two messages are otherwise
 identical.
+
+**`ref_mismatch`** is the only fixture that deliberately writes a SNP annotation disagreeing with its
+reference, so it is the one exception to the derive-never-type rule above — and the only way to reach
+either skip counter, because a derived annotation always matches. It pins that 5 SNPs total, 3 applied,
+1 already present and 1 mismatched all appear, rather than leaving two positions unaccounted for (#112).
 
 **`reverse_strand`** is the only fixture that can reach the strand-complementing branch: VCF filtering
 always writes strand `1`, so a `-1` can only arrive through a hand-written `--skip_filtering` annotation.
