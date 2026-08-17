@@ -337,6 +337,29 @@ Mutation testing is the other half — change one line, confirm a *named* set of
 
 A mutation that fails nothing means the code it touched is asserted by no fixture.
 
+## Checking a release against real data
+
+The fixtures cannot imitate a real library: millions of reads, every SNP shape, both strands. That is the
+only thing that could have contradicted #94, where two bisulfite branches were removed on a control-flow
+argument no fixture can reach.
+
+```sh
+test/bin/compare_versions.pl --bam sample.bam --snps all_SNPs_STRAIN_GRCm39.txt.gz \
+    --old 0.8.0 --new dev --args '--paired --bisulfite'
+```
+
+It stages all three scripts at each revision — `SNPsplit` calls `$RealBin/tag2sort` with no override, so
+mixing versions across that boundary would compare something nobody runs — runs both over the same BAM,
+and compares alignment records in full.
+
+BAM headers are compared with `@PG` removed, because `@PG` records the argv and 0.9.0 writes BAM through
+`samtools view -o` rather than a shell redirect. `version`, `date_run` and `command` are filtered from
+the reports for the same reason the YAML masks them.
+
+Exit status is 0 when nothing that matters changed, 1 when something did, and **2 when either run
+failed** — that last case exists because a run that produces nothing would otherwise pass the comparison
+with no files to compare, which is the vacuous pass the rest of this suite is built to avoid.
+
 ## Environment
 
 `SNPSPLIT_NO_SLEEP=1` skips the tools' progress pauses. Both harnesses set it; it takes a single run from
