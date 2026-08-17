@@ -292,7 +292,7 @@ warn "All done. Genome(s) are now ready to be indexed with your favourite aligne
 sub read_new_snp_annotation {
     
     my ($file,$strain,$strain2) = @_;
-    warn "Reading $strain/$strain2 SNPs from file '$file'\n"; sleep(1);
+    warn "Reading $strain/$strain2 SNPs from file '$file'\n"; pause(1);
     
     unless (-e $file) {
 	die "Couldn't find SNP file '$file'\n";
@@ -317,7 +317,7 @@ sub read_new_snp_annotation {
 	my (undef,$chr,$pos,$strand,$allele) = split(/\t/);
 
 	unless ($allele){
-	    warn "'$_'\n"; sleep(1);
+	    warn "'$_'\n"; pause(1);
 	}
 	# warn "$allele\n";
 	# ref here is the $strain sequence, SNP is the $strain2 sequence
@@ -396,7 +396,7 @@ sub read_snp_files{
     
     ### READING FROM SNP FILE FOR STRAIN 1 (these are only high confidence SNPs)
     warn "Storing SNP positions for strain $strain provided in '$snp_file_strain'\n";
-    sleep (1);
+    pause(1);
     
     my $snp_count_strain = 0;
 
@@ -505,7 +505,7 @@ sub read_snp_files{
 	# last if ($snp_count_strain2 == 10000);
     }
     
-    warn "Finally, looking at new reference [$strain] specific reads...\n"; sleep (1);
+    warn "Finally, looking at new reference [$strain] specific reads...\n"; pause(1);
     
     foreach my $chr (keys %snps){
 	foreach my $pos (keys %{$snps{$chr}}){
@@ -1366,6 +1366,11 @@ sub extract_chromosome_name {
     }
 }
 
+# Pauses are skipped entirely when SNPSPLIT_NO_SLEEP is set
+sub pause{
+    sleep($_[0]) unless $ENV{SNPSPLIT_NO_SLEEP};
+}
+
 
 ###################################################################
 
@@ -1435,7 +1440,7 @@ VERSION
 		if ($vcf_file =~ 'mgp_REL2005_snps_indels.vcf.gz'){
 			warn "Setting option --v7_VCF as the supplied file is called 'mgp_REL2005_snps_indels.vcf.gz'\n\n";
 			$v7_MGP_file = 1;
-			sleep(1);
+			pause(1);
 		}
 
 		### March 2021: Now also accepting the v7 combined SNP and INDEL file
@@ -1447,11 +1452,11 @@ VERSION
 				warn "Using v7 MGP file 'mgp_REL2005_snps_indels.vcf.gz'. This file can be obtained from:\n";
 				warn "ftp://ftp-mouse.sanger.ac.uk/REL-2004-v7-SNPs_Indels/mgp_REL2005_snps_indels.vcf.gz\n\n";
 				warn "PLEASE NOTE:\n============\nThis file is currently not marked as Current_SNPs, so consider this approach experimental for the time being (as of 15 03 2021)\n\n";	
-				sleep(1);
+				pause(1);
 			}
 			else{
 				warn "Version 7 input file selected. Input VCF file '$vcf_file' doesn't appear to be file 'mgp_REL2005_snps_indels.vcf.gz'. If something goes wrong, I won't accept responsibility....!\n\n";
-				sleep(3);
+				pause(3);
 			}
 		}
     }
