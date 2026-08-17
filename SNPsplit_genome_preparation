@@ -319,7 +319,7 @@ sub read_new_snp_annotation {
     }
 
     if ($file =~ /gz$/){
-	open (IN, "gunzip -c $file |") or die $!;
+	open (IN, '-|','gunzip','-c',$file) or die $!;
     }
     else{
 	open (IN,$file) or die $!;
@@ -401,14 +401,14 @@ sub read_snp_files{
 
     
     if ($snp_file_strain =~ /\.gz$/){
-	open (SNP_STRAIN,"gunzip -c $snp_file_strain |") or die "Failed to read from gzipped file $snp_file_strain: $!\n\n";
+	open (SNP_STRAIN,'-|','gunzip','-c',$snp_file_strain) or die "Failed to read from gzipped file $snp_file_strain: $!\n\n";
     }
     else{
 	open (SNP_STRAIN,"$snp_file_strain") or die "Failed to read from $snp_file_strain: $!\n\n";
     }
     
     if ($snp_file_strain2 =~ /\.gz$/){
-	open (SNP_STRAIN2,"gunzip -c $snp_file_strain2 |") or die "Failed to read from gzipped file $snp_file_strain2: $!\n\n";
+	open (SNP_STRAIN2,'-|','gunzip','-c',$snp_file_strain2) or die "Failed to read from gzipped file $snp_file_strain2: $!\n\n";
     }
     else{
 	open (SNP_STRAIN2,"$snp_file_strain2") or die "Failed to read from file $snp_file_strain2: $!\n\n";
@@ -933,7 +933,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     my ($strain, $strain_index, $strain_identity) = @_;    
     
     if ($vcf_file =~ /gz$/){
-		open (IN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
+		open (IN,'-|','gunzip','-c',$vcf_file) or die "Failed to open file '$vcf_file': $!\n";
     } 
     else{
 		open (IN, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
@@ -1233,14 +1233,21 @@ sub filter_relevant_SNP_calls_from_VCF{
     if (-e $all_SNPs){
 	warn "File '$all_SNPs' existed in the folder already, overwriting it...\n\n";
     }
-    open (ALLSNP,"| gzip -c - > $all_SNPs") or die "Failed to write to file $all_SNPs: $!\n";
+    ### gzip has no output-file option, so the redirect happens inside the forked child rather than in
+    ### a shell. That keeps a file name containing a space or a shell metacharacter out of harm's way
+    my $gzip_pid = open (ALLSNP,'|-');
+    defined $gzip_pid or die "Failed to fork a gzip process for $all_SNPs: $!\n";
+    unless ($gzip_pid){ # the child
+	open (STDOUT,'>',$all_SNPs) or die "Failed to write to file $all_SNPs: $!\n";
+	exec ('gzip','-c') or die "Failed to run gzip: $!\n";
+    }
 
     ### Sorted so the file is reproducible and diffable; hash order made it differ between runs
     foreach my $location (sort by_location keys %all_SNPs){
 	print ALLSNP "$all_SNPs{$location}\n";
     }
-    ### open on a pipe succeeds as soon as the shell is spawned, so this close is the only place a
-    ### failing gzip can be noticed. SNPsplit reads this file and would otherwise load no SNPs at all
+    ### The pipe opens before gzip has run, so this close is the only place a failing gzip can be
+    ### noticed. SNPsplit reads this file and would otherwise load no SNPs at all
     close ALLSNP or die "Failed to write the SNP list to $all_SNPs via gzip: the file is incomplete\n";
     warn "complete\n\n";
 }
@@ -1252,7 +1259,7 @@ sub detect_chroms{
     my @chrom;
     
     if ($vcf_file =~ /gz$/){
-		open (DETECT,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
+		open (DETECT,'-|','gunzip','-c',$vcf_file) or die "Failed to open file '$vcf_file': $!\n";
     }
     else{
 		open (DETECT, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";
@@ -1289,7 +1296,7 @@ sub detect_strains{
     my %strains; # detecting the available strains from the VCF file
     
     if ($vcf_file =~ /gz$/){
-		open (STRAIN,"gunzip -c $vcf_file |") or die "Failed to open file '$vcf_file': $!\n";
+		open (STRAIN,'-|','gunzip','-c',$vcf_file) or die "Failed to open file '$vcf_file': $!\n";
     }
     else{
 		open (STRAIN, $vcf_file) or die "Failed to read Input VCF file '$vcf_file': $!\n";

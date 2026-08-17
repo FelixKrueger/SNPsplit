@@ -644,6 +644,18 @@ fixture(
     );
 }
 
+### #99: every gunzip and gzip invocation used to be interpolated into a command string. The VCF here
+### sits under a directory whose name contains a space and is read through gunzip, and the build name
+### contains one too, so it lands in the gzipped SNP list's file name and in every output directory.
+fixture(
+    name    => 'spaced_paths',
+    args    => '--vcf_file <SPACED_VCF> --reference_genome genome --strain STRAIN_A --genome_build <SPACED_BUILD>',
+    readme  => 'a gzipped VCF under a directory whose name contains a space, and a genome build name containing one, so both the gunzip reads and the gzipped SNP list are exercised with paths a command string would split',
+    markers => ['gzip_vcf'],
+    genome  => \%STD_GENOME,
+    vcf     => { 'snps.vcf' => $STD_VCF },
+);
+
 ### An existing SNP folder suppresses the creating-it-for-you notice, and an existing archive triggers
 ### the overwrite notice. The only two messages about clobbering the user's own files.
 fixture(

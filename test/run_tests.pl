@@ -138,6 +138,20 @@ SHIM
 
     s/<REAL_SAMTOOLS>/$samtools/g for @args;
 
+    ### A samtools whose path contains a space. Substituted after the args file has been split on
+    ### whitespace, so the space cannot be turned into an argument boundary here - the point is whether
+    ### the tools keep it in one piece, and interpolating it into a command string does not.
+    if (grep { /<SPACED_SAMTOOLS>/ } @args) {
+        my $dir = File::Spec->catdir($scratch, 'samtools dir');
+        make_path($dir);
+        my $wrapper = File::Spec->catfile($dir, 'samtools');
+        open my $fh, '>', $wrapper or die "write samtools wrapper: $!\n";
+        print {$fh} "#!/bin/sh\nexec " . shell_quote($samtools) . " \"\$\@\"\n";
+        close $fh;
+        chmod 0755, $wrapper;
+        s/<SPACED_SAMTOOLS>/$wrapper/g for @args;
+    }
+
     ### Relative filenames are mandatory: the YAML records infile and SNP_annotation verbatim, so an
     ### absolute path would bake the random scratch component into the recorded output.
     my @cmd = ($staged_impl, '--SNP_file', 'snps.txt', @args, @inputs);
