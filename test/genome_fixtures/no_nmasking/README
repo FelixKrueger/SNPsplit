@@ -1,0 +1,1 @@
+--no_nmasking forces --full_sequence and suppresses the N-masked directory entirely

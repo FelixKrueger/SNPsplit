@@ -1,0 +1,1 @@
+Reverse-strand SNPs are complemented by read_snps; a non-DNA allele is skipped with a warning. Only reachable through --skip_filtering, since VCF filtering always writes strand 1

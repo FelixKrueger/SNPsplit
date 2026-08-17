@@ -1,0 +1,1 @@
+A SNP annotation that disagrees with its reference: one position already carrying the SNP base and one matching neither allele are both skipped, and both are now reported instead of only showing up as the SNP total exceeding the positions changed

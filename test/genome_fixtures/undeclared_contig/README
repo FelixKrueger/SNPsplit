@@ -1,0 +1,1 @@
+A VCF record on a chromosome with no ##contig header aborts with a raw perl diagnostic instead of a diagnosis

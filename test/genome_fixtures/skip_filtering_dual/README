@@ -1,0 +1,1 @@
+--dual_hybrid under --skip_filtering, built from committed SNP files and archives with no VCF: --strain2 promotes to --dual_hybrid, which sets --full_sequence for the third genome to read back

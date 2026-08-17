@@ -1,0 +1,1 @@
+A renamed FORMAT column aborts in the header parser. Renamed rather than deleted, because deleting it leaves nine columns and the run dies earlier on an empty strain list

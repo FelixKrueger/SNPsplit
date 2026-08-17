@@ -25,3 +25,28 @@ jobs:
           perl --version | sed -n '2p'
       - name: Run fixture suite
         run: test/run_tests.pl --verbose
+
+  genome-fixtures:
+    # SNPsplit_genome_preparation touches no alignments, so this job needs gzip and nothing else.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record versions
+        run: |
+          perl --version | sed -n '2p'
+          gzip --version | head -1
+      - name: Run genome preparation fixture suite
+        run: test/run_genome_tests.pl --verbose
+      - name: Re-run under two hash seeds
+        # The runner sorts the six formerly hash-ordered outputs so --impl stays usable against an
+        # implementation with its own iteration order. Running under differing seeds keeps that
+        # normalisation proven rather than assumed.
+        run: |
+          for seed in 1 4242; do
+            echo "PERL_HASH_SEED=$seed"
+            PERL_HASH_SEED=$seed PERL_PERTURB_KEYS=2 test/run_genome_tests.pl
+          done
+      - name: Check the output is reproducible
+        # The suite cannot catch this: it sorts those outputs before comparing, so it passes whether or
+        # not the source sorts them. This compares the raw output of two runs instead.
+        run: test/bin/check_reproducible.pl

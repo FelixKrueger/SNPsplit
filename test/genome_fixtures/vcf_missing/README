@@ -1,0 +1,1 @@
+A named VCF that does not exist aborts before anything else is read

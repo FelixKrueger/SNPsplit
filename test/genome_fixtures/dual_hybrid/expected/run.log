@@ -1,0 +1,159 @@
+Strain 2 specified, setting option '--dual_hybrid'
+Dual Hybrid strain selected
+Strain defined as 'STRAIN_A' (strain index: 9)
+Strain2 defined as 'STRAIN_B' (strain2 index: 10)
+Reference genome folder provided is genome/	(absolute path is '<scratch>/genome/)'
+
+Summarising SNPsplit Genome Preparation Parameters
+==================================================
+Processing SNPs from VCF file:		snps.vcf
+Reading/filtering VCF file:		Yes (default)
+Reference genome:			<scratch>/genome/
+N-masking:				Yes
+Full SNP genome:			Yes
+SNP strain:				STRAIN_A
+SNP strain 2:				STRAIN_B
+Dual hybrid, new Ref/SNP:		STRAIN_A/STRAIN_B
+
+Folder 'SNPs_STRAIN_A' doesn't exist. Creating it for you...
+
+Analysing SNP fields for name >STRAIN_A<
+Using FORMAT field index: 8
+Using INFO field index: 7
+GT index not defined, checking...
+Setting GT index to >>0<<
+Setting FI index to >>3<<
+
+SNP position summary for strain STRAIN_A (based on genome build TESTBUILD)
+===========================================================================
+
+Positions read in total:	25
+
+19	SNP were homozygous. Of these:
+17	SNP were homozygous and passed high confidence filters and were thus included into the STRAIN_A genome
+
+Not included into STRAIN_A genome:
+5	had the same sequence as the reference
+0		had no clearly defined alternative base
+1		Calls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)
+2		were homozygous but the filtering call was low confidence
+
+Now printing a single list of all SNPs to >all_SNPs_STRAIN_A_TESTBUILD.txt.gz<...
+complete
+
+Finished filtering and writing out SNPs for strain STRAIN_A
+
+Now reading in and storing sequence information of the genome specified in: <scratch>/genome/
+
+Processing chromosome 1 (for strain STRAIN_A)
+Reading SNPs from file <scratch>/SNPs_STRAIN_A/chr1.txt
+Writing modified chromosome (N-masking)
+Writing N-masked output to: <scratch>/STRAIN_A_N-masked/chr1.N-masked.fa
+Writing modified chromosome (incorporating SNPs)
+Writing full sequence output to: <scratch>/STRAIN_A_full_sequence/chr1.SNPs_introduced.fa
+17 SNPs total for chromosome 1
+17 positions on chromosome 1 were changed to 'N'
+17 reference positions on chromosome 1 were changed to the SNP alternative base
+
+
+
+
+Summary
+17 Ns were newly introduced into the N-masked genome for strain STRAIN_A in total
+17 SNPs were newly introduced into the full sequence genome version for strain STRAIN_A in total
+
+
+Now starting to work on strain 2 [STRAIN_B]
+Folder 'SNPs_STRAIN_B' doesn't exist. Creating it for you...
+
+Analysing SNP fields for name >STRAIN_B<
+Using FORMAT field index: 8
+Using INFO field index: 7
+GT index not defined, checking...
+Setting GT index to >>0<<
+Setting FI index to >>3<<
+
+SNP position summary for strain STRAIN_B (based on genome build TESTBUILD)
+===========================================================================
+
+Positions read in total:	25
+
+20	SNP were homozygous. Of these:
+18	SNP were homozygous and passed high confidence filters and were thus included into the STRAIN_B genome
+
+Not included into STRAIN_B genome:
+5	had the same sequence as the reference
+0		had no clearly defined alternative base
+0		Calls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)
+2		were homozygous but the filtering call was low confidence
+
+Now printing a single list of all SNPs to >all_SNPs_STRAIN_B_TESTBUILD.txt.gz<...
+complete
+
+Finished filtering and writing out SNPs for strain 2 [STRAIN_B]
+
+Processing chromosome 1 (for strain STRAIN_B)
+Reading SNPs from file <scratch>/SNPs_STRAIN_B/chr1.txt
+Writing modified chromosome (N-masking)
+Writing N-masked output to: <scratch>/STRAIN_B_N-masked/chr1.N-masked.fa
+Writing modified chromosome (incorporating SNPs)
+Writing full sequence output to: <scratch>/STRAIN_B_full_sequence/chr1.SNPs_introduced.fa
+18 SNPs total for chromosome 1
+18 positions on chromosome 1 were changed to 'N'
+18 reference positions on chromosome 1 were changed to the SNP alternative base
+
+
+
+Summary
+18 Ns were newly introduced into the N-masked genome for strain 2 [STRAIN_B] in total
+18 SNPs were newly introduced into the full sequence genome version for strain 2 [STRAIN_B] in total
+
+Determining new Ref [STRAIN_A] and SNP [STRAIN_B] annotations
+============================================================
+
+Writing STRAIN_A specific SNPs (relative to the TESTBUILD reference) to >>STRAIN_A_specific_SNPs.TESTBUILD.txt<<
+Writing STRAIN_B specific SNPs (relative to the TESTBUILD reference) to >>STRAIN_B_specific_SNPs.TESTBUILD.txt<<
+Writing SNPs in common between STRAIN_A and STRAIN_B (relative to the TESTBUILD reference) to >>STRAIN_A_STRAIN_B_SNPs_in_common.TESTBUILD.txt<<
+Writing all new SNPs >>STRAIN_A/STRAIN_B to >>all_STRAIN_B_SNPs_STRAIN_A_reference.based_on_TESTBUILD.txt<<
+
+Storing SNP positions for strain STRAIN_A provided in 'all_SNPs_STRAIN_A_TESTBUILD.txt.gz'
+Stored 17 positions in total
+
+Now reading and comparing SNP positions for strain STRAIN_B provided in 'all_SNPs_STRAIN_B_TESTBUILD.txt.gz'
+Finally, looking at new reference [STRAIN_A] specific reads...
+
+Looked at positions from new Reference strain [STRAIN_A]:		17
+Compared positions from new SNP strain [STRAIN_B]:		18
+======================================================
+SNPs were the same in Ref and SNP genome (not written out):	5
+SNPs were present in both Ref and SNP genome but had a different sequence:	5
+SNPs were low confidence in one strain and thus ignored:	4
+SNPs were unique to Ref [STRAIN_A]:				5
+SNPs were unique to SNP [STRAIN_B]:				6
+
+done...
+Changing the genomic reference sequence to the full sequence of strain STRAIN_A
+
+Now reading in and storing sequence information of the genome specified in: <scratch>/STRAIN_A_full_sequence/
+
+Reading and storing all new SNPs with Ref/SNP: STRAIN_A/STRAIN_B from 'all_STRAIN_B_SNPs_STRAIN_A_reference.based_on_TESTBUILD.txt'
+Reading STRAIN_A/STRAIN_B SNPs from file 'all_STRAIN_B_SNPs_STRAIN_A_reference.based_on_TESTBUILD.txt'
+Got SNP information for chromosome 1. Creating modified chromosome
+Processing chr1 (to create new genome for STRAIN_A/STRAIN_B)
+Writing modified chromosome (N-masking)
+Writing N-masked output to: <scratch>/STRAIN_A_STRAIN_B_dual_hybrid.based_on_TESTBUILD_N-masked/chr1.N-masked.fa
+Writing modified chromosome (incorporating SNPs)
+Writing full sequence output to: <scratch>/STRAIN_A_STRAIN_B_dual_hybrid.based_on_TESTBUILD_full_sequence/chr1.SNPs_introduced.fa
+16 SNPs total for chromosome 1
+16 positions on chromosome 1 were changed to 'N'
+16 reference positions on chromosome 1 were changed to the SNP alternative base
+
+
+
+Summary
+16 Ns were newly introduced into the N-masked genome for strain/strain 2 [STRAIN_A/STRAIN_B] in total
+16 SNPs were newly introduced into the full sequence genome version for strainstrain 2 [STRAIN_A/STRAIN_B] in total
+
+All done. Genome(s) are now ready to be indexed with your favourite aligner!
+FYI, aligners shown to work with SNPsplit are Bowtie2, STAR, HISAT2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)
+

@@ -1,0 +1,37 @@
+Reference genome folder provided is genome/	(absolute path is '<scratch>/genome/)'
+
+Summarising SNPsplit Genome Preparation Parameters
+==================================================
+Reading/filtering VCF file:		No (skipped by user)
+Reference genome:			<scratch>/genome/
+N-masking:				Yes
+Full SNP genome:			Yes
+SNP strain:				STRAIN_A
+
+Skipped reading the VCF file and filtering SNPs again (specified by user)
+
+Now reading in and storing sequence information of the genome specified in: <scratch>/genome/
+
+Processing chromosome 1 (for strain STRAIN_A)
+Reading SNPs from file <scratch>/SNPs_STRAIN_A/chr1.txt
+Writing modified chromosome (N-masking)
+Writing N-masked output to: <scratch>/STRAIN_A_N-masked/chr1.N-masked.fa
+Writing modified chromosome (incorporating SNPs)
+Writing full sequence output to: <scratch>/STRAIN_A_full_sequence/chr1.SNPs_introduced.fa
+5 SNPs total for chromosome 1
+1 positions on chromosome 1 already carried the SNP base and were left alone
+1 positions on chromosome 1 were skipped because the reference base did not match the annotation
+3 positions on chromosome 1 were changed to 'N'
+3 reference positions on chromosome 1 were changed to the SNP alternative base
+
+
+
+
+Summary
+3 Ns were newly introduced into the N-masked genome for strain STRAIN_A in total
+3 SNPs were newly introduced into the full sequence genome version for strain STRAIN_A in total
+
+
+All done. Genome(s) are now ready to be indexed with your favourite aligner!
+FYI, aligners shown to work with SNPsplit are Bowtie2, STAR, HISAT2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)
+

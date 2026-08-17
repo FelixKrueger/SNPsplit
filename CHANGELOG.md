@@ -1,6 +1,6 @@
-## v0.7.0 (Release 16 08 2026)
+## v0.8.0 (Release 17 08 2026)
 
-- Added a fixture-based regression test suite (`test/`) covering SNPsplit and tag2sort, run in CI
+- Added fixture-based regression test suites for all three scripts (`test/run_tests.pl` and `test/run_genome_tests.pl`, 53 fixtures), run in CI
 
 ### SNPsplit
 
@@ -13,6 +13,8 @@
 - Fixed `--sam`, which previously produced no sorted output at all ([#93](https://github.com/FelixKrueger/SNPsplit/issues/93))
 
 - Fixed `--samtools_path` and `--output_dir` being passed to tag2sort in a way that broke on paths containing a space ([#97](https://github.com/FelixKrueger/SNPsplit/issues/97))
+
+- `--SNP_file` now accepts the per-chromosome `SNPs_<strain>/chr*.txt` files written by the genome preparation, whose header line was previously read as a SNP, and reports lines it cannot parse ([#107](https://github.com/FelixKrueger/SNPsplit/issues/107))
 
 - Removed two bisulfite strand branches that could never run, and the `sort_snps` and `read_snps_bisulfite` subroutines, which were never called ([#94](https://github.com/FelixKrueger/SNPsplit/issues/94))
 
@@ -28,7 +30,25 @@
 
 ### SNPsplit_genome_preparation
 
-- No functional changes; version raised in step with the other scripts
+- **Breaking:** a chromosome naming mismatch between the VCF and the reference genome now aborts instead of writing an unmodified genome ([#102](https://github.com/FelixKrueger/SNPsplit/issues/102))
+
+- **Breaking:** a failing `gzip` now aborts instead of leaving a zero-byte SNP list and reporting success ([#103](https://github.com/FelixKrueger/SNPsplit/issues/103))
+
+- **Breaking:** a missing `--reference_genome` now exits non-zero, and the help and version options now exit 0 ([#105](https://github.com/FelixKrueger/SNPsplit/issues/105))
+
+- `--skip_filtering` now honours `--strain2` and `--dual_hybrid` instead of silently discarding them ([#106](https://github.com/FelixKrueger/SNPsplit/issues/106))
+
+- `--skip_filtering` without `--strain` now aborts instead of writing files with a blank strain name
+
+- `<strain>_specific_SNPs.<build>.txt` now has the same five columns as every other SNP annotation, so it can be passed to SNPsplit ([#107](https://github.com/FelixKrueger/SNPsplit/issues/107))
+
+- SNP lists and strain comparison files are now written in sorted order, so two runs on the same input produce identical output ([#104](https://github.com/FelixKrueger/SNPsplit/issues/104))
+
+- SNP positions skipped because the reference base disagrees with the annotation, or because the reference already carries the SNP base, are now reported instead of only showing up as a discrepancy between two counts ([#112](https://github.com/FelixKrueger/SNPsplit/issues/112))
+
+- Progress pauses are now skipped when `SNPSPLIT_NO_SLEEP` is set, matching SNPsplit and tag2sort
+
+- A FastA entry with a header but no sequence no longer produces uninitialised-value warnings before the real diagnostic
 
 ### Other
 

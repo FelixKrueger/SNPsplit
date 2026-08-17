@@ -1,0 +1,1 @@
+Two FastA files with the same chromosome name abort at the end-of-file duplicate check (the message ending in a full stop), not the in-loop one

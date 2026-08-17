@@ -1,0 +1,1 @@
+--skip_filtering with no SNP folder aborts with the message telling the user to drop the option. The only guidance this failure gives

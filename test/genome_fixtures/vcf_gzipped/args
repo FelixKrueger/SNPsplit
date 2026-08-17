@@ -1,0 +1,1 @@
+--vcf_file snps.vcf.gz --reference_genome genome --strain STRAIN_A
