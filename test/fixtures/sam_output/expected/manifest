@@ -1,0 +1,11 @@
+sam_output.SNPsplit_report.txt
+sam_output.SNPsplit_report.yaml
+sam_output.SNPsplit_sort.txt
+sam_output.allele_flagged.sam
+sam_output.bam
+sam_output.genome1.sam
+sam_output.genome2.sam
+sam_output.unassigned.sam
+snps.txt
+stderr.log
+stdout.log

@@ -23,7 +23,7 @@ use Cwd;
 ## along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.6.0';
+my $pipeline_version = '0.7.0';
 my $parent_dir = getcwd;
 my $full_commandline = join (" ","SNPsplit",@ARGV);
 # warn "Full commandline: $full_commandline\n"; sleep(5);
@@ -47,6 +47,7 @@ while (@ARGV){
 	$meta_count = 0;
 	%yaml = ();
 	%meta = ();
+	($snp_found,$no_snp_found) = (0,0);
 
     my $file = shift @ARGV;
 	my $timestamp = localtime(time);
@@ -172,7 +173,7 @@ while (@ARGV){
 
     if (%snps){ # not necessary to read SNPs a second time
 		warn "Using already stored SNP information\n";
-		sleep (1);
+		pause(1);
     }
     else{
 		### READ IN SNP FILE
@@ -204,7 +205,7 @@ while (@ARGV){
 		push @args, '--hic';
     }
     if ($samtools_path){
-		push @args, "--samtools_path $samtools_path";
+		push @args, '--samtools_path', $samtools_path;
     }
     if ($paired){
 		push @args, '--paired';
@@ -216,7 +217,7 @@ while (@ARGV){
 		push @args, '--verbose';
     }
     if ($output_dir){ # not passing on empty strings
-		push @args, "--output_dir $output_dir";
+		push @args, '--output_dir', $output_dir;
     }
     if ($conflict){
 		push @args, '--conflicting';
@@ -225,14 +226,20 @@ while (@ARGV){
 		push @args, '--singletons';
     }
 
-    system ("$RealBin/tag2sort @args $outfile");
+    # List form, so a path containing a space is passed as one argument
+    if (system ("$RealBin/tag2sort", @args, $outfile) != 0){
+		my $why = $? == -1        ? "could not be started: $!"
+		        : ($? & 127)      ? 'was killed by signal ' . ($? & 127)
+		        :                   'failed with exit status ' . ($? >> 8);
+		die "Allele-specific sorting (tag2sort) $why\n\n";
+    }
 
     ####
 
     my $sortfile = my $sort_yaml_file = $outfile;
 
-    if ($sortfile =~ s/allele_flagged\.bam$/SNPsplit_sort.txt/){
-		if (-e $sortfile){
+    if ($sortfile =~ s/allele_flagged\.[bs]am$/SNPsplit_sort.txt/){
+		if (-e "${output_dir}$sortfile"){
 
 			open (SORT,"${output_dir}$sortfile") or die "Failed to read sorting report from '${output_dir}$sortfile': $!\n";
 			my $doc;
@@ -281,8 +288,8 @@ sub print_YAML{
 
 	# Sorting stats
 	if ($sort_yaml_file){
-		if ($sort_yaml_file =~ s/allele_flagged\.bam$/SNPsplit_sort.yaml/){
-			if (-e $sort_yaml_file){
+		if ($sort_yaml_file =~ s/allele_flagged\.[bs]am$/SNPsplit_sort.yaml/){
+			if (-e "${output_dir}$sort_yaml_file"){
 				# warn "Found sorting YAML file ($sort_yaml_file). Printing that too\n";
 				print YAML "Sorting:\n";
 				open (SORTYAML,"${output_dir}$sort_yaml_file") or die "Failed to read sorting report from '${output_dir}$sort_yaml_file': $!\n";
@@ -294,7 +301,7 @@ sub print_YAML{
 				}
 
 				close SORTYAML or die $!;
-				if (unlink $sort_yaml_file){ 
+				if (unlink "${output_dir}$sort_yaml_file"){
 					# removing the sort.yaml file to avoid duplication
 				}
 				else{
@@ -652,7 +659,7 @@ sub determine_N_position{
     my ($chr,$start,$cigar,$sequence,$md_tag,$line) = @_;
     my ($genome1,$genome2,$irrelevant,$ct_unassigned) = (0,0,0,0); # determining number of SNPs that can be used to assign a certain allele
 
-    if ($verbose){ warn "Now looking at the following read:\n$chr\t$start\t$cigar\t$sequence\t$md_tag\n";sleep(1);}
+    if ($verbose){ warn "Now looking at the following read:\n$chr\t$start\t$cigar\t$sequence\t$md_tag\n";pause(1);}
     # parsing CIGAR string
     my @len = split (/\D+/,$cigar); # storing the length per operation
     my @ops = split (/\d+/,$cigar); # storing the operation
@@ -663,7 +670,7 @@ sub determine_N_position{
 	
 	if (scalar @ops == 1 and $ops[0] eq 'M'){
 
-		if ($verbose){ warn "Read is a single continuous match: $cigar\n"; sleep(1);}
+		if ($verbose){ warn "Read is a single continuous match: $cigar\n"; pause(1);}
 		# adjusting the read mapping position by the SNP position
 
 		if ($verbose){
@@ -693,47 +700,19 @@ sub determine_N_position{
 				}
 				if ($verbose){ warn "now adjusting for the number of elements in the array, adding ",(scalar @array-1),"\n"};
 				$pos += (scalar @array) - 1;
-				if ($verbose){ warn "pos right now: $pos\n\n"; sleep(1)};
+				if ($verbose){ warn "pos right now: $pos\n\n"; pause(1)};
 			}
 			else{ # element is a digit, so we can just add it to the position
 				if ($verbose){ warn "element is $ns[$index]\n"};
 				$pos += $ns[$index];
-				if ($verbose){ warn "Start: $start\tpos: $pos\n"; sleep(1);};
+				if ($verbose){ warn "Start: $start\tpos: $pos\n"; pause(1);};
 			}
 
 			my $genomic_pos = $pos + $start;
 
 			### seeing if the SNP is present in the SNP position list
-			if (exists $snps{$chr}->{$genomic_pos}){
-			++$snp_found;
-
-			if ($verbose) { warn "SNP was present: ref: $snps{$chr}->{$genomic_pos}->{ref}\tsnp: $snps{$chr}->{$genomic_pos}->{snp}\n";}
-			if ($verbose){ warn "pos: $pos\n$sequence\n";}
-			my $read_base = substr($sequence,$pos,1); # The N position has not been adjusted for the N yet so can be used as index
-			if ($verbose) { warn "base in read was: $read_base\n";}
-
-			if ($bisulfite){
-				($genome1,$genome2,$irrelevant,$ct_unassigned) = score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant,$ct_unassigned);
-			}
-			else{ ## DEFAULT
-				if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
-					if ($verbose) { warn "genome 1 specific!\n";}
-						++$genome1;
-					}
-					elsif ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
-						if ($verbose) { warn "genome 2 specific!\n";}
-						++$genome2;
-					}
-					else{
-						if ($verbose) { warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-						++$irrelevant;
-					}
-				}
-			}
-			else{
-				++$no_snp_found;
-				if ($verbose) { warn "SNP was not present in the SNP list\n";}
-			}
+			($genome1,$genome2,$irrelevant,$ct_unassigned) =
+				score_snp_position($chr,$genomic_pos,$pos,$sequence,$line,$genome1,$genome2,$irrelevant,$ct_unassigned);
 
 			if ($verbose) { warn "now adjusting the position for the N itself\n";}
 			$pos += 1; # adjusting position for the N itself. irrelevant if this is the last element of the array
@@ -832,7 +811,7 @@ sub determine_N_position{
 					}
 					else{
 						# this might give us a clue of which other characters might turn up in the MD-tag
-						if ($verbose){ warn "The character was no deletion: $ns[$index]\n"; sleep(1);}
+						if ($verbose){ warn "The character was no deletion: $ns[$index]\n"; pause(1);}
 					}
 				}
 				else{
@@ -940,7 +919,7 @@ sub determine_N_position{
 			my $operation_length = 0;
 			if ($verbose){
 				warn "Chromosome is $chr\n";
-				warn "Position within the read is: $temp_pos. MD-tag is: $md_tag\n"; sleep(1);
+				warn "Position within the read is: $temp_pos. MD-tag is: $md_tag\n"; pause(1);
 				warn "To start with, genomic position is: $genomic_pos\n";
 				warn "To start with, operation length is $operation_length\n\n";
 			}
@@ -1021,40 +1000,9 @@ sub determine_N_position{
 			}
 
 			### STEP IV: determining if the SNP is present in the SNP position list, and whether the position in the read was the reference or SNP base
-			if ($verbose){   warn "Found a match, genomic position should be: $genomic_pos\n~~~~~~~~~~~~~~\n\n"; sleep(1);}
-			if (exists $snps{$chr}->{$genomic_pos}){
-				++$snp_found;
-
-				if ($verbose){	warn "SNP was present: ref: $snps{$chr}->{$genomic_pos}->{ref}\tsnp: $snps{$chr}->{$genomic_pos}->{snp}\n";}
-				if ($verbose){	warn "pos: $pos\n$sequence\n";}
-				my $read_base = substr($sequence,$pos,1); # The N position has not been adjusted for the N yet so can be used as index
-
-				if ($verbose){	warn "base in read was: $read_base\n";}
-				if ($bisulfite){
-					($genome1,$genome2,$irrelevant,$ct_unassigned) = score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant,$ct_unassigned);
-				}
-				### Non-bisulfite setting ( = DEFAULT)
-				else{
-					if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
-						if ($verbose){ warn "genome 1 specific!\n";}
-						++$genome1;
-					}
-					elsif ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
-						if ($verbose){ warn "genome 2 specific!\n";}
-						++$genome2;
-					}
-					else{
-						if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-						++$irrelevant;
-					}
-				}
-			}
-			else{
-				++$no_snp_found;
-				if ($verbose){
-					warn "SNP was not present in the SNP list\n";
-				}
-			}
+			if ($verbose){   warn "Found a match, genomic position should be: $genomic_pos\n~~~~~~~~~~~~~~\n\n"; pause(1);}
+			($genome1,$genome2,$irrelevant,$ct_unassigned) =
+				score_snp_position($chr,$genomic_pos,$pos,$sequence,$line,$genome1,$genome2,$irrelevant,$ct_unassigned);
 
 			if ($verbose){  warn "now adjusting the position for the N itself\n";}
 			$pos += 1; # adjusting position for the N itself. irrelevant if this is the last element of the array
@@ -1075,6 +1023,48 @@ sub determine_N_position{
 ### SUBROUTINES
 ###
 ###################################################################################################################
+
+# Pauses are skipped entirely when SNPSPLIT_NO_SLEEP is set
+sub pause{
+    sleep($_[0]) unless $ENV{SNPSPLIT_NO_SLEEP};
+}
+
+# Both CIGAR paths score a masked position the same way; one implementation keeps them in step
+sub score_snp_position{
+
+    my ($chr,$genomic_pos,$pos,$sequence,$line,$genome1,$genome2,$irrelevant,$ct_unassigned) = @_;
+
+    unless (exists $snps{$chr}->{$genomic_pos}){
+		++$no_snp_found;
+		if ($verbose){ warn "SNP was not present in the SNP list\n";}
+		return ($genome1,$genome2,$irrelevant,$ct_unassigned);
+    }
+
+    ++$snp_found;
+    if ($verbose){ warn "SNP was present: ref: $snps{$chr}->{$genomic_pos}->{ref}\tsnp: $snps{$chr}->{$genomic_pos}->{snp}\n";}
+    if ($verbose){ warn "pos: $pos\n$sequence\n";}
+    my $read_base = substr($sequence,$pos,1); # The N position has not been adjusted for the N yet so can be used as index
+    if ($verbose){ warn "base in read was: $read_base\n";}
+
+    if ($bisulfite){
+		return score_bisulfite_SNPs($line,$chr,$genomic_pos,$read_base,$genome1,$genome2,$irrelevant,$ct_unassigned);
+    }
+
+    if ($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){
+		if ($verbose){ warn "genome 1 specific!\n";}
+		++$genome1;
+    }
+    elsif ($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){
+		if ($verbose){ warn "genome 2 specific!\n";}
+		++$genome2;
+    }
+    else{
+		if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
+		++$irrelevant;
+    }
+
+    return ($genome1,$genome2,$irrelevant,$ct_unassigned);
+}
 
 
 
@@ -1119,7 +1109,7 @@ sub score_bisulfite_SNPs{
 
     ### if the SNP in question involves a genomic C position we potentially need to allow both C or T as C (G/A for the reverse strand)
 
-    if ($verbose){ warn "Reference base is $snps{$chr}->{$genomic_pos}->{ref}\tSNP base:\t$snps{$chr}->{$genomic_pos}->{snp}\tRead base:\t$read_base\n"; sleep(1);}
+    if ($verbose){ warn "Reference base is $snps{$chr}->{$genomic_pos}->{ref}\tSNP base:\t$snps{$chr}->{$genomic_pos}->{snp}\tRead base:\t$read_base\n"; pause(1);}
 
     ### REFERENCE STRAIN = C
     if ( $snps{$chr}->{$genomic_pos}->{ref} eq 'C'){    # the position is a C in the reference genome
@@ -1271,17 +1261,6 @@ sub score_bisulfite_SNPs{
 		# warn "Reference base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
 		++$genome1;
 	    }
-	    # added this section 13 June 2017
-	    elsif ($snps{$chr}->{$genomic_pos}->{snp} eq 'C'){ # a bisulfite converted position on the bottom strand may be a G or A
-		if ($read_base eq 'C' or $read_base eq 'T'){
-		    if ($verbose){ warn "genome 2 specific!\n";}
-		    ++$genome2;
-		}
-		else{
-		    if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-		    ++$irrelevant;
-		}
-	    }
 	    elsif($read_base eq $snps{$chr}->{$genomic_pos}->{snp}){ # has to be T
 		if ($verbose){ warn "genome 2 specific!\n";}
 		++$genome2;
@@ -1335,17 +1314,6 @@ sub score_bisulfite_SNPs{
 		if ($verbose){ warn "genome 2 specific!\n";}
 		# warn "Alternative base is G\nGenomic base:\t$snps{$chr}->{$genomic_pos}->{ref}\tRead base:\t$read_base\n"; sleep(1);
 		++$genome2;
-	    }
-	    # added this section 13 June 2017
-	    elsif ($snps{$chr}->{$genomic_pos}->{ref} eq 'C'){ # a bisulfite converted position on the bottom strand may be a G or A
-		if ($read_base eq 'C' or $read_base eq 'T'){
-		    if ($verbose){ warn "genome 1 specific!\n";}
-		    ++$genome1;
-		}
-		else{
-		    if ($verbose){ warn "The base was different than both genome 1 or genome 2: $read_base\n";}
-		    ++$irrelevant;
-		}
 	    }
 	    elsif($read_base eq $snps{$chr}->{$genomic_pos}->{ref}){ # has to be T
 		if ($verbose){ warn "genome 1 specific!\n";}
@@ -1404,16 +1372,21 @@ sub sam2bam_convert{
     my $file = shift;
 
     warn "File appears to be in SAM format and needs conversion into BAM format first\n";
-    sleep (3);
+    pause(3);
     my $bamfile = $file;
     $bamfile =~ s/sam$/bam/;
     warn "Now converting '$file' to '$bamfile' ...\n";
-    sleep (3);
+    pause(3);
 
-    system ("$samtools_path view -bS $file > $bamfile");
+    if (system ("$samtools_path view -bS $file > $bamfile") != 0){
+		my $why = $? == -1        ? "could not be started: $!"
+		        : ($? & 127)      ? 'was killed by signal ' . ($? & 127)
+		        :                   'failed with exit status ' . ($? >> 8);
+		die "SAM to BAM conversion $why\n\n";
+    }
 
     warn "BAM conversion finished\n\n";
-    sleep (3);
+    pause(3);
     return $bamfile;  # setting bamfile as new input file
 
 }
@@ -1430,11 +1403,12 @@ sub sort_by_name_paired_end{
     system ("$samtools_path sort -n -o $sorted $file");  # removed -O again because it doesn't seem to be working... 09 Jan 2017
     $file = $sorted; # setting sorted BAM file as new $file
     warn "Finished sorting BAM file into new file '$file'\n\n";
-    sleep (1);
+    pause(1);
     return $file;
 
 }
 
+# Stores all SNP types; bisulfite C>T/G>A rejection is strand-specific and lives in score_bisulfite_SNPs
 sub read_snps{
 
     if ($snp_file =~ /\.gz$/){
@@ -1447,7 +1421,7 @@ sub read_snps{
     ### READING FROM SNP FILE
 
     warn "Storing SNP positions provided in '$snp_file'\n";
-    sleep(1);
+    pause(1);
 
     my $snp_count = 0;
 
@@ -1464,86 +1438,6 @@ sub read_snps{
     }
     warn "Stored $snp_count positions in total\n\n";
     return ($snp_count);
-
-}
-
-sub read_snps_bisulfite{
-
-    warn "Processing SNPs provided in '$snp_file' in a bisulfite-aware fashion...\n";
-
-    if ($snp_file =~ /\.gz$/){
-	open (SNP,"gunzip -c $snp_file |") or die "Failed to read from zgipped $snp_file: $!\n\n";
-    }
-    else{
-	open (SNP,$snp_file) or die "Failed to read from $snp_file: $!\n\n";
-    }
-
-    ### READING FROM SNP FILE
-    my $snp_count = 0;
-    my $total     = 0;
-    my $ct_snp    = 0;
-    my $ga_snp    = 0;
-
-    while (<SNP>){
-	chomp;
-	my ($chr,$pos,$diff)  = (split /\t/)[1,2,4];
-	my ($ref,$snp) = (split /\//,$diff);
-	# print "$chr\t$pos\t$ref\t$snp\n";
-	++$total;
-
-	if ($ref eq 'C' and $snp eq 'T'){
-	    $ct_snp++;
-	    next;
-	}
-	if ($ref eq 'T' and $snp eq 'C'){
-	    $ct_snp++;
-	    next;
-	}
-
-	if ($ref eq 'G' and $snp eq 'A'){
-	    $ga_snp++;
-	    next;
-	}
-	if ($ref eq 'A' and $snp eq 'G'){
-	    $ga_snp++;
-	    next;
-	}
-
-	#sleep(1);
-
-	++$snp_count;
-
-	### for N-masked genomes the SNPs are stored in an. hashes
-	$snps{$chr}->{$pos}->{ref} = $ref;
-	$snps{$chr}->{$pos}->{snp} = $snp;
-    }
-
-    my $perc_CT = sprintf("%.2f",$ct_snp/$total *100);
-    my $perc_GA = sprintf("%.2f",$ga_snp/$total *100);
-    my $perc_stored = sprintf("%.2f",$snp_count/$total *100);
-
-    warn "Stored positions in total:\t\t$snp_count ($perc_stored%)\n";
-    warn "Excluded C>T positions in total:\t$ct_snp ($perc_CT%)\n";
-    warn "Excluded G>A positions in total:\t$ga_snp ($perc_GA%)\n\n";
-
-    print REPORT "Stored positions in total:\t\t$snp_count ($perc_stored%)\n";
-    print REPORT "Excluded C>T positions in total:\t$ct_snp ($perc_CT%)\n";
-    print REPORT "Excluded G>A positions in total:\t$ga_snp ($perc_GA%)\n\n";
-
-    return ($snp_count);
-
-}
-
-
-sub sort_snps{
-
-    warn "Sorting SNP positions\n";
-
-    foreach my $chr (keys %snps){
-	warn "Sorting SNP positions on chromosome $chr...\n";
-	@{$snps{$chr}} =  sort {$a->{pos}<=>$b->{pos}} @{$snps{$chr}};
-    }
-    warn "Finished sorting SNP positions\n\n\n";
 
 }
 
@@ -1672,7 +1566,7 @@ sub test_positional_sorting{
     my $filename = shift;
     my $samtools_path = shift;
     warn "\nNow testing Bismark result file $filename for positional sorting\n";
-    sleep(1);
+    pause(1);
 
     if ($filename =~ /\.gz$/) {
 	open (TEST,"gunzip -c $filename |") or die "Can't open gzipped file $filename: $!\n";
@@ -1693,6 +1587,7 @@ sub test_positional_sorting{
 
     while (<TEST>) {
 	if (/^\@/) {	     # testing header lines if they contain the @SO flag (for being sorted)
+	    # No SAM header line starts with @SO; the sort order lives on @HD as SO:
 	    if (/^\@SO/) {
 		warn "SAM header line '$_' indicates that the Bismark aligment file has been sorted by chromosomal positions. Paired-end files will be sorted by name before proceeding with the SNPsplit tagging process\n\n";
 		return 0;
@@ -1870,7 +1765,7 @@ VERSION
 		}
 
 		unless ($paired){
-			warn "The option --singletons only makes sense for paired-end files. Simply ignoring it in single-end mode...\n"; sleep(1);
+			warn "The option --singletons only makes sense for paired-end files. Simply ignoring it in single-end mode...\n"; pause(1);
 			$singletons = undef;
 		}
     }
@@ -1879,7 +1774,7 @@ VERSION
 		warn "Hi-C data specified. This assumes that the data has been processed with HiCUP, is paired-end and does not require positional sorting.\nSetting '--paired' and '--no_sort'...\n\n";
 		$paired = 1;
 		$no_sort = 1;
-		sleep(1);
+		pause(1);
     }
 
     ### OUTPUT DIRECTORY PATH

@@ -1,0 +1,15 @@
+Input file:						'multi_input.allele_flagged.bam'
+Writing unassigned reads to:				'multi_input.unassigned.bam'
+Writing genome 1-specific reads to:			'multi_input.genome1.bam'
+Writing genome 2-specific reads to:			'multi_input.genome2.bam'
+
+
+Allele-specific single-end sorting report
+=========================================
+Read alignments processed in total:		2
+Reads were unassignable:			0 (0.00%)
+Reads were specific for genome 1:		1 (50.00%)
+Reads were specific for genome 2:		1 (50.00%)
+Reads contained conflicting SNP information:	0 (0.00)
+
+

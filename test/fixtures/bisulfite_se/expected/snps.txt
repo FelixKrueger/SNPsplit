@@ -1,0 +1,9 @@
+1	chr1	30	1	C/T
+2	chr1	90	1	C/G
+3	chr1	150	1	T/C
+4	chr1	210	1	G/A
+5	chr1	270	1	A/G
+6	chr1	330	1	A/T
+7	chr1	390	1	G/C
+8	chr1	450	1	G/T
+9	chr1	510	1	T/G

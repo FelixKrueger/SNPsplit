@@ -9,7 +9,7 @@ Singleton alignments in the allele-tagged paired-end file (which is the default 
 
 ## Hi-C
 
-Assumes data processed with [HiCUP](www.bioinformatics.babraham.ac.uk/projects/hicup/ "HiCUP on the Babraham Bioinformatics website") as input, i.e. the input BAM files are by definition paired-end and Reads 1 and 2 follow each other. Hi-C sorting discriminates several more possible read combinations:
+Assumes data processed with [HiCUP](https://www.bioinformatics.babraham.ac.uk/projects/hicup/ "HiCUP on the Babraham Bioinformatics website") as input, i.e. the input BAM files are by definition paired-end and Reads 1 and 2 follow each other. Hi-C sorting discriminates several more possible read combinations:
 
 ```
 G1-G1

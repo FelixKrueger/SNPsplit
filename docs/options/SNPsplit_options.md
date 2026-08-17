@@ -45,7 +45,7 @@ This option skips the sorting step if BAM files are already sorted by read name 
 
 - `--hic`
 
-Assumes Hi-C data processed with [HiCUP](www.bioinformatics.babraham.ac.uk/projects/hicup/) as input, i.e. the input BAM file is paired-end and Reads 1 and 2 follow each other. Thus, this option also sets the flags `--paired` and `--no_sort`. Default: OFF.
+Assumes Hi-C data processed with [HiCUP](https://www.bioinformatics.babraham.ac.uk/projects/hicup/) as input, i.e. the input BAM file is paired-end and Reads 1 and 2 follow each other. Thus, this option also sets the flags `--paired` and `--no_sort`. Default: OFF.
 
 - `--bisulfite`
 

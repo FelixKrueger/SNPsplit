@@ -1,0 +1,46 @@
+---
+Meta:
+  tool: SNPsplit
+  version: <masked>
+  infile: cigar_complex.bam
+  date_run: <masked>
+  mode: standard DNA
+  library: single-end
+  command: <masked>
+Tagging:
+  total_reads: 11
+  unaligned: 0
+  percent_unaligned: 0.00
+  g1: 6
+  percent_g1: 54.55
+  g2: 3
+  percent_g2: 27.27
+  unassignable: 2
+  percent_unassignable: 18.18
+  no_snp: 2
+  percent_no_snp: 18.18
+  bizarre: 0
+  percent_bizarre: 0.00
+  SNP_annotation: snps.txt
+  SNPs_stored: 4
+  N_containing_reads: 11
+  non_N_containing_reads: 0
+  N_deletion: 0
+  percent_N_deletion: 0.00
+  multi_N_deletion: 0
+  N_was_known_SNP: 11
+  percent_N_was_known_SNP: 91.67
+  N_not_known: 1
+  percent_N_not_known: 8.33
+Sorting:
+  tagged_infile: cigar_complex.allele_flagged.bam
+  SE_total_reads: 11
+  SE_unassignable: 2
+  SE_percent_unassignable: 18.18
+  SE_genome1: 6
+  SE_percent_genome1: 54.55
+  SE_genome2: 3
+  SE_percent_genome2: 27.27
+  SE_conflicting: 0
+  SE_percent_conflicting: 0.00
+...

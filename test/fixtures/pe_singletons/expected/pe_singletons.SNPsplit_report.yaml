@@ -1,0 +1,56 @@
+---
+Meta:
+  tool: SNPsplit
+  version: <masked>
+  infile: pe_singletons.bam
+  date_run: <masked>
+  mode: standard DNA
+  library: paired-end
+  command: <masked>
+Tagging:
+  total_reads: 15
+  unaligned: 0
+  percent_unaligned: 0.00
+  g1: 6
+  percent_g1: 40.00
+  g2: 2
+  percent_g2: 13.33
+  unassignable: 5
+  percent_unassignable: 33.33
+  no_snp: 0
+  percent_no_snp: 0.00
+  bizarre: 2
+  percent_bizarre: 13.33
+  SNP_annotation: snps.txt
+  SNPs_stored: 4
+  N_containing_reads: 10
+  non_N_containing_reads: 5
+  N_deletion: 0
+  percent_N_deletion: 0.00
+  multi_N_deletion: 0
+  N_was_known_SNP: 12
+  percent_N_was_known_SNP: 100.00
+  N_not_known: 0
+  percent_N_not_known: 0.00
+Sorting:
+  tagged_infile: pe_singletons.allele_flagged.bam
+  PE_total_reads: 10
+  PE_total_pairs: 5
+  PE_total_singletons: 5
+  PE_unassignable: 2
+  PE_percent_unassignable: 20.00
+  PE_unassignable_pairs: 1
+  PE_unassignable_singletons: 1
+  PE_genome1: 4
+  PE_percent_genome1: 40.00
+  PE_genome1_pairs: 2
+  PE_genome1_singletons: 2
+  PE_genome2: 1
+  PE_percent_genome2: 10.00
+  PE_genome2_pairs: 0
+  PE_genome2_singletons: 1
+  PE_conflicting: 3
+  PE_percent_conflicting: 30.00
+  PE_conflicting_pairs: 2
+  PE_conflicting_singletons: 1
+...

@@ -1,0 +1,11 @@
+out/output_dir.SNPsplit_report.txt
+out/output_dir.SNPsplit_report.yaml
+out/output_dir.SNPsplit_sort.txt
+out/output_dir.allele_flagged.bam
+out/output_dir.genome1.bam
+out/output_dir.genome2.bam
+out/output_dir.unassigned.bam
+output_dir.bam
+snps.txt
+stderr.log
+stdout.log

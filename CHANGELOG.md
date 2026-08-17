@@ -1,3 +1,41 @@
+## v0.7.0 (Release 16 08 2026)
+
+- Added a fixture-based regression test suite (`test/`) covering SNPsplit and tag2sort, run in CI
+
+### SNPsplit
+
+- **Breaking:** a failing `tag2sort` stage, or a failing SAM to BAM conversion, now aborts the run instead of reporting success
+
+- Fixed `--output_dir` skipping the sorting report, which also left a stray `SNPsplit_sort.yaml` behind ([#91](https://github.com/FelixKrueger/SNPsplit/issues/91))
+
+- Fixed the SNP-coverage counters carrying over when several input files are given in one command ([#92](https://github.com/FelixKrueger/SNPsplit/issues/92))
+
+- Fixed `--sam`, which previously produced no sorted output at all ([#93](https://github.com/FelixKrueger/SNPsplit/issues/93))
+
+- Fixed `--samtools_path` and `--output_dir` being passed to tag2sort in a way that broke on paths containing a space ([#97](https://github.com/FelixKrueger/SNPsplit/issues/97))
+
+- Removed two bisulfite strand branches that could never run, and the `sort_snps` and `read_snps_bisulfite` subroutines, which were never called ([#94](https://github.com/FelixKrueger/SNPsplit/issues/94))
+
+- The two CIGAR paths now share one implementation of the allele comparison instead of a copy each ([#95](https://github.com/FelixKrueger/SNPsplit/issues/95))
+
+### tag2sort
+
+- Fixed `--samtools_path` being ignored when reading BAM files
+
+- Fixed the Hi-C report printing a blank genome 1 count when no G1/G1 pair was present ([#90](https://github.com/FelixKrueger/SNPsplit/issues/90))
+
+- Removed `standard_paired_end`, which was never called
+
+### SNPsplit_genome_preparation
+
+- No functional changes; version raised in step with the other scripts
+
+### Other
+
+- Removed `copy_SNPsplit_files_for_release.pl`, which is no longer used
+
+- Fixed two HiCUP links in the documentation that were missing their `https://`
+
 ## v0.6.0 (Release 07 01 2023)
 
 - Restructured the documentation, using `mkdocs`. The new User Guide lives at this address: http://felixkrueger.github.io/SNPsplit/

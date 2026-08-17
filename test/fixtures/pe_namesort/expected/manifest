@@ -1,0 +1,13 @@
+pe_namesort.SNPsplit_report.txt
+pe_namesort.SNPsplit_report.yaml
+pe_namesort.SNPsplit_sort.txt
+pe_namesort.allele_flagged.bam
+pe_namesort.bam
+pe_namesort.conflicting.bam
+pe_namesort.genome1.bam
+pe_namesort.genome2.bam
+pe_namesort.sortedByName.bam
+pe_namesort.unassigned.bam
+snps.txt
+stderr.log
+stdout.log

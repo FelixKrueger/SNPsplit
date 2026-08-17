@@ -1,0 +1,11 @@
+se_skipped.SNPsplit_report.txt
+se_skipped.SNPsplit_report.yaml
+se_skipped.SNPsplit_sort.txt
+se_skipped.allele_flagged.bam
+se_skipped.bam
+se_skipped.genome1.bam
+se_skipped.genome2.bam
+se_skipped.unassigned.bam
+snps.txt
+stderr.log
+stdout.log

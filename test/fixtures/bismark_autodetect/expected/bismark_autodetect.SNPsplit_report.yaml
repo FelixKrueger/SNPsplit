@@ -1,0 +1,58 @@
+---
+Meta:
+  tool: SNPsplit
+  version: <masked>
+  infile: bismark_autodetect.bam
+  date_run: <masked>
+  mode: bisulfite
+  library: paired-end
+  command: <masked>
+Tagging:
+  total_reads: 2
+  unaligned: 0
+  percent_unaligned: 0.00
+  g1: 2
+  percent_g1: 100.00
+  g2: 0
+  percent_g2: 0.00
+  unassignable: 0
+  percent_unassignable: 0.00
+  unassigned_but_ct: 0
+  no_snp: 0
+  percent_no_snp: 0.00
+  bizarre: 0
+  percent_bizarre: 0.00
+  SNP_annotation: snps.txt
+  SNPs_stored: 4
+  N_containing_reads: 2
+  non_N_containing_reads: 0
+  N_deletion: 0
+  percent_N_deletion: 0.00
+  multi_N_deletion: 0
+  N_was_known_SNP: 2
+  percent_N_was_known_SNP: 100.00
+  CT_positions_skipped: 0
+  N_not_known: 0
+  percent_N_not_known: 0.00
+Sorting:
+  tagged_infile: bismark_autodetect.allele_flagged.bam
+  PE_total_reads: 1
+  PE_total_pairs: 1
+  PE_total_singletons: 0
+  PE_unassignable: 0
+  PE_percent_unassignable: 0.00
+  PE_unassignable_pairs: 0
+  PE_unassignable_singletons: 0
+  PE_genome1: 1
+  PE_percent_genome1: 100.00
+  PE_genome1_pairs: 1
+  PE_genome1_singletons: 0
+  PE_genome2: 0
+  PE_percent_genome2: 0.00
+  PE_genome2_pairs: 0
+  PE_genome2_singletons: 0
+  PE_conflicting: 0
+  PE_percent_conflicting: 0.00
+  PE_conflicting_pairs: 0
+  PE_conflicting_singletons: 0
+...

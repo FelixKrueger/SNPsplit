@@ -1,0 +1,44 @@
+Input file:					'header_only.bam'
+Writing allele-flagged output file to:		'header_only.allele_flagged.bam'
+
+
+Allele-tagging report
+=====================
+Processed 0 read alignments in total
+Reads were unaligned and hence skipped: 0 (N/A%)
+0 reads were unassignable (N/A%)
+0 reads were specific for genome 1 (N/A%)
+0 reads were specific for genome 2 (N/A%)
+0 reads did not contain one of the expected bases at known SNP positions (N/A%)
+0 contained conflicting allele-specific SNPs (N/A%)
+
+
+SNP coverage report
+===================
+SNP annotation file:	snps.txt
+SNPs stored in total:	4
+N-containing reads:	0
+non-N:			0
+total:			0
+Reads had a deletion of the N-masked position (and were thus dropped):	0 (N/A%)
+Of which had multiple deletions of N-masked positions within the same read:	0
+
+Of valid N containing reads,
+N was present in the list of known SNPs:	0 (N/A%)
+N was not present in the list of SNPs:		0 (N/A%)
+
+Input file:						'header_only.allele_flagged.bam'
+Writing unassigned reads to:				'header_only.unassigned.bam'
+Writing genome 1-specific reads to:			'header_only.genome1.bam'
+Writing genome 2-specific reads to:			'header_only.genome2.bam'
+
+
+Allele-specific single-end sorting report
+=========================================
+Read alignments processed in total:		0
+Reads were unassignable:			0 (N/A%)
+Reads were specific for genome 1:		0 (N/A%)
+Reads were specific for genome 2:		0 (N/A%)
+Reads contained conflicting SNP information:	0 (N/A)
+
+

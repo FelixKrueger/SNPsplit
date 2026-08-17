@@ -1,0 +1,46 @@
+---
+Meta:
+  tool: SNPsplit
+  version: <masked>
+  infile: output_dir.bam
+  date_run: <masked>
+  mode: standard DNA
+  library: single-end
+  command: <masked>
+Tagging:
+  total_reads: 9
+  unaligned: 0
+  percent_unaligned: 0.00
+  g1: 3
+  percent_g1: 33.33
+  g2: 2
+  percent_g2: 22.22
+  unassignable: 3
+  percent_unassignable: 33.33
+  no_snp: 2
+  percent_no_snp: 22.22
+  bizarre: 1
+  percent_bizarre: 11.11
+  SNP_annotation: snps.txt
+  SNPs_stored: 4
+  N_containing_reads: 8
+  non_N_containing_reads: 1
+  N_deletion: 0
+  percent_N_deletion: 0.00
+  multi_N_deletion: 0
+  N_was_known_SNP: 9
+  percent_N_was_known_SNP: 90.00
+  N_not_known: 1
+  percent_N_not_known: 10.00
+Sorting:
+  tagged_infile: output_dir.allele_flagged.bam
+  SE_total_reads: 9
+  SE_unassignable: 3
+  SE_percent_unassignable: 33.33
+  SE_genome1: 3
+  SE_percent_genome1: 33.33
+  SE_genome2: 2
+  SE_percent_genome2: 22.22
+  SE_conflicting: 1
+  SE_percent_conflicting: 11.11
+...

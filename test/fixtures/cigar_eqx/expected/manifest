@@ -1,0 +1,7 @@
+cigar_eqx.SNPsplit_report.txt
+cigar_eqx.SNPsplit_report.yaml
+cigar_eqx.allele_flagged.bam
+cigar_eqx.bam
+snps.txt
+stderr.log
+stdout.log

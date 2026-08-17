@@ -26,7 +26,7 @@ use lib "$Bin/../lib";
 my %counting;
 my %fhs;
 
-my $SNPsplit_version = '0.6.0';
+my $SNPsplit_version = '0.7.0';
 my %yaml;
 my $yaml_count = 0;
 
@@ -36,6 +36,9 @@ my ($unassigned,$genome1,$genome2,$conflicting,$snp_found,$no_snp_found,$bizarre
 my $report_file;
 
 foreach my $file (@ARGV){
+  %yaml       = ();
+  $yaml_count = 0;
+
   warn "\nSummary of parameters for SNPsplit-sort:\n";
   warn '='x40,"\n";
   warn "SNPsplit tagged infile:\t\t$file\n";
@@ -69,7 +72,7 @@ foreach my $file (@ARGV){
   }
   warn "\n\n";
 
-  sleep (1);
+  pause(1);
   my $outfile;
   if ($hic){
     process_HiC_paired_end($file);
@@ -96,8 +99,13 @@ foreach my $file (@ARGV){
   close YAML or warn "Had trouble closing YAML filehandle: $!\n";
 }
 
+# Pauses are skipped entirely when SNPSPLIT_NO_SLEEP is set
+sub pause{
+  sleep($_[0]) unless $ENV{SNPSPLIT_NO_SLEEP};
+}
+
 sub print_YAML{
-  # warn "-Sorting:\n"; 
+  # warn "-Sorting:\n";
   foreach my $entry (sort {$a<=>$b} keys %yaml){
     foreach my $stat(keys %{$yaml{$entry}}){ # should only be 1 stat per entry
       # warn "Entry: $entry\t$stat: $yaml{$entry}->{$stat}\n";
@@ -110,7 +118,7 @@ sub process_single_end{
 
   my $file = shift;
 
-  open (IN,"samtools view -h ${output_dir}$file |") or die "Failed to read from BAM file ${output_dir}$file: $!\n";
+  open (IN,"$samtools_path view -h ${output_dir}$file |") or die "Failed to read from BAM file ${output_dir}$file: $!\n";
   warn "Now processing input file <<< $file >>>\n\n";
 
   my $outfile = open_output_filehandles($file);
@@ -234,7 +242,7 @@ sub process_HiC_paired_end{
 
   my $file = shift;
 
-  open (IN,"samtools view -h ${output_dir}$file |") or die "Failed to read from BAM file $file: $!\n";
+  open (IN,"$samtools_path view -h ${output_dir}$file |") or die "Failed to read from BAM file $file: $!\n";
 
   open_output_filehandles($file);
 
@@ -243,7 +251,7 @@ sub process_HiC_paired_end{
 
   my ($g1_ua , $ua_g1 , $g2_ua , $ua_g2, $g1_g2 , $g2_g1) = (0,0,0,0,0,0);
   my ($g1_g1 , $g2_g2) = (0,0);
-  ($unassigned,$conflicting) = (0,0);
+  ($unassigned,$genome1,$genome2,$conflicting) = (0,0,0,0);
 
   my $count = 0;
 
@@ -488,7 +496,7 @@ sub princess_paired_end{
 
   my $file = shift;
 
-  open (IN,"samtools view -h ${output_dir}$file |") or die "Failed to read from BAM file $file: $!\n";
+  open (IN,"$samtools_path view -h ${output_dir}$file |") or die "Failed to read from BAM file $file: $!\n";
 
   open_output_filehandles($file);
 
@@ -857,13 +865,13 @@ sub princess_paired_end{
 sub open_output_filehandles{
 
   my $infile = my $file = shift;
-  $file =~ s/allele_flagged\.bam$/bam/;
+  # Normalised to .bam either way, so every output name below derives from one stem
+  $file =~ s/allele_flagged\.[bs]am$/bam/;
 
   my $genome1_file = my $genome2_file = my $unassigned_file = my $conflicting_file = $report_file = my $yaml_file = $file;
   my $genome1_file_st = my $genome2_file_st = my $unassigned_file_st = my $conflicting_file_st = $file;
 
   my $g1_ua_file = my $g2_ua_file = my $g1_g2_file = $file;
-  # the input file needs to end in .bam (we tested this in while checking the command line options)
 
   # using different filenames for Hi-C data altogether
   if ($hic){
@@ -1039,57 +1047,6 @@ sub open_output_filehandles{
   }
 }
 
-sub standard_paired_end {
-
-  my ($r1,$r2,$XX_tag_1,$XX_tag_2,$genome1_count_r1,$genome1_count_r2,$genome2_count_r1,$genome2_count_r2,$unassigned_r1,$unassigned_r2) = @_;
-  # print join ("\n",$r1,$r2,$XX_tag_1,$XX_tag_2,$genome1_count_r1,$genome1_count_r2,$genome2_count_r1,$genome2_count_r2,$unassigned_r1,$unassigned_r2),"\n";  sleep(1);
-
-  chomp $r1;
-  chomp $r2;
-
-  ### if we came this far all reads should now have an XX-tag assigned to them
-  $r1 .= "\t$XX_tag_1\n";
-  $r2 .= "\t$XX_tag_2\n";
-
-
-  if ($unassigned_r1 and $unassigned_r2){
-    # if neither of the reads overlapped a SNP, the read pair cannot be assigned
-    print UNASSIGNED $r1;
-    print UNASSIGNED $r2;
-    # warn "Read is Unassigned\n";
-    ++$unassigned;
-  }
-  ### Now booting read pairs where Read 1 and Read 2 had conflicting allelic information
-  if ( ($XX_tag_1 eq 'XX:Z:G1' and $XX_tag_2 eq 'XX:Z:G2') or ($XX_tag_1 eq 'XX:Z:G2' and $XX_tag_2 eq 'XX:Z:G1') ){
-    if ($verbose){
-      warn "Read pair contained conflicting allele-assignments!\nRead 1:\t$XX_tag_1\\nRead 2:\t$XX_tag_2\n";
-      warn "Read1\ng1: $genome1_count_r1\ng2: $genome2_count_r1\n";
-      warn "Read2\ng1: $genome1_count_r2\ng2: $genome2_count_r2\n";
-    }
-    ++$conflicting;
-    return;
-  }
-
-  elsif( ($genome1_count_r1 + $genome1_count_r2) > ($genome2_count_r1 + $genome2_count_r2) ){
-    print G1 $r1;
-    print G1 $r2;
-    ++$genome1;
-    # warn "Read pair is genome 1 specific\n"; sleep(1);
-  }
-  elsif( ($genome1_count_r1 + $genome1_count_r2) < ($genome2_count_r1 + $genome2_count_r2) ){
-    print G2 $r1;
-    print G2 $r2;
-    ++$genome2;
-    # warn "Read pair is genome 2 specific\n"; sleep(1);
-  }
-  else{
-    warn "XX-tag 1: $XX_tag_1\nXX-tag 2: $XX_tag_2\n==============\n";
-    die "The read pair has to be unassigned, g1 or g2 specific!\nRead 1: $r1\nRead 2: $r2\n";
-  }
-  # warn "$XX_tag_1\n$XX_tag_2\n==============\n";sleep(1);
-
-}
-
 sub print_helpfile{
   print <<EOF
 
@@ -1212,7 +1169,7 @@ VERSION
   ### no files provided
   unless (@ARGV){
     warn "You need to provide one or more allele-tagged SNPsplit files to start sorting them allele-specifically. Please respecify!\n\n";
-    sleep(2);
+    pause(2);
 
     print_helpfile();
     exit;
@@ -1235,15 +1192,15 @@ VERSION
       unless(-e "$output_dir$file"){
 	  die "Input file '$output_dir$file' doesn't exist in the input folder. Please check filenames and try again!\n\n";
       }
-      unless ($file =~ /\.bam$/){
-	  die "Supplied file needs to be a SNPsplit tagged BAM file (ending in .bam). Please respecify!\n";
+      unless ($file =~ /\.[bs]am$/){
+	  die "Supplied file needs to be a SNPsplit tagged BAM or SAM file (ending in .bam or .sam). Please respecify!\n";
       }
   }
 
   ### no files provided
   unless (@ARGV){
       warn "You need to provide one or more allele-tagged SNPsplit files to start sorting them allele-specifically. Please respecify!\n\n";
-      sleep(2);
+      pause(2);
 
       print_helpfile();
       exit;
@@ -1256,7 +1213,7 @@ VERSION
     }
 
     unless ($paired){
-      warn "The option --singletons only makes sense for paired-end files. Simply ignoring it in single-end mode...\n"; sleep(1);
+      warn "The option --singletons only makes sense for paired-end files. Simply ignoring it in single-end mode...\n"; pause(1);
       $singletons = undef;
     }
 
