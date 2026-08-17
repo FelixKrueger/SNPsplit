@@ -1,3 +1,0 @@
-
-Summary
-0 Ns were newly introduced into the N-masked genome for strain STRAIN_A in total

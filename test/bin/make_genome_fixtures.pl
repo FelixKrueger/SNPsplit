@@ -432,12 +432,12 @@ fixture(
 
 ### --- Errors and edges ------------------------------------------------------------------------
 
-### The VCF names chromosome 1; the reference calls it chr1. Nothing matches, so the run succeeds and
-### writes an unmodified genome under a name that says it is N-masked.
+### The VCF names chromosome 1; the reference calls it chr1. Nothing matches at all, which the
+### whole-genome check catches before any sequence is written.
 fixture(
     name   => 'chrom_name_mismatch',
     args   => $STD_ARGS,
-    readme => 'Ensembl-style VCF chromosome names against UCSC-style reference names: exit 0, zero Ns introduced, and an output file called chrchr1',
+    readme => 'Ensembl-style VCF chromosome names against UCSC-style reference names abort with both name lists, before an unmodified genome can be written',
     genome => { 'chr1.fa' => fasta('chr1', $SEQ) },
     vcf    => { 'snps.vcf' => $STD_VCF },
 );
@@ -445,7 +445,7 @@ fixture(
 fixture(
     name    => 'poison_gzip',
     args    => $STD_ARGS,
-    readme  => 'A failing gzip leaves a zero-byte all-SNP archive and the run still reports success',
+    readme  => 'A failing gzip aborts the run: the close on the pipe is the only place it can be noticed, and SNPsplit reads the file it would have written',
     markers => ['poison_gzip'],
     genome  => \%STD_GENOME,
     vcf     => { 'snps.vcf' => $STD_VCF },
@@ -454,7 +454,7 @@ fixture(
 fixture(
     name    => 'missing_genome',
     args    => '--vcf_file snps.vcf --strain STRAIN_A',
-    readme  => 'A missing --reference_genome warns and exits 0, so a failed run reports success',
+    readme  => 'A missing --reference_genome aborts with a non-zero exit status',
     markers => ['allow_empty'],
     vcf     => { 'snps.vcf' => $STD_VCF },
 );

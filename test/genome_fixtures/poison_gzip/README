@@ -1,1 +1,1 @@
-A failing gzip leaves a zero-byte all-SNP archive and the run still reports success
+A failing gzip aborts the run: the close on the pipe is the only place it can be noticed, and SNPsplit reads the file it would have written

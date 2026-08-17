@@ -34,25 +34,5 @@ Not included into STRAIN_A genome:
 0		were homozygous but the filtering call was low confidence
 
 Now printing a single list of all SNPs to >all_SNPs_STRAIN_A_GRCm39.txt.gz<...
-complete
-
 gzip: deliberate failure
-Finished filtering and writing out SNPs for strain STRAIN_A
-
-Now reading in and storing sequence information of the genome specified in: <scratch>/genome/
-
-Processing chromosome 1 (for strain STRAIN_A)
-Reading SNPs from file <scratch>/SNPs_STRAIN_A/chr1.txt
-Writing modified chromosome (N-masking)
-Writing N-masked output to: <scratch>/STRAIN_A_N-masked/chr1.N-masked.fa
-6 SNPs total for chromosome 1
-6 positions on chromosome 1 were changed to 'N'
-
-
-
-Summary
-6 Ns were newly introduced into the N-masked genome for strain STRAIN_A in total
-
-All done. Genome(s) are now ready to be indexed with your favourite aligner!
-FYI, aligners shown to work with SNPsplit are Bowtie2, STAR, HISAT2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)
-
+Failed to write the SNP list to all_SNPs_STRAIN_A_GRCm39.txt.gz via gzip: the file is incomplete

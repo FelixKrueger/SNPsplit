@@ -129,6 +129,8 @@ else{
 my %chromosomes; # genomic sequence
 read_genome_into_memory($parent_dir);
 
+check_chromosome_names_agree();
+
 ### Create modified genome
 my $new_n_total = 0;
 my $new_snp_total = 0;
@@ -288,6 +290,24 @@ warn "All done. Genome(s) are now ready to be indexed with your favourite aligne
 #############################################################
 ### SUBROUTINES
 #############################################################
+
+### The per-chromosome check inside create_modified_chromosome cannot catch a wholesale naming
+### mismatch: the loop iterates the reference's chromosomes and skips any the VCF does not mention, so
+### an Ensembl VCF against a UCSC genome matches nothing and writes the reference back out unmodified
+sub check_chromosome_names_agree {
+
+    foreach my $chr (keys %chromosomes){
+	return if exists $chroms{$chr};
+    }
+
+    warn "\nNone of the chromosome names in the VCF file were found in the reference genome.\nA rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)\nbut the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)\n";
+    warn "The chromosome names in the SNP annotation were:\n";
+    warn "$_\n" foreach (sort keys %chroms);
+    warn "The chromosome names in the reference genome folder were:\n";
+    warn "$_\n" foreach (sort keys %chromosomes);
+    die "[FATAL ERROR] Please ensure that the same version of the genome is used for both VCF annotations and reference genome (FastA files). Exiting...\n\n";
+
+}
 
 sub read_new_snp_annotation {
     
@@ -1192,12 +1212,14 @@ sub filter_relevant_SNP_calls_from_VCF{
 	warn "File '$all_SNPs' existed in the folder already, overwriting it...\n\n";
     }
     open (ALLSNP,"| gzip -c - > $all_SNPs") or die "Failed to write to file $all_SNPs: $!\n";
-    
+
     foreach my $location (keys %all_SNPs){
 	print ALLSNP "$all_SNPs{$location}\n";
     }
+    ### open on a pipe succeeds as soon as the shell is spawned, so this close is the only place a
+    ### failing gzip can be noticed. SNPsplit reads this file and would otherwise load no SNPs at all
+    close ALLSNP or die "Failed to write the SNP list to $all_SNPs via gzip: the file is incomplete\n";
     warn "complete\n\n";
-    close ALLSNP;   
 }
 
 
@@ -1560,9 +1582,7 @@ VERSION
 
     ### GENOME FOLDER
     unless ($genome_folder){
-	warn "Reference genome folder was not specified! Please use --reference_genome </genome/folder/>\n";
-	# print_helpfile();
-	exit;
+	die "Reference genome folder was not specified! Please use --reference_genome </genome/folder/>\n";
     }
     my $parent_dir = getcwd();    
 
@@ -1714,6 +1734,6 @@ the current working directory, so move there before invoking SNPsplit_genome_pre
 
 EOF
     ;
-  exit 1;
+  exit 0;
 }
 
