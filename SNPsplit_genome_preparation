@@ -527,8 +527,8 @@ sub read_snp_files{
     
     warn "Finally, looking at new reference [$strain] specific reads...\n"; pause(1);
     
-    foreach my $chr (keys %snps){
-	foreach my $pos (keys %{$snps{$chr}}){
+    foreach my $chr (sort keys %snps){
+	foreach my $pos (sort {$a <=> $b} keys %{$snps{$chr}}){
 	    my $location = join (':',$chr,$pos);
 	    
 	    if ($snps{$chr}->{$pos}->{read} == 0){ # present only for Strain 1
@@ -714,7 +714,7 @@ sub create_modified_chromosome_dual_hybrid {
     my $new_n = 0;
     my $new_snp = 0;
 
-   foreach my $pos (keys %{$snps_dual_genome{$chr}}) {
+   foreach my $pos (sort {$a <=> $b} keys %{$snps_dual_genome{$chr}}) {
 
        # Apply the SNP
        ++$count;
@@ -1213,7 +1213,8 @@ sub filter_relevant_SNP_calls_from_VCF{
     }
     open (ALLSNP,"| gzip -c - > $all_SNPs") or die "Failed to write to file $all_SNPs: $!\n";
 
-    foreach my $location (keys %all_SNPs){
+    ### Sorted so the file is reproducible and diffable; hash order made it differ between runs
+    foreach my $location (sort by_location keys %all_SNPs){
 	print ALLSNP "$all_SNPs{$location}\n";
     }
     ### open on a pipe succeeds as soon as the shell is spawned, so this close is the only place a
@@ -1389,6 +1390,13 @@ sub extract_chromosome_name {
     }
 }
 
+# Locations are chr:pos strings, so a plain sort would place position 100 before position 30
+sub by_location {
+    my ($chr_a,$pos_a) = split (/:/,$a);
+    my ($chr_b,$pos_b) = split (/:/,$b);
+    return ($chr_a cmp $chr_b or $pos_a <=> $pos_b);
+}
+
 # Pauses are skipped entirely when SNPSPLIT_NO_SLEEP is set
 sub pause{
     sleep($_[0]) unless $ENV{SNPSPLIT_NO_SLEEP};
@@ -1525,7 +1533,7 @@ VERSION
 		if ($list_strains){
 			warn "\nAvailable genomes to choose from are:\n";
 			warn "="x37,"\n";
-			foreach my $strain(keys %strains){
+			foreach my $strain(sort keys %strains){
 			print "$strain\n";
 			}
 			warn "="x37,"\n";
@@ -1543,7 +1551,7 @@ VERSION
 				warn "Strain name specified [$strain] does not match any of the available strain names!\n";
 				warn "\nAvailable genomes to choose from are:\n";
 				warn "="x37,"\n";	
-				foreach my $strain(keys %strains){
+				foreach my $strain(sort keys %strains){
 					print "$strain\n";
 				}
 				warn "="x37,"\n";
@@ -1554,7 +1562,7 @@ VERSION
 			warn "No strain specified!\n";
 			warn "\nAvailable genomes to choose from are:\n";
 			warn "="x37,"\n";	
-			foreach my $strain(keys %strains){
+			foreach my $strain(sort keys %strains){
 				print "$strain\n";
 			}
 			warn "="x37,"\n";
@@ -1572,7 +1580,7 @@ VERSION
 					warn "Strain2 name specified [$strain2] does not match any of the available strain names!\n";
 					warn "\nAvailable genomes to choose from are:\n";
 					warn "="x37,"\n";	
-					foreach my $strain(keys %strains){
+					foreach my $strain(sort keys %strains){
 						print "$strain\n";
 					}
 				warn "="x37,"\n";
@@ -1583,7 +1591,7 @@ VERSION
 				warn "No strain 2 specified!\n";
 				warn "\nAvailable genomes to choose from are:\n";
 				warn "="x37,"\n";	
-				foreach my $strain(keys %strains){
+				foreach my $strain(sort keys %strains){
 					print "$strain\n";
 				}
 				warn "="x37,"\n";

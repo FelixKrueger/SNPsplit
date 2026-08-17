@@ -38,11 +38,15 @@ jobs:
       - name: Run genome preparation fixture suite
         run: test/run_genome_tests.pl --verbose
       - name: Re-run under two hash seeds
-        # Six outputs are written from Perl hashes and normalised by sorting. Running under fixed,
-        # differing seeds keeps that normalisation proven instead of assumed: without it a broken rule
-        # would surface as an intermittent failure months later.
+        # The runner sorts the six formerly hash-ordered outputs so --impl stays usable against an
+        # implementation with its own iteration order. Running under differing seeds keeps that
+        # normalisation proven rather than assumed.
         run: |
           for seed in 1 4242; do
             echo "PERL_HASH_SEED=$seed"
             PERL_HASH_SEED=$seed PERL_PERTURB_KEYS=2 test/run_genome_tests.pl
           done
+      - name: Check the output is reproducible
+        # The suite cannot catch this: it sorts those outputs before comparing, so it passes whether or
+        # not the source sorts them. This compares the raw output of two runs instead.
+        run: test/bin/check_reproducible.pl

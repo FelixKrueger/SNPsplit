@@ -12,6 +12,8 @@
 
 - `--skip_filtering` now honours `--strain2` and `--dual_hybrid` instead of silently discarding them ([#106](https://github.com/FelixKrueger/SNPsplit/issues/106))
 
+- SNP lists and strain comparison files are now written in sorted order, so two runs on the same input produce identical output ([#104](https://github.com/FelixKrueger/SNPsplit/issues/104))
+
 - `--skip_filtering` without `--strain` now aborts instead of writing files with a blank strain name
 
 - Progress pauses are now skipped when `SNPSPLIT_NO_SLEEP` is set, matching SNPsplit and tag2sort

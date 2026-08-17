@@ -216,8 +216,10 @@ Beyond the shared masking: `*.txt.gz` is decompressed and recorded under a `.txt
 `.bam` → `.sam.txt` precedent, and `manifest` still pins the archive's existence separately from its
 content.
 
-**Six output files are written from Perl hashes, so their line order differs on every run.** They are
-sorted before comparison, and the dual-hybrid annotation additionally has its ID column's digits masked:
+**Six output files used to be written straight out of Perl hashes, so their line order differed on
+every run** (#104). The source sorts them now, but the runner still sorts before comparison, so `--impl`
+stays usable against an implementation with its own ideas about iteration order. The dual-hybrid
+annotation additionally has its ID column's digits masked:
 
 | Output | Cause |
 |---|---|
@@ -286,10 +288,19 @@ hand:
 ```sh
 # the normalisation is doing work, not getting lucky
 for seed in 1 4242; do PERL_HASH_SEED=$seed PERL_PERTURB_KEYS=2 test/run_genome_tests.pl; done
+
+# the tool itself produces byte-identical output on identical input
+test/bin/check_reproducible.pl
 ```
 
-CI runs that loop too. It proves the normalised output is seed-independent; the ≥5-record rule above is
-what makes the raw output actually differ between seeds, and without that the check is vacuous.
+CI runs both. The seed loop proves the normalised output is seed-independent; the ≥5-record rule above
+is what makes the raw output differ when it should, and without that the check is vacuous.
+
+`check_reproducible.pl` exists because **the suite cannot catch a reproducibility regression**: it sorts
+those six outputs before comparing, so it passes whether or not the source sorts them. That script
+compares the raw output of two runs under different hash seeds instead, and fails naming the files that
+differ. Run against `SNPsplit_genome_preparation` as of `dev` before #104 was fixed, it names exactly
+those six.
 
 Mutation testing is the other half — change one line, confirm a *named* set of fixtures fails, revert:
 
