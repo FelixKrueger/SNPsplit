@@ -1,0 +1,6 @@
+<n>	1	200	1	G/A
+<n>	1	230	1	T/A
+<n>	1	260	1	T/A
+STRAIN_A_<n>	1	120	1	A/T
+STRAIN_A_<n>	1	150	1	A/T
+STRAIN_A_<n>	1	90	1	A/T

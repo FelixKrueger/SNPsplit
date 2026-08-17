@@ -188,9 +188,20 @@ sub stage_inputs {
         opendir my $dh, $snps_in or die "opendir $snps_in: $!\n";
         for my $entry (grep { $_ ne '.' && $_ ne '..' } readdir $dh) {
             my $src = File::Spec->catfile($snps_in, $entry);
-            -d $src ? copy_tree($src, File::Spec->catdir($scratch, $entry))
-                    : copy($src, File::Spec->catfile($scratch, $entry))
-                        or die "copy $src: $!\n";
+            if (-d $src) {
+                copy_tree($src, File::Spec->catdir($scratch, $entry));
+            }
+            ### The all-SNP archives are stored as plain text and compressed on the way in, so no
+            ### binary lands in the repository and regenerating a fixture cannot churn the diff with a
+            ### different gzip version's output.
+            elsif ($entry =~ /\.gz$/) {
+                my $dst = File::Spec->catfile($scratch, $entry);
+                my $st  = system(join ' ', 'gzip', '-c', shell_quote($src), '>', shell_quote($dst));
+                die "$name: could not gzip $entry\n" if $st != 0;
+            }
+            else {
+                copy($src, File::Spec->catfile($scratch, $entry)) or die "copy $src: $!\n";
+            }
         }
         closedir $dh;
     }

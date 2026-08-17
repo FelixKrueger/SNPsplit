@@ -187,7 +187,7 @@ git diff test/genome_fixtures      # READ THIS
 | `README` | yes | One line naming the code paths pinned |
 | `genome/` | no | Reference FastA files, copied verbatim. Omitted by fixtures that abort before reading it |
 | `<name>.vcf` | no | Staged under its own basename, so `vcf_v7` can be called `mgp_REL2005_snps_indels.vcf` |
-| `snps_in/` | no | Copied to the scratch root: a pre-made `SNPs_<strain>/` tree for `--skip_filtering` |
+| `snps_in/` | no | Copied to the scratch root: a pre-made `SNPs_<strain>/` tree for `--skip_filtering`. A file here named `*.gz` holds **plain text** and is compressed on the way in, so no binary lands in the repository |
 | `pre_existing` | no | Filename per line, created empty before the run |
 | `gzip_vcf` | no | Marker: stage the VCF gzipped |
 | `poison_gzip` | no | Marker: install a failing `gzip` first on `PATH` |
@@ -245,20 +245,26 @@ Each fixture's own staged `genome/` and VCF are recorded into `expected/` **deli
 
 ## Fixtures worth knowing about
 
-Three pin behaviour that is plainly wrong, deliberately:
+Four were written to pin behaviour that was wrong and now assert the fix, since #102, #103, #105 and
+#106 are resolved:
 
-- **`chrom_name_mismatch`** — an Ensembl-style VCF against a UCSC-style reference exits 0, writes
-  `chrchr1.N-masked.fa` containing zero Ns, and reports "All done". The nine-line Ensembl-versus-UCSC
-  explanation the script carries for exactly this case never fires, because the loop iterates the
-  reference's chromosomes and silently skips any the VCF does not mention.
-- **`poison_gzip`** — a failing `gzip` leaves a zero-byte archive and the run still reports success.
-  Downstream `SNPsplit` then loads zero SNPs.
-- **`skip_filtering_strain2`** — `--skip_filtering` accepts `--strain2` and discards it without a word,
-  because the promotion to `--dual_hybrid` sits inside the block `--skip_filtering` skips.
+- **`chrom_name_mismatch`** — an Ensembl-style VCF against a UCSC-style reference used to exit 0 and
+  write `chrchr1.N-masked.fa` containing zero Ns. The per-chromosome check could not catch it, because
+  the loop iterates the reference's chromosomes and skips any the VCF does not mention. Now checked once
+  after both name sets are known, printing both lists. Partial overlap is still legal, which
+  `multi_chrom` asserts.
+- **`poison_gzip`** — a failing `gzip` used to leave a zero-byte archive and report success. `open` on a
+  pipe returns before the shell runs, so the `close` is the only place it can be noticed.
+- **`missing_genome`** — a missing `--reference_genome` used to exit 0.
+- **`skip_filtering_dual`** — `--skip_filtering` used to accept `--strain2` and discard it, because both
+  the promotion to `--dual_hybrid` and its implied `--full_sequence` sat inside the block
+  `--skip_filtering` skips. It now builds all six genomes from committed SNP files with no VCF at all,
+  which is the only fixture reaching `read_snp_files` against pre-made archives.
 
-**`empty_chromosome`** reaches that same Ensembl-versus-UCSC abort from the other direction: a
-header-only FastA entry is stored as the empty string, which is falsy, so the check fires for a
+**`empty_chromosome`** reaches the Ensembl-versus-UCSC abort from the other direction: a header-only
+FastA entry is stored as the empty string, which is falsy, so the per-chromosome check fires for a
 chromosome that *is* present — reporting it as not found and then listing it among the names it found.
+That path is unchanged and still worth knowing about.
 
 **`no_format_column`** renames the `FORMAT` column rather than deleting it. Deleting it leaves nine
 columns, `detect_strains` skips indices up to 8, and the run dies earlier on an empty strain list, which

@@ -1,0 +1,7 @@
+5 positions on chromosome 1 were changed to 'N'
+5 reference positions on chromosome 1 were changed to the SNP alternative base
+
+
+Summary
+5 Ns were newly introduced into the N-masked genome for strain STRAIN_A in total
+5 SNPs were newly introduced into the full sequence genome version for strain STRAIN_A in total

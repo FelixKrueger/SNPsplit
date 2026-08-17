@@ -1,6 +1,4 @@
-Strain defined as 'STRAIN_A' (strain index: 9)
 Strain 2 specified, setting option '--dual_hybrid'
 Dual Hybrid strain selected
-Strain2 defined as 'STRAIN_A' (strain2 index: 9)
 Strain 1 [STRAIN_A] and Strain 2 [STRAIN_A] must be different from each other. Please respecify!
 

@@ -573,18 +573,41 @@ fixture(
     vcf     => { 'snps.vcf' => $STD_VCF },
 );
 
-### --strain2 promotes to --dual_hybrid inside the block --skip_filtering skips, so the option is
-### accepted and discarded without a word.
-fixture(
-    name    => 'skip_filtering_strain2',
-    args    => '--skip_filtering --reference_genome genome --strain STRAIN_A --strain2 STRAIN_B',
-    readme  => '--skip_filtering silently discards --strain2: exit 0, no dual genome, no warning',
-    genome  => { '1.fa' => fasta('1', $SEQ) },
-    snps_in => {
-        'SNPs_STRAIN_A/chr1.txt' => snp_file('1',
-            map { [ $_, 1, substr($SEQ, $_ - 1, 1) . '/' . alt_for(substr($SEQ, $_ - 1, 1)) ] } @STD_POS),
-    },
-);
+### A dual hybrid built entirely from pre-made SNP files, with no VCF read at all. Reaches
+### read_snp_files against committed archives and the third genome built on strain 1's full sequence,
+### neither of which any other --skip_filtering fixture touches.
+###
+### The .gz files here hold plain text; the runner compresses them on the way in.
+{
+    my @a_pos = (30,  60,  90, 120, 150);
+    my @b_pos = (30,  60, 200, 230, 260);
+    my $rows  = sub {
+        my @r = map { my $r = substr($SEQ, $_ - 1, 1); [ $_, 1, "$r/" . alt_for($r) ] } @{ $_[0] };
+        return @r;
+    };
+    my $plain = sub {
+        my ($n, $out) = (0, '');
+        for my $r (@{ $_[0] }) {
+            $out .= join("\t", ++$n, 1, $r->[0], $r->[1], $r->[2]) . "\n";
+        }
+        return $out;
+    };
+    my @a_rows = $rows->(\@a_pos);
+    my @b_rows = $rows->(\@b_pos);
+
+    fixture(
+        name    => 'skip_filtering_dual',
+        args    => '--skip_filtering --reference_genome genome --strain STRAIN_A --strain2 STRAIN_B',
+        readme  => '--dual_hybrid under --skip_filtering, built from committed SNP files and archives with no VCF: --strain2 promotes to --dual_hybrid, which sets --full_sequence for the third genome to read back',
+        genome  => { '1.fa' => fasta('1', $SEQ) },
+        snps_in => {
+            'SNPs_STRAIN_A/chr1.txt'            => snp_file('1', @a_rows),
+            'SNPs_STRAIN_B/chr1.txt'            => snp_file('1', @b_rows),
+            'all_SNPs_STRAIN_A_GRCm39.txt.gz'   => $plain->(\@a_rows),
+            'all_SNPs_STRAIN_B_GRCm39.txt.gz'   => $plain->(\@b_rows),
+        },
+    );
+}
 
 ### An existing SNP folder suppresses the creating-it-for-you notice, and an existing archive triggers
 ### the overwrite notice. The only two messages about clobbering the user's own files.

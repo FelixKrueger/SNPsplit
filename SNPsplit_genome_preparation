@@ -1489,6 +1489,34 @@ VERSION
 		}
     }
 
+    ### Option implications, before the strain lookup: only the lookup needs the VCF, so keeping these
+    ### inside the block below meant --skip_filtering accepted --strain2 and discarded it, and left
+    ### --dual_hybrid without the full-sequence genome its third step reads back
+    if (defined $strain2 and not $dual_hybrid){
+		warn "Strain 2 specified, setting option '--dual_hybrid'\n";
+		$dual_hybrid = 1;
+    }
+    if ($dual_hybrid){
+		warn "Dual Hybrid strain selected\n";
+		$full_sequence = 1; # the third genome is built from strain 1's full sequence
+
+		unless (defined $strain2){
+			die "\n'--dual_hybrid' needs a second strain. Please respecify using '--strain2 NAME'\n\n";
+		}
+		unless (defined $strain){
+			die "\n'--dual_hybrid' needs a first strain. Please respecify using '--strain NAME'\n\n";
+		}
+		if ($strain eq $strain2){
+			die "Strain 1 [$strain] and Strain 2 [$strain2] must be different from each other. Please respecify!\n\n";
+		}
+    }
+
+    ### Every output file is named after the strain, so an undefined one silently produces filenames
+    ### such as '_N-masked/' instead of aborting
+    if ($skip_filtering and not defined $strain){
+		die "\nYou need to name the strain whose SNP folder should be used, with '--strain NAME'\n\n";
+    }
+
     my $strain_index;
     my $strain2_index;
     unless($skip_filtering){
@@ -1533,19 +1561,8 @@ VERSION
 			die "\nPlease choose one of the available strains using '--strain NAME' and try again\n\n";
 		}
 	
-		### Strain 2 (optional)
-		if (defined $strain2){
-			unless ($dual_hybrid){
-				warn "Strain 2 specified, setting option '--dual_hybrid'\n";
-				$dual_hybrid = 1;
-			}
-		}
+		### Strain 2 (optional); the name lookup needs the VCF, the option handling does not
 		if ($dual_hybrid){
-			warn "Dual Hybrid strain selected\n";
-
-			# this automatically sets the full_sequence option
-			$full_sequence = 1;
-
 			if (defined $strain2){
 				if (exists $strains{$strain2}){
 					$strain2_index = $strains{$strain2};
@@ -1571,11 +1588,6 @@ VERSION
 				}
 				warn "="x37,"\n";
 				die "\nPlease choose one of the available strains using '--strain2 NAME' and try again\n\n";
-			}
-	    
-			# make sure that Strain 1 and Strain 2 are different from each other
-			if ($strain eq $strain2){
-				die "Strain 1 [$strain] and Strain 2 [$strain2] must be different from each other. Please respecify!\n\n"; 
 			}
 		}
     }
