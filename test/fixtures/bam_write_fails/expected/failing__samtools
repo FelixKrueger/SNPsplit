@@ -1,0 +1,11 @@
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in
+    *genome1*)
+      <samtools> "$@"
+      echo 'samtools: deliberate write failure' >&2
+      exit 1
+      ;;
+  esac
+done
+exec <samtools> "$@"

@@ -8,7 +8,7 @@ Point `--impl` at any implementation to diff it against the same expected output
 
 | Runner | Tools | Fixtures | Needs |
 |---|---|---|---|
-| `run_tests.pl` | `SNPsplit`, `tag2sort` | `fixtures/`, 25 | `samtools`, `gzip` |
+| `run_tests.pl` | `SNPsplit`, `tag2sort` | `fixtures/`, 26 | `samtools`, `gzip` |
 | `run_genome_tests.pl` | `SNPsplit_genome_preparation` | `genome_fixtures/`, 31 | `gzip` only |
 
 Two runners rather than one: the tools disagree on nearly every tool-specific decision a runner makes.
@@ -281,6 +281,12 @@ identical.
 reference, so it is the one exception to the derive-never-type rule above — and the only way to reach
 either skip counter, because a derived annotation always matches. It pins that 5 SNPs total, 3 applied,
 1 already present and 1 mismatched all appear, rather than leaving two positions unaccounted for (#112).
+
+**`bam_write_fails`** stages a samtools that runs normally and then reports failure when writing
+genome1. Exiting straight away would be a different test: that kills `tag2sort` mid-write and was already
+reported as `killed by signal 13`. The silent case — samtools finishing its work and reporting a problem,
+which only `close` can observe — is what #116 was about, and the fixture records exit status 0 against
+the previous version.
 
 **`samtools_path_spaced`** and **`spaced_paths`** cover #99, one per suite. The first stages a samtools
 wrapper at `samtools dir/samtools` and drives the whole pipeline through it; its `poison_calls` file is
