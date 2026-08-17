@@ -1,0 +1,17 @@
+Reference genome folder provided is genome/	(absolute path is '<scratch>/genome/)'
+
+Summarising SNPsplit Genome Preparation Parameters
+==================================================
+Reading/filtering VCF file:		No (skipped by user)
+Reference genome:			<scratch>/genome/
+N-masking:				Yes
+Full SNP genome:			No
+SNP strain:				STRAIN_A
+
+Skipped reading the VCF file and filtering SNPs again (specified by user)
+
+Now reading in and storing sequence information of the genome specified in: <scratch>/genome/
+
+Processing chromosome 1 (for strain STRAIN_A)
+Folder >><scratch>/SNPs_STRAIN_A<< doesn't exist. Try losing the option --skip_filtering to generate the folder and SNP files from the VCF file
+

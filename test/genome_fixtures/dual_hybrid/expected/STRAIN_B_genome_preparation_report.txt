@@ -1,0 +1,7 @@
+18 positions on chromosome 1 were changed to 'N'
+18 reference positions on chromosome 1 were changed to the SNP alternative base
+
+
+Summary
+18 Ns were newly introduced into the N-masked genome for strain 2 [STRAIN_B] in total
+18 SNPs were newly introduced into the full sequence genome version for strain 2 [STRAIN_B] in total

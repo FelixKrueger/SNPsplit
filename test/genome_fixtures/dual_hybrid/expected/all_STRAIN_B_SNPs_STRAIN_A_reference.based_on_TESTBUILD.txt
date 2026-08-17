@@ -1,0 +1,16 @@
+<n>	1	100	1	A/G
+<n>	1	160	1	A/C
+<n>	1	170	1	T/A
+<n>	1	180	1	T/A
+<n>	1	190	1	A/C
+<n>	1	200	1	G/A
+<n>	1	250	1	A/C
+<n>	1	60	1	A/C
+<n>	1	70	1	C/G
+<n>	1	80	1	A/G
+<n>	1	90	1	A/C
+STRAIN_A_<n>	1	110	1	A/C
+STRAIN_A_<n>	1	120	1	A/T
+STRAIN_A_<n>	1	130	1	A/T
+STRAIN_A_<n>	1	140	1	C/A
+STRAIN_A_<n>	1	150	1	A/T

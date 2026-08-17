@@ -1,0 +1,58 @@
+Strain defined as 'STRAIN_A' (strain index: 9)
+Reference genome folder provided is genome/	(absolute path is '<scratch>/genome/)'
+
+Summarising SNPsplit Genome Preparation Parameters
+==================================================
+Processing SNPs from VCF file:		snps.vcf
+Reading/filtering VCF file:		Yes (default)
+Reference genome:			<scratch>/genome/
+N-masking:				Yes
+Full SNP genome:			No
+SNP strain:				STRAIN_A
+
+Folder 'SNPs_STRAIN_A' doesn't exist. Creating it for you...
+
+Analysing SNP fields for name >STRAIN_A<
+Using FORMAT field index: 8
+Using INFO field index: 7
+GT index not defined, checking...
+Setting GT index to >>0<<
+Setting FI index to >>3<<
+
+SNP position summary for strain STRAIN_A (based on genome build GRCm39)
+===========================================================================
+
+Positions read in total:	10
+
+6	SNP were homozygous. Of these:
+5	SNP were homozygous and passed high confidence filters and were thus included into the STRAIN_A genome
+
+Not included into STRAIN_A genome:
+1	had the same sequence as the reference
+1		had no clearly defined alternative base
+2		Calls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)
+1		were homozygous but the filtering call was low confidence
+
+Now printing a single list of all SNPs to >all_SNPs_STRAIN_A_GRCm39.txt.gz<...
+complete
+
+Finished filtering and writing out SNPs for strain STRAIN_A
+
+Now reading in and storing sequence information of the genome specified in: <scratch>/genome/
+
+Processing chromosome 1 (for strain STRAIN_A)
+Reading SNPs from file <scratch>/SNPs_STRAIN_A/chr1.txt
+Skipping allele 'CA/G' as it appears to contain non DNA bases (only G,A,T,C allowed)
+Writing modified chromosome (N-masking)
+Writing N-masked output to: <scratch>/STRAIN_A_N-masked/chr1.N-masked.fa
+4 SNPs total for chromosome 1
+4 positions on chromosome 1 were changed to 'N'
+
+
+
+Summary
+4 Ns were newly introduced into the N-masked genome for strain STRAIN_A in total
+
+All done. Genome(s) are now ready to be indexed with your favourite aligner!
+FYI, aligners shown to work with SNPsplit are Bowtie2, STAR, HISAT2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)
+

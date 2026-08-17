@@ -1,0 +1,63 @@
+Strain defined as 'STRAIN_A' (strain index: 9)
+Reference genome folder provided is genome/	(absolute path is '<scratch>/genome/)'
+
+Summarising SNPsplit Genome Preparation Parameters
+==================================================
+Processing SNPs from VCF file:		snps.vcf
+Reading/filtering VCF file:		Yes (default)
+Reference genome:			<scratch>/genome/
+N-masking:				Yes
+Full SNP genome:			Yes
+SNP strain:				STRAIN_A
+
+Folder 'SNPs_STRAIN_A' doesn't exist. Creating it for you...
+
+Analysing SNP fields for name >STRAIN_A<
+Using FORMAT field index: 8
+Using INFO field index: 7
+GT index not defined, checking...
+Setting GT index to >>0<<
+Setting FI index to >>3<<
+
+SNP position summary for strain STRAIN_A (based on genome build GRCm39)
+===========================================================================
+
+Positions read in total:	6
+
+6	SNP were homozygous. Of these:
+6	SNP were homozygous and passed high confidence filters and were thus included into the STRAIN_A genome
+
+Not included into STRAIN_A genome:
+0	had the same sequence as the reference
+0		had no clearly defined alternative base
+0		Calls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)
+0		were homozygous but the filtering call was low confidence
+
+Now printing a single list of all SNPs to >all_SNPs_STRAIN_A_GRCm39.txt.gz<...
+complete
+
+Finished filtering and writing out SNPs for strain STRAIN_A
+
+Now reading in and storing sequence information of the genome specified in: <scratch>/genome/
+
+Processing chromosome 1 (for strain STRAIN_A)
+Reading SNPs from file <scratch>/SNPs_STRAIN_A/chr1.txt
+Writing modified chromosome (N-masking)
+Writing N-masked output to: <scratch>/STRAIN_A_N-masked/chr1.N-masked.fa
+Writing modified chromosome (incorporating SNPs)
+Writing full sequence output to: <scratch>/STRAIN_A_full_sequence/chr1.SNPs_introduced.fa
+6 SNPs total for chromosome 1
+6 positions on chromosome 1 were changed to 'N'
+6 reference positions on chromosome 1 were changed to the SNP alternative base
+
+
+
+
+Summary
+6 Ns were newly introduced into the N-masked genome for strain STRAIN_A in total
+6 SNPs were newly introduced into the full sequence genome version for strain STRAIN_A in total
+
+
+All done. Genome(s) are now ready to be indexed with your favourite aligner!
+FYI, aligners shown to work with SNPsplit are Bowtie2, STAR, HISAT2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)
+

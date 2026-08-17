@@ -1,0 +1,1 @@
+A header-only FastA entry triggers the Ensembl-versus-UCSC abort for a chromosome that is present, and the diagnostic lists the name it says was not found

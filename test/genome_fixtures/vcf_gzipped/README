@@ -1,0 +1,1 @@
+A gzipped VCF under a name that does not trigger v7 detection, so --v7_VCF stays off

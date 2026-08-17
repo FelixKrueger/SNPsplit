@@ -1,0 +1,16 @@
+Strain defined as 'STRAIN_A' (strain index: 9)
+Reference genome folder provided is genome/	(absolute path is '<scratch>/genome/)'
+
+Summarising SNPsplit Genome Preparation Parameters
+==================================================
+Processing SNPs from VCF file:		snps.vcf
+Reading/filtering VCF file:		Yes (default)
+Reference genome:			<scratch>/genome/
+N-masking:				Yes
+Full SNP genome:			No
+SNP strain:				STRAIN_A
+
+Folder 'SNPs_STRAIN_A' doesn't exist. Creating it for you...
+
+Analysing SNP fields for name >STRAIN_A<
+Failed to extract index of field 'FORMAT'. Hmmm... at <scratch>/bin/SNPsplit_genome_preparation line <n>, <IN> line 3.

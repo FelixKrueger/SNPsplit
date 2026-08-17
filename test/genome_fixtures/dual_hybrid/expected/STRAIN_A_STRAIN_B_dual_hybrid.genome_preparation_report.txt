@@ -1,0 +1,19 @@
+Looked at positions from new Reference strain [STRAIN_A]:		17
+Compared positions from new SNP strain [STRAIN_B]:		18
+======================================================
+SNPs were the same in Ref and SNP genome (not written out):	5
+SNPs were present in both Ref and SNP genome but had a different sequence:	5
+SNPs were low confidence in one strain and thus ignored:	4
+SNPs were unique to Ref [STRAIN_A]:				5
+SNPs were unique to SNP [STRAIN_B]:				6
+
+Changing the genomic reference sequence to the full sequence of strain STRAIN_A
+
+Reading and storing all new SNPs with Ref/SNP: STRAIN_A/STRAIN_B from 'all_STRAIN_B_SNPs_STRAIN_A_reference.based_on_TESTBUILD.txt'
+16 positions on chromosome 1 were changed to 'N'
+16 reference positions on chromosome 1 were changed to the SNP alternative base
+
+
+Summary
+16 Ns were newly introduced into the N-masked genome for strainstrain 2 [STRAIN_ASTRAIN_B] in total
+16 SNPs were newly introduced into the full sequence genome version for strainstrain 2 [STRAIN_A/STRAIN_B] in total

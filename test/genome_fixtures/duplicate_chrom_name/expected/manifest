@@ -1,0 +1,8 @@
+SNPs_STRAIN_A/chr1.txt
+STRAIN_A_SNP_filtering_report.txt
+all_SNPs_STRAIN_A_GRCm39.txt.gz
+genome/a.fa
+genome/b.fa
+snps.vcf
+stderr.log
+stdout.log

@@ -264,6 +264,13 @@ sub normalise {
         elsif ($rel =~ /\.yaml$/) {
             $out{$rel} = mask_yaml(slurp($abs));
         }
+        elsif ($rel eq 'poison_calls') {
+            ### Concurrent samtools processes append here, so the order of the lines is a scheduling
+            ### artifact: sam2bam_fails records two calls and failed roughly one run in four. The set of
+            ### calls is what the fixture asserts, so sorting loses nothing.
+            my @calls = sort split /^/, mask_paths(slurp($abs), $scratch);
+            $out{$rel} = join '', @calls;
+        }
         else {
             $out{$rel} = mask_paths(slurp($abs), $scratch);
         }

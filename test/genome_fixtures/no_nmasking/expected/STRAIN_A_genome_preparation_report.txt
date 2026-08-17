@@ -1,0 +1,3 @@
+6 reference positions on chromosome 1 were changed to the SNP alternative base
+
+6 SNPs were newly introduced into the full sequence genome version for strain STRAIN_A in total
