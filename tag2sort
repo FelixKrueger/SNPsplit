@@ -1072,7 +1072,7 @@ be assigned to a specific allele, and they are one of the following:
 
 --paired               Paired-end mode. (Default: OFF).
 
--o/--outdir <dir>      Write all output files into this directory. By default the output files will be written into
+-o/--output_dir <dir>  Write all output files into this directory. By default the output files will be written into
                        the same folder as the input file(s).
 
 --singletons           If the allele-tagged paired-end file also contains singleton alignments (which is the
