@@ -1,0 +1,15 @@
+Input file:						'sam_output.allele_flagged.sam'
+Writing unassigned reads to:				'sam_output.unassigned.sam'
+Writing genome 1-specific reads to:			'sam_output.genome1.sam'
+Writing genome 2-specific reads to:			'sam_output.genome2.sam'
+
+
+Allele-specific single-end sorting report
+=========================================
+Read alignments processed in total:		9
+Reads were unassignable:			3 (33.33%)
+Reads were specific for genome 1:		3 (33.33%)
+Reads were specific for genome 2:		2 (22.22%)
+Reads contained conflicting SNP information:	1 (11.11)
+
+

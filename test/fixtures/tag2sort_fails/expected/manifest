@@ -1,0 +1,7 @@
+snps.txt
+stderr.log
+stdout.log
+tag2sort_fails.SNPsplit_report.txt
+tag2sort_fails.SNPsplit_report.yaml
+tag2sort_fails.allele_flagged.bam
+tag2sort_fails.bam

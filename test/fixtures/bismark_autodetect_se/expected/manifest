@@ -1,0 +1,11 @@
+bismark_autodetect_se.SNPsplit_report.txt
+bismark_autodetect_se.SNPsplit_report.yaml
+bismark_autodetect_se.SNPsplit_sort.txt
+bismark_autodetect_se.allele_flagged.bam
+bismark_autodetect_se.bam
+bismark_autodetect_se.genome1.bam
+bismark_autodetect_se.genome2.bam
+bismark_autodetect_se.unassigned.bam
+snps.txt
+stderr.log
+stdout.log

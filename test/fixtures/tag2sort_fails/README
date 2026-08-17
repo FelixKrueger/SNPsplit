@@ -1,0 +1,1 @@
+a failing sorting stage aborts the run instead of being reported as success

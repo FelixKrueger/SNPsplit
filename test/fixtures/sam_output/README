@@ -1,1 +1,1 @@
-tag2sort rejects the .sam handoff, so SNPsplit aborts instead of reporting success
+SAM output throughout, including the sorting report merge and cleanup

@@ -2,21 +2,22 @@
 Meta:
   tool: SNPsplit
   version: <masked>
-  infile: multi_input_2.bam
+  infile: bismark_autodetect_se.bam
   date_run: <masked>
-  mode: standard DNA
+  mode: bisulfite
   library: single-end
   command: <masked>
 Tagging:
-  total_reads: 2
+  total_reads: 1
   unaligned: 0
   percent_unaligned: 0.00
   g1: 1
-  percent_g1: 50.00
+  percent_g1: 100.00
   g2: 0
   percent_g2: 0.00
-  unassignable: 1
-  percent_unassignable: 50.00
+  unassignable: 0
+  percent_unassignable: 0.00
+  unassigned_but_ct: 0
   no_snp: 0
   percent_no_snp: 0.00
   bizarre: 0
@@ -24,21 +25,22 @@ Tagging:
   SNP_annotation: snps.txt
   SNPs_stored: 4
   N_containing_reads: 1
-  non_N_containing_reads: 1
+  non_N_containing_reads: 0
   N_deletion: 0
   percent_N_deletion: 0.00
   multi_N_deletion: 0
   N_was_known_SNP: 1
   percent_N_was_known_SNP: 100.00
+  CT_positions_skipped: 0
   N_not_known: 0
   percent_N_not_known: 0.00
 Sorting:
-  tagged_infile: multi_input_2.allele_flagged.bam
-  SE_total_reads: 2
-  SE_unassignable: 1
-  SE_percent_unassignable: 50.00
+  tagged_infile: bismark_autodetect_se.allele_flagged.bam
+  SE_total_reads: 1
+  SE_unassignable: 0
+  SE_percent_unassignable: 0.00
   SE_genome1: 1
-  SE_percent_genome1: 50.00
+  SE_percent_genome1: 100.00
   SE_genome2: 0
   SE_percent_genome2: 0.00
   SE_conflicting: 0
