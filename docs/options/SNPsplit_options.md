@@ -21,6 +21,11 @@ Mandatory file specifying SNP positions to be considered, may be a plain text fi
 
 Only the information contained in fields 'Chromosome', 'Position' and 'Ref/SNP base' are being used for analysis. The genome referred to as 'Ref' will be used as genome 1, the genome containing the 'SNP' base as genome 2.
 
+Either file the genome preparation writes may be used: `all_SNPs_<strain>_<genome_build>.txt.gz`, or one
+of the per-chromosome `SNPs_<strain>/chr*.txt` files, whose leading `>chromosome` header line and extra
+sixth column are both ignored. Lines that do not parse are counted and reported rather than skipped
+silently.
+
 
 - `--single_end`
 
