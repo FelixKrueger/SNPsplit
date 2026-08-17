@@ -1,2 +1,2 @@
-bare samtools invoked: view -bS -
-bare samtools invoked: view -bS sam2bam_fails.sam
+bare samtools invoked: view -bS -o sam2bam_fails.allele_flagged.bam -
+bare samtools invoked: view -bS -o sam2bam_fails.bam sam2bam_fails.sam

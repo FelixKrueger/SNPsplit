@@ -1,0 +1,1 @@
+a gzipped VCF under a directory whose name contains a space, and a genome build name containing one, so both the gunzip reads and the gzipped SNP list are exercised with paths a command string would split

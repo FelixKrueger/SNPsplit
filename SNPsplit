@@ -23,7 +23,7 @@ use Cwd;
 ## along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.8.0';
+my $pipeline_version = '0.9.0';
 my $parent_dir = getcwd;
 my $full_commandline = join (" ","SNPsplit",@ARGV);
 # warn "Full commandline: $full_commandline\n"; sleep(5);
@@ -321,7 +321,7 @@ sub process_masked_BAM_file{
 
     my ($file) = @_;
 
-    open (IN,"$samtools_path view -h $file |") or die "Failed to read from BAM file $file: $!\n";
+    open (IN,'-|',$samtools_path,'view','-h',$file) or die "Failed to read from BAM file $file: $!\n";
     warn "Reading from sorted mapping file '$file'\n";
 
     ### READING FROM MAPPING BAM FILE
@@ -1378,7 +1378,7 @@ sub sam2bam_convert{
     warn "Now converting '$file' to '$bamfile' ...\n";
     pause(3);
 
-    if (system ("$samtools_path view -bS $file > $bamfile") != 0){
+    if (system ($samtools_path,'view','-bS','-o',$bamfile,$file) != 0){
 		my $why = $? == -1        ? "could not be started: $!"
 		        : ($? & 127)      ? 'was killed by signal ' . ($? & 127)
 		        :                   'failed with exit status ' . ($? >> 8);
@@ -1400,7 +1400,7 @@ sub sort_by_name_paired_end{
 
     warn "Sorting paired-end BAM file '$file' by read IDs ...\n";
     #   system ("$samtools_path sort -O BAM -n -o $sorted $file"); # added -O BAM on 13 Dec 2016
-    system ("$samtools_path sort -n -o $sorted $file");  # removed -O again because it doesn't seem to be working... 09 Jan 2017
+    system ($samtools_path,'sort','-n','-o',$sorted,$file);  # removed -O again because it doesn't seem to be working... 09 Jan 2017
     $file = $sorted; # setting sorted BAM file as new $file
     warn "Finished sorting BAM file into new file '$file'\n\n";
     pause(1);
@@ -1412,7 +1412,7 @@ sub sort_by_name_paired_end{
 sub read_snps{
 
     if ($snp_file =~ /\.gz$/){
-	open (SNP,"gunzip -c $snp_file |") or die "Failed to read from gzipped $snp_file: $!\n\n";
+	open (SNP,'-|','gunzip','-c',$snp_file) or die "Failed to read from gzipped $snp_file: $!\n\n";
     }
     else{
 	open (SNP,$snp_file) or die "Failed to read from $snp_file: $!\n\n";
@@ -1490,7 +1490,7 @@ sub open_output_filehandles{
 
     if ($bam){
 		$outfile =~ s/sam$/bam/;
-		open (OUT,"| $samtools_path view -bS 2> /dev/null - > ${output_dir}$outfile") or die "Unable to write to BAM file '$outfile': $!\n";
+		open_bam_writer(\*OUT,"${output_dir}$outfile",'-bS');
     }
     else{ # writing out to a SAM file
 		open (OUT,'>',"${output_dir}$outfile") or die "Unable to write to file '${output_dir}$outfile': $!\n";
@@ -1528,10 +1528,10 @@ sub check_for_bs{
 
     ### if the user did not specify whether the alignment file was single-end or paired-end we are trying to get this information from the @PG header line in the SAM/BAM file
     if ($file =~ /\.gz$/){
-		open (DETERMINE,"gunzip -c $file |") or die "Unable to read from gzipped file $file: $!\n";
+		open (DETERMINE,'-|','gunzip','-c',$file) or die "Unable to read from gzipped file $file: $!\n";
     }
     elsif ($file =~ /\.bam$/ ){
-		open (DETERMINE,"$samtools_path view -h $file |") or die "Unable to read from BAM file $file: $!\n";
+		open (DETERMINE,'-|',$samtools_path,'view','-h',$file) or die "Unable to read from BAM file $file: $!\n";
     }
     else{
 		open (DETERMINE,$file) or die "Unable to read from $file: $!\n";
@@ -1586,11 +1586,11 @@ sub test_positional_sorting{
     pause(1);
 
     if ($filename =~ /\.gz$/) {
-	open (TEST,"gunzip -c $filename |") or die "Can't open gzipped file $filename: $!\n";
+	open (TEST,'-|','gunzip','-c',$filename) or die "Can't open gzipped file $filename: $!\n";
     }
     elsif ($filename =~ /bam$/){ ### this would allow to read BAM files that do not end in *.bam
 	if ($samtools_path){
-	    open (TEST,"$samtools_path view -h $filename |") or die "Can't open BAM file $filename: $!\n";
+	    open (TEST,'-|',$samtools_path,'view','-h',$filename) or die "Can't open BAM file $filename: $!\n";
 	}
 	else{
 	    die "Sorry couldn't find an installation of Samtools. Either specifiy an alternative path using the option '--samtools_path /your/path/', or use a SAM file instead\n\n";
@@ -1975,4 +1975,22 @@ sub print_helpfile{
 EOF
     ;
   exit 1;
+}
+
+### Opens a BAM writer without going through a shell, so a path containing a space or a shell
+### metacharacter is safe. samtools' own stderr is discarded, matching the redirect this replaced:
+### these writers stay open for the whole run, so a message from one of them interleaves with the main
+### output at an unpredictable point
+sub open_bam_writer {
+
+    my ($handle,$file,@view_args) = @_;
+
+    my $pid = open ($handle,'|-');
+    defined $pid or die "Failed to fork a samtools process for '$file': $!\n";
+
+    unless ($pid){ # the child
+	open (STDERR,'>','/dev/null');
+	exec ($samtools_path,'view',@view_args,'-o',$file,'-') or die "Failed to run '$samtools_path': $!\n";
+    }
+
 }

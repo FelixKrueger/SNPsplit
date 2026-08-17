@@ -1,0 +1,1 @@
+a samtools path containing a space, exercised through the read pipes, the BAM writers, the SAM to BAM conversion and the sorter

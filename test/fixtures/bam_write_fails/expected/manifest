@@ -1,0 +1,13 @@
+bam_write_fails.SNPsplit_report.txt
+bam_write_fails.SNPsplit_report.yaml
+bam_write_fails.SNPsplit_sort.txt
+bam_write_fails.SNPsplit_sort.yaml
+bam_write_fails.allele_flagged.bam
+bam_write_fails.bam
+bam_write_fails.genome1.bam
+bam_write_fails.genome2.bam
+bam_write_fails.unassigned.bam
+failing/samtools
+snps.txt
+stderr.log
+stdout.log

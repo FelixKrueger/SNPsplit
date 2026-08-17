@@ -366,6 +366,30 @@ $F{gp_per_chrom} = {
     reads    => $F{gp_generated}{reads},
 };
 
+### #99: every samtools invocation used to be interpolated into a command string, so a samtools path
+### containing a space was read as a program name plus arguments. This drives the whole pipeline -
+### tagging, sorting, the SAM to BAM conversion and the BAM writers - through such a path.
+###
+### --sam is set so the sorted output goes through tag2sort's SAM writers as well.
+$F{samtools_path_spaced} = {
+    args   => '--single_end --samtools_path <SPACED_SAMTOOLS>',
+    notes  => 'a samtools path containing a space, exercised through the read pipes, the BAM writers, the SAM to BAM conversion and the sorter',
+    poison => 1,
+    reads  => $F{se_basic}{reads},
+};
+
+### #116: every BAM writer is a pipe to samtools, so close is the only place a write failure can be
+### seen - the pipe opens before samtools runs and its stderr is discarded. tag2sort used to close four
+### of eleven handles, none of them checked, so a truncated BAM was reported as success.
+###
+### The staged samtools fails only when writing genome1, so the run reaches the writers normally and
+### exactly one of them fails.
+$F{bam_write_fails} = {
+    args       => '--single_end --samtools_path <WRITE_FAIL_SAMTOOLS>',
+    notes      => 'a samtools that fails while writing genome1 aborts the run instead of leaving a truncated BAM and reporting success',
+    reads      => $F{se_basic}{reads},
+};
+
 ### --- Emit -----------------------------------------------------------------------------------
 
 for my $name (sort keys %F) {
