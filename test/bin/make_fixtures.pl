@@ -232,6 +232,17 @@ $F{sam_output} = {
     reads => $F{se_basic}{reads},
 };
 
+### A .sam input with no --samtools_path, so the failing shim is the samtools that sam2bam_convert
+### finds. Tests that a failed SAM to BAM conversion aborts rather than being reported as success.
+$F{sam2bam_fails} = {
+    args        => '--single_end',
+    notes       => 'a failed SAM to BAM conversion aborts the run',
+    feed_sam    => 1,
+    poison      => 1,
+    allow_empty => 1,
+    reads       => $F{se_basic}{reads},
+};
+
 ### The sorting stage is replaced with one that always fails, so this tests the abort itself rather
 ### than any particular reason for failing.
 $F{tag2sort_fails} = {

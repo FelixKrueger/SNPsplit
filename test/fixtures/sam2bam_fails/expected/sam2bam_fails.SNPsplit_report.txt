@@ -1,0 +1,3 @@
+Input file:					'sam2bam_fails.sam'
+Writing allele-flagged output file to:		'sam2bam_fails.allele_flagged.bam'
+

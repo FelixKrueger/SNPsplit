@@ -1,0 +1,9 @@
+poison_calls
+sam2bam_fails.SNPsplit_report.txt
+sam2bam_fails.SNPsplit_report.yaml
+sam2bam_fails.allele_flagged.bam
+sam2bam_fails.bam
+sam2bam_fails.sam
+snps.txt
+stderr.log
+stdout.log

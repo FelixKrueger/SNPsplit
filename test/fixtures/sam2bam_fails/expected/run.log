@@ -1,0 +1,24 @@
+Testing if input file 'sam2bam_fails.sam' looks like a Bisulfite-Seq file
+Now starting to process file <<< 'sam2bam_fails.sam' >>> 
+
+Input file:					'sam2bam_fails.sam'
+Writing SNPplit-tag report to:			'sam2bam_fails.SNPsplit_report.txt'
+Writing allele-flagged output file to:		'sam2bam_fails.allele_flagged.bam'
+
+
+Summary of parameters for SNPsplit-tag:
+========================================
+SNPsplit infile:		sam2bam_fails.sam
+SNP annotation file:		snps.txt
+Output directory:		><
+Parent directory:		><scratch><
+Samtools path:			<samtools>
+Output format:			BAM (default)
+Input format:			Single-End
+
+
+File appears to be in SAM format and needs conversion into BAM format first
+Now converting 'sam2bam_fails.sam' to 'sam2bam_fails.bam' ...
+samtools: shim reached - --samtools_path was ignored
+SAM to BAM conversion failed with exit status 127
+
