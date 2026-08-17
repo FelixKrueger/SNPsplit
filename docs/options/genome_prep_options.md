@@ -66,6 +66,10 @@ This option skips reading and filtering the VCF file. This assumes that a folder
 example:   33941939        9       68878541       1       T/G
 ```
 
+Combined with `--dual_hybrid`, both strains' folders must be present along with the
+`all_SNPs_<Strain_Name>_<genome_build>.txt.gz` file for each, since those are what the strain comparison
+reads.
+
 - `--nmasking`
 
 Write out a genome version for the strain specified where Ref bases are replaced with `N`. In the Ref/SNP example `T/G` the N-masked genome would now carry an `N` instead of the `T`. The N-masked genome is written to a folder called  `<strain_name>_N-masked/`. Default: ON
