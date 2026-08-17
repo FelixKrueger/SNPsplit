@@ -1,10 +1,22 @@
 # SNPsplit fixture suite
 
-A differential regression harness for `SNPsplit` and `tag2sort`. Every fixture runs the tool in a
-private scratch directory and compares every file it produces against committed expected output.
+Differential regression harnesses for all three tools. Every fixture runs the tool in a private
+scratch directory and compares every file it produces against committed expected output.
 
 Point `--impl` at any implementation to diff it against the same expected output, which makes
-`fixtures/*/expected/` an executable specification rather than just a regression net.
+`*/expected/` an executable specification rather than just a regression net.
+
+| Runner | Tools | Fixtures | Needs |
+|---|---|---|---|
+| `run_tests.pl` | `SNPsplit`, `tag2sort` | `fixtures/`, 23 | `samtools`, `gzip` |
+| `run_genome_tests.pl` | `SNPsplit_genome_preparation` | `genome_fixtures/`, 29 | `gzip` only |
+
+Two runners rather than one: the tools disagree on nearly every tool-specific decision a runner makes.
+Genome preparation needs no samtools, takes a VCF plus a reference *directory* instead of alignments,
+has no companion binary to stage, and needs three normalisations the other suite has no use for. The
+tool-agnostic halves of the two runners are byte-identical so they can be de-duplicated into a shared
+module mechanically; the four subs that could not be copied verbatim are named at their definitions
+with the reason.
 
 ## Running
 
@@ -139,10 +151,158 @@ output format.
 `hic_no_g1`, `output_dir`, `multi_input` and `sam_output` used to pin defects and now assert correct
 behaviour, since #90 to #93 are fixed.
 
+**`gp_generated`** takes its `chr1.fa` and `snps.txt` from a real `SNPsplit_genome_preparation` run at
+authoring time instead of writing them by hand, so the file one tool writes and the other reads is
+checked rather than assumed. Same reasoning as the MD tags. Regenerate it with
+`test/bin/make_fixtures.pl`, which runs the genome preparation script itself.
+
+The annotation comes from `all_SNPs_<strain>_<build>.txt.gz`, not from `SNPs_<strain>/chr*.txt`: the
+per-chromosome file opens with a `>chr` header line and `read_snps` has no header skip, so reading it
+yields uninitialised-value warnings and a SNP stored under an empty chromosome name. It is sorted by
+position, because the archive is written from a hash and would otherwise land in a different order every
+time anyone regenerates the fixture.
+
+It carries its own reference rather than sharing `%STD`: genome preparation masks exactly what it
+filters, so it cannot produce the unlisted `N` at position 280 that `se_basic` depends on.
+
+# Genome preparation suite
+
+`run_genome_tests.pl` drives `SNPsplit_genome_preparation` over `genome_fixtures/`. Same flags as the
+other runner minus `--samtools`, and it injects no arguments: each fixture's `args` file is the whole
+command line, because this tool takes three independent mandatory-ish inputs rather than one.
+
+```sh
+test/bin/make_genome_fixtures.pl   # re-author references, VCFs and SNP files
+test/run_genome_tests.pl --update  # re-record
+git diff test/genome_fixtures      # READ THIS
+```
+
+`make_genome_fixtures.pl` rewrites only the inputs it owns and never touches `expected/`.
+
+## Fixture layout
+
+| File | Required | Purpose |
+|---|---|---|
+| `args` | yes | The complete argument list, one line |
+| `README` | yes | One line naming the code paths pinned |
+| `genome/` | no | Reference FastA files, copied verbatim. Omitted by fixtures that abort before reading it |
+| `<name>.vcf` | no | Staged under its own basename, so `vcf_v7` can be called `mgp_REL2005_snps_indels.vcf` |
+| `snps_in/` | no | Copied to the scratch root: a pre-made `SNPs_<strain>/` tree for `--skip_filtering` |
+| `pre_existing` | no | Filename per line, created empty before the run |
+| `gzip_vcf` | no | Marker: stage the VCF gzipped |
+| `poison_gzip` | no | Marker: install a failing `gzip` first on `PATH` |
+| `allow_empty` | no | Marker: this fixture legitimately generates no genome |
+| `exclude` | no | Glob per line: in `manifest`, content not compared. **Cannot reach `stdout.log`** |
+
+## Rules that are not optional
+
+- **Never type a VCF `REF` base.** Read it out of the reference the VCF is written against.
+  `create_modified_chromosome` skips a SNP whose `REF` disagrees, and the counter that records the skip
+  is never reported, so a mistyped base produces a fixture that records a plausible zero-SNP result and
+  looks correct. `make_genome_fixtures.pl` asserts every `REF` after writing it.
+- **Give every hash-ordered output at least five records.** Below that the order cannot vary, or repeats
+  by chance, and the fixture passes without exercising the normalisation it exists to prove. This is why
+  `dual_hybrid` carries five records of each classification rather than one.
+- **Keep `poison_gzip`'s SNP list small.** The failure is silent because a ~1 KB buffered write still
+  fits the pipe buffer before the dead child is noticed. A larger list would behave differently.
+- **Prefer error fixtures whose `die` carries no `$!`.** `strerror` text is not guaranteed identical
+  across platforms.
+- For `reverse_strand`, the reference base must be the *complement* of the file's ref allele, since
+  `read_snps` complements before `create_modified_chromosome` compares.
+
+## Normalisation
+
+Beyond the shared masking: `*.txt.gz` is decompressed and recorded under a `.txt` suffix, following the
+`.bam` → `.sam.txt` precedent, and `manifest` still pins the archive's existence separately from its
+content.
+
+**Six output files are written from Perl hashes, so their line order differs on every run.** They are
+sorted before comparison, and the dual-hybrid annotation additionally has its ID column's digits masked:
+
+| Output | Cause |
+|---|---|
+| `all_SNPs_<strain>_<build>.txt.gz` | `keys %all_SNPs`, once per strain |
+| `<strain>_specific_SNPs.<build>.txt` | `keys %snps` |
+| `<strain2>_specific_SNPs.<build>.txt` | read order of the strain-2 archive |
+| `<strain>_<strain2>_SNPs_in_common.<build>.txt` | read order of the strain-2 archive |
+| `all_<strain2>_SNPs_<strain>_reference.based_on_<build>.txt` | line order **and** field 0 |
+| the strain list on stdout | `keys %strains`, five call sites |
+
+Sorting loses nothing: line order is read by no consumer, and `sort` keeps duplicates so a spurious
+duplicate line is still caught. Field 0 is masked only in its digits — the `<strain>_` prefix stays, because
+it is the one signal that a line came from the new-reference branch and it is a documented column.
+
+**The table is hardcoded in the runner, not declared per fixture.** The nondeterminism is a property of
+the tool, so an author who forgot a marker would get a fixture that fails one run in three, which is
+worse than no fixture.
+
+Perl stamps a line number onto the four `die`s and `warn`s that lack a trailing newline, so
+`<impl> line NNN` is masked while `<IN> line N` — real behaviour — survives. Without it every fixture
+pinning a diagnostic would break on any edit above the reported line.
+
+Each fixture's own staged `genome/` and VCF are recorded into `expected/` **deliberately**: the tool
+`chdir`s into the reference folder, so a regression that wrote there would otherwise be invisible.
+
+## Fixtures worth knowing about
+
+Three pin behaviour that is plainly wrong, deliberately:
+
+- **`chrom_name_mismatch`** — an Ensembl-style VCF against a UCSC-style reference exits 0, writes
+  `chrchr1.N-masked.fa` containing zero Ns, and reports "All done". The nine-line Ensembl-versus-UCSC
+  explanation the script carries for exactly this case never fires, because the loop iterates the
+  reference's chromosomes and silently skips any the VCF does not mention.
+- **`poison_gzip`** — a failing `gzip` leaves a zero-byte archive and the run still reports success.
+  Downstream `SNPsplit` then loads zero SNPs.
+- **`skip_filtering_strain2`** — `--skip_filtering` accepts `--strain2` and discards it without a word,
+  because the promotion to `--dual_hybrid` sits inside the block `--skip_filtering` skips.
+
+**`empty_chromosome`** reaches that same Ensembl-versus-UCSC abort from the other direction: a
+header-only FastA entry is stored as the empty string, which is falsy, so the check fires for a
+chromosome that *is* present — reporting it as not found and then listing it among the names it found.
+
+**`no_format_column`** renames the `FORMAT` column rather than deleting it. Deleting it leaves nine
+columns, `detect_strains` skips indices up to 8, and the run dies earlier on an empty strain list, which
+would make the fixture a duplicate of `strain_not_in_vcf`.
+
+**`duplicate_chrom_name`** reaches the end-of-file duplicate check, whose message ends in a full stop.
+The in-loop check one screen above ends in an exclamation mark and needs a *third* occurrence of the
+name, because it runs before the previous chromosome has been stored. The two messages are otherwise
+identical.
+
+**`reverse_strand`** is the only fixture that can reach the strand-complementing branch: VCF filtering
+always writes strand `1`, so a `-1` can only arrive through a hand-written `--skip_filtering` annotation.
+
+## Proving the fixtures assert anything
+
+`29 passed` alone only proves the fixtures are self-consistent. Two checks establish more, both run by
+hand:
+
+```sh
+# the normalisation is doing work, not getting lucky
+for seed in 1 4242; do PERL_HASH_SEED=$seed PERL_PERTURB_KEYS=2 test/run_genome_tests.pl; done
+```
+
+CI runs that loop too. It proves the normalised output is seed-independent; the ≥5-record rule above is
+what makes the raw output actually differ between seeds, and without that the check is vacuous.
+
+Mutation testing is the other half — change one line, confirm a *named* set of fixtures fails, revert:
+
+| Mutate | Should fail |
+|---|---|
+| `'N'` in `create_modified_chromosome` | 14 fixtures, but **not** `chrom_name_mismatch`, `empty_chromosome` or `multi_chrom`'s VCF-absent chromosome, which legitimately introduce zero Ns |
+| `'N'` in `create_modified_chromosome_dual_hybrid` | `dual_hybrid` only — the first mutation does not reach it |
+| either full-sequence substitution | `dual_hybrid`, `full_sequence`, `no_nmasking` / `dual_hybrid` |
+| `$fi == 1` | 18 fixtures |
+| the strand complement in `read_snps` | `reverse_strand` only |
+| the new Ref/SNP allele, the unique-to-strain-1 test, or the strain-1 filter test | `dual_hybrid` only |
+
+A mutation that fails nothing means the code it touched is asserted by no fixture.
+
 ## Environment
 
-`SNPSPLIT_NO_SLEEP=1` skips the tools' progress pauses. The harness sets it; it takes a single run from
-roughly 2.2 s to 0.2 s and matters most for `--verbose`, which otherwise sleeps once per MD element.
+`SNPSPLIT_NO_SLEEP=1` skips the tools' progress pauses. Both harnesses set it; it takes a single run from
+roughly 2.2 s to 0.2 s and matters most for `--verbose`, which otherwise sleeps once per MD element. All
+three tools honour it.
 
 The expected output in this repository was recorded with samtools 1.21 and perl 5.34.1 on macOS. CI runs
 `ubuntu-24.04`. The same expected output has also been checked against samtools 1.22.1 with perl 5.32.1
