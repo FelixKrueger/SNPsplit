@@ -356,9 +356,22 @@ BAM headers are compared with `@PG` removed, because `@PG` records the argv and 
 `samtools view -o` rather than a shell redirect. `version`, `date_run` and `command` are filtered from
 the reports for the same reason the YAML masks them.
 
-Exit status is 0 when nothing that matters changed, 1 when something did, and **2 when either run
-failed** — that last case exists because a run that produces nothing would otherwise pass the comparison
-with no files to compare, which is the vacuous pass the rest of this suite is built to avoid.
+Each side prints what its revision resolved to and what it calls itself:
+
+```
+[0.6.0]         0.6.0         is 6e49c58, and reports version 0.6.0
+[origin_master] origin/master is 499292f, and reports version 0.9.0
+```
+
+**That line is not decoration.** A local branch nobody fast-forwarded resolves silently to whatever it
+last pointed at, and the first real use of this script compared `master` against `0.6.0` where `master`
+*was* `0.6.0` — reporting no change, confidently, having compared nothing. Two revisions resolving to the
+same commit is now refused before either run starts, along with a revision that does not exist, because
+finding either out after the first run costs an hour on a real library.
+
+Exit status is **0** when nothing that matters changed, **1** when something did, and **2** whenever it
+could not compare at all — a missing input, a bad revision, two revisions that are the same commit, or a
+run that aborted. Anything that produced no comparison exits 2 rather than reporting no change.
 
 ## Environment
 
