@@ -32,6 +32,8 @@ my $yaml_count = 0;
 
 my ($paired,$hic,$verbose,$samtools_path,$bam,$output_dir,$conflict,$singletons,$parent_dir) = process_commandline();
 
+my @bam_writers; # every BAM writer opened, so all of them can be closed and checked
+
 my ($unassigned,$genome1,$genome2,$conflicting,$snp_found,$no_snp_found,$bizarre,$no_snp);
 my $report_file;
 
@@ -84,12 +86,7 @@ foreach my $file (@ARGV){
     process_single_end($file);
   }
 
-  close G1;
-  close G2;
-  close UNASSIGNED;
-  if ($conflict){
-    close CONFLICT;
-  }
+  close_bam_writers();
 
   # returning to SNPsplit-tag, or end otherwise
   warn "Sorting finished successfully\n\n";
@@ -1285,6 +1282,30 @@ sub open_bam_writer {
     unless ($pid){ # the child
 	open (STDERR,'>','/dev/null');
 	exec ($samtools_path,'view',@view_args,'-o',$file,'-') or die "Failed to run '$samtools_path': $!\n";
+    }
+
+    push @bam_writers, [$handle,$file];
+
+}
+
+### Each writer is a pipe to samtools, so close is the only place a write failure can be seen: the pipe
+### opens before samtools runs and its stderr is discarded. Every handle is closed, including the Hi-C
+### and singleton ones that used to be left to process exit, and a failure aborts - a truncated BAM is
+### worse than none, because whatever reads it next will read part of the data and not notice
+sub close_bam_writers {
+
+    my @failed;
+
+    foreach my $writer (@bam_writers){
+	my ($handle,$file) = @$writer;
+	next if close $handle;
+	push @failed, $file;
+    }
+    @bam_writers = ();
+
+    if (@failed){
+	die "samtools failed while writing:\n" . join('',map {"  $_\n"} @failed)
+	  . "These output files are incomplete\n";
     }
 
 }

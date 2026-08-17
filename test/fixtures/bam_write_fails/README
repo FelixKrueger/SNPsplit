@@ -1,0 +1,1 @@
+a samtools that fails while writing genome1 aborts the run instead of leaving a truncated BAM and reporting success

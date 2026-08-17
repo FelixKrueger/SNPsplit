@@ -138,6 +138,37 @@ SHIM
 
     s/<REAL_SAMTOOLS>/$samtools/g for @args;
 
+    ### A samtools that works for everything except writing genome1, so exactly one BAM writer fails
+    ### while the run still gets far enough to open them. Written this way rather than by breaking
+    ### samtools outright, because the contract under test is "a failed BAM write aborts", and a
+    ### samtools that fails everywhere would abort earlier for a different reason.
+    if (grep { /<WRITE_FAIL_SAMTOOLS>/ } @args) {
+        my $dir = File::Spec->catdir($scratch, 'failing');
+        make_path($dir);
+        my $wrapper = File::Spec->catfile($dir, 'samtools');
+        open my $fh, '>', $wrapper or die "write failing samtools: $!\n";
+        ### It runs samtools first and only then reports failure, so all the input is consumed and no
+        ### SIGPIPE reaches the writer. Exiting straight away would kill tag2sort mid-write, which was
+        ### already reported as "killed by signal 13" - the silent case is samtools finishing its work
+        ### and reporting a problem, which only close can observe.
+        print {$fh} <<"SHIM";
+#!/bin/sh
+for arg in "\$\@"; do
+  case "\$arg" in
+    *genome1*)
+      @{[ shell_quote($samtools) ]} "\$\@"
+      echo 'samtools: deliberate write failure' >&2
+      exit 1
+      ;;
+  esac
+done
+exec @{[ shell_quote($samtools) ]} "\$\@"
+SHIM
+        close $fh;
+        chmod 0755, $wrapper;
+        s/<WRITE_FAIL_SAMTOOLS>/$wrapper/g for @args;
+    }
+
     ### A samtools whose path contains a space. Substituted after the args file has been split on
     ### whitespace, so the space cannot be turned into an argument boundary here - the point is whether
     ### the tools keep it in one piece, and interpolating it into a command string does not.
