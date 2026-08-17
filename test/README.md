@@ -8,8 +8,8 @@ Point `--impl` at any implementation to diff it against the same expected output
 
 | Runner | Tools | Fixtures | Needs |
 |---|---|---|---|
-| `run_tests.pl` | `SNPsplit`, `tag2sort` | `fixtures/`, 24 | `samtools`, `gzip` |
-| `run_genome_tests.pl` | `SNPsplit_genome_preparation` | `genome_fixtures/`, 30 | `gzip` only |
+| `run_tests.pl` | `SNPsplit`, `tag2sort` | `fixtures/`, 25 | `samtools`, `gzip` |
+| `run_genome_tests.pl` | `SNPsplit_genome_preparation` | `genome_fixtures/`, 31 | `gzip` only |
 
 Two runners rather than one: the tools disagree on nearly every tool-specific decision a runner makes.
 Genome preparation needs no samtools, takes a VCF plus a reference *directory* instead of alignments,
@@ -281,6 +281,17 @@ identical.
 reference, so it is the one exception to the derive-never-type rule above — and the only way to reach
 either skip counter, because a derived annotation always matches. It pins that 5 SNPs total, 3 applied,
 1 already present and 1 mismatched all appear, rather than leaving two positions unaccounted for (#112).
+
+**`samtools_path_spaced`** and **`spaced_paths`** cover #99, one per suite. The first stages a samtools
+wrapper at `samtools dir/samtools` and drives the whole pipeline through it; its `poison_calls` file is
+empty, which is the assertion that `--samtools_path` was honoured at every site rather than just the
+first. The second puts a gzipped VCF under `vcf dir/` and gives the build a name containing a space, so
+it lands in the gzipped SNP list's file name too. Both produce nothing at all against the previous
+version.
+
+The spaced paths are substituted into the argument list *after* the `args` file has been split on
+whitespace, via `<SPACED_SAMTOOLS>`, `<SPACED_VCF>` and `<SPACED_BUILD>`. A space written directly into
+`args` would just become an argument boundary and test nothing.
 
 **`reverse_strand`** is the only fixture that can reach the strand-complementing branch: VCF filtering
 always writes strand `1`, so a `-1` can only arrive through a hand-written `--skip_filtering` annotation.

@@ -118,7 +118,7 @@ sub process_single_end{
 
   my $file = shift;
 
-  open (IN,"$samtools_path view -h ${output_dir}$file |") or die "Failed to read from BAM file ${output_dir}$file: $!\n";
+  open (IN,'-|',$samtools_path,'view','-h',"${output_dir}$file") or die "Failed to read from BAM file ${output_dir}$file: $!\n";
   warn "Now processing input file <<< $file >>>\n\n";
 
   my $outfile = open_output_filehandles($file);
@@ -242,7 +242,7 @@ sub process_HiC_paired_end{
 
   my $file = shift;
 
-  open (IN,"$samtools_path view -h ${output_dir}$file |") or die "Failed to read from BAM file $file: $!\n";
+  open (IN,'-|',$samtools_path,'view','-h',"${output_dir}$file") or die "Failed to read from BAM file $file: $!\n";
 
   open_output_filehandles($file);
 
@@ -496,7 +496,7 @@ sub princess_paired_end{
 
   my $file = shift;
 
-  open (IN,"$samtools_path view -h ${output_dir}$file |") or die "Failed to read from BAM file $file: $!\n";
+  open (IN,'-|',$samtools_path,'view','-h',"${output_dir}$file") or die "Failed to read from BAM file $file: $!\n";
 
   open_output_filehandles($file);
 
@@ -915,15 +915,15 @@ sub open_output_filehandles{
       $g1_g2_file       =~ s/sam$/bam/;
 
 
-      open (G1,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$genome1_file") or die "Unable to write to BAM file '$genome1_file': $!\n";
-      open (G2,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$genome2_file") or die "Unable to write to BAM file '$genome2_file': $!\n";
-      open (UNASSIGNED,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$unassigned_file") or die "Unable to write to BAM file '$unassigned_file': $!\n";
+      open_bam_writer(\*G1,"${output_dir}$genome1_file",'-bS');
+      open_bam_writer(\*G2,"${output_dir}$genome2_file",'-bS');
+      open_bam_writer(\*UNASSIGNED,"${output_dir}$unassigned_file",'-bS');
       if ($conflict){
-	open (CONFLICT,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$conflicting_file") or die "Unable to write to BAM file '$conflicting_file': $!\n";
+	open_bam_writer(\*CONFLICT,"${output_dir}$conflicting_file",'-bS');
       }
-      open (G1UA,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$g1_ua_file") or die "Unable to write to BAM file '$g1_ua_file': $!\n";
-      open (G2UA,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$g2_ua_file") or die "Unable to write to BAM file '$g2_ua_file': $!\n";
-      open (G1G2,"| $samtools_path view -bS 2>/dev/null - > ${output_dir}$g1_g2_file") or die "Unable to write to BAM file '$g1_g2_file': $!\n";
+      open_bam_writer(\*G1UA,"${output_dir}$g1_ua_file",'-bS');
+      open_bam_writer(\*G2UA,"${output_dir}$g2_ua_file",'-bS');
+      open_bam_writer(\*G1G2,"${output_dir}$g1_g2_file",'-bS');
     }
     else{
       $genome1_file     =~ s/sam$/bam/;
@@ -938,19 +938,19 @@ sub open_output_filehandles{
 	$conflicting_file_st =~ s/sam$/bam/;
       }
 
-      open (G1,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$genome1_file") or die "Unable to write to BAM file '$genome1_file': $!\n";
-      open (G2,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$genome2_file") or die "Unable to write to BAM file '$genome2_file': $!\n";
-      open (UNASSIGNED,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$unassigned_file") or die "Unable to write to BAM file '$unassigned_file': $!\n";
+      open_bam_writer(\*G1,"${output_dir}$genome1_file",'-bSh');
+      open_bam_writer(\*G2,"${output_dir}$genome2_file",'-bSh');
+      open_bam_writer(\*UNASSIGNED,"${output_dir}$unassigned_file",'-bSh');
       if ($conflict){
-	open (CONFLICT,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$conflicting_file") or die "Unable to write to BAM file '$conflicting_file': $!\n";
+	open_bam_writer(\*CONFLICT,"${output_dir}$conflicting_file",'-bSh');
       }
 
       if ($singletons){
-	open (G1_ST,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$genome1_file_st") or die "Unable to write to BAM file '$genome1_file_st': $!\n";
-	open (G2_ST,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$genome2_file_st") or die "Unable to write to BAM file '$genome2_file_st': $!\n";
-	open (UNASSIGNED_ST,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$unassigned_file_st") or die "Unable to write to BAM file '$unassigned_file_st': $!\n";
+	open_bam_writer(\*G1_ST,"${output_dir}$genome1_file_st",'-bSh');
+	open_bam_writer(\*G2_ST,"${output_dir}$genome2_file_st",'-bSh');
+	open_bam_writer(\*UNASSIGNED_ST,"${output_dir}$unassigned_file_st",'-bSh');
 	if ($conflict){
-	  open (CONFLICT_ST,"| $samtools_path view -bSh 2>/dev/null - > ${output_dir}$conflicting_file_st") or die "Unable to write to BAM file '$conflicting_file_st': $!\n";
+	  open_bam_writer(\*CONFLICT_ST,"${output_dir}$conflicting_file_st",'-bSh');
 	}
       }
 
@@ -1268,5 +1268,23 @@ VERSION
   $parent_dir = getcwd();
 
   return ($paired,$hic,$verbose,$samtools_path,$bam,$output_dir,$conflict,$singletons,$parent_dir);
+
+}
+
+### Opens a BAM writer without going through a shell, so a path containing a space or a shell
+### metacharacter is safe. samtools' own stderr is discarded, matching the redirect this replaced:
+### these writers stay open for the whole run, so a message from one of them interleaves with the main
+### output at an unpredictable point
+sub open_bam_writer {
+
+    my ($handle,$file,@view_args) = @_;
+
+    my $pid = open ($handle,'|-');
+    defined $pid or die "Failed to fork a samtools process for '$file': $!\n";
+
+    unless ($pid){ # the child
+	open (STDERR,'>','/dev/null');
+	exec ($samtools_path,'view',@view_args,'-o',$file,'-') or die "Failed to run '$samtools_path': $!\n";
+    }
 
 }

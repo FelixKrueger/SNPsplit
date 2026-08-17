@@ -143,6 +143,24 @@ sub run_fixture {
     my @args = read_args($dir);
     die "$name: fixture has no args file\n" unless @args;
 
+    ### Paths containing a space, substituted after the args file has been split on whitespace so the
+    ### space cannot become an argument boundary here. A VCF under a directory with a space in the name
+    ### is the realistic case - the tool reads it through gunzip - and a build name with a space lands
+    ### in every output file name, including the gzipped SNP list.
+    if (grep { /<SPACED_VCF>/ } @args) {
+        my $spaced = File::Spec->catdir($scratch, 'vcf dir');
+        make_path($spaced);
+        my @staged = grep { -f } ( glob(File::Spec->catfile($scratch, '*.vcf')),
+                                   glob(File::Spec->catfile($scratch, '*.vcf.gz')) );
+        die "$name: <SPACED_VCF> needs exactly one staged VCF, found @{[ scalar @staged ]}\n"
+            unless @staged == 1;
+        my $moved = File::Spec->catfile($spaced, basename($staged[0]));
+        rename $staged[0], $moved or die "move VCF into '$spaced': $!\n";
+        my $rel = File::Spec->abs2rel($moved, $scratch);
+        s/<SPACED_VCF>/$rel/g for @args;
+    }
+    s/<SPACED_BUILD>/test build/g for @args;
+
     my @cmd     = ($staged_impl, @args);
     my $cmdline = join ' ', map { shell_quote($_) } @cmd;
     print "  run: $cmdline\n" if $verbose;

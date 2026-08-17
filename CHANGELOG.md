@@ -1,3 +1,9 @@
+## Unreleased
+
+- **Breaking:** all 34 samtools, gzip and gunzip invocations now run without a shell, so paths containing a space or a shell metacharacter work throughout ([#99](https://github.com/FelixKrueger/SNPsplit/issues/99))
+
+- A failed SAM to BAM conversion no longer leaves a zero-byte BAM file behind
+
 ## v0.8.0 (Release 17 08 2026)
 
 - Added fixture-based regression test suites for all three scripts (`test/run_tests.pl` and `test/run_genome_tests.pl`, 53 fixtures), run in CI
