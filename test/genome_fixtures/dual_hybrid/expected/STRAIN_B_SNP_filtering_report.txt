@@ -1,0 +1,15 @@
+SNP position summary for strain STRAIN_B (based on genome build TESTBUILD)
+===========================================================================
+
+Positions read in total:	25
+
+20	SNP were homozygous. Of these:
+18	SNP were homozygous and passed high confidence filters and were thus included into the STRAIN_B genome
+
+Not included into STRAIN_B genome:
+5	had the same sequence as the reference
+0		had no clearly defined alternative base
+0		Calls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)
+2		were homozygous but the filtering call was low confidence
+
+Printed a single list of all SNPs to >all_SNPs_STRAIN_B_TESTBUILD.txt.gz<...

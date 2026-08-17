@@ -1,0 +1,1 @@
+A failing gzip leaves a zero-byte all-SNP archive and the run still reports success

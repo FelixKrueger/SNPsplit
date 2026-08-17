@@ -1,0 +1,1 @@
+A missing --reference_genome warns and exits 0, so a failed run reports success

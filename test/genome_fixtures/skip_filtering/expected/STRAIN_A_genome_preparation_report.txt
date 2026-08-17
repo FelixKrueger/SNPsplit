@@ -1,0 +1,5 @@
+6 positions on chromosome 1 were changed to 'N'
+0 positions on chromosome X were changed to 'N'
+
+Summary
+6 Ns were newly introduced into the N-masked genome for strain STRAIN_A in total
