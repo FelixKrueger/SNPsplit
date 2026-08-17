@@ -552,7 +552,9 @@ sub read_snp_files{
 		++$unique_ref;
 		
 		### here we need to use the SNP position (i.e. Strain sequence) as new reference and the GRCm39 sequence as the SNP (i.e. where Strain2 is the same as GRCm39)
-		print OUT_STRAIN "$chr\t$pos\t$snps{$chr}->{$pos}->{snp}/$snps{$chr}->{$pos}->{ref}\n"; # writing out an annotation track Strain vs GRCm39
+		### Five columns like every other SNP annotation this script writes, so the track can be
+		### passed straight to SNPsplit as --SNP_file
+		print OUT_STRAIN "${strain}_${unique_ref}\t$chr\t$pos\t1\t$snps{$chr}->{$pos}->{snp}/$snps{$chr}->{$pos}->{ref}\n";
 		
 		### here we need to use the SNP position (i.e. Strain sequence) as new reference and the GRCm39 sequence as the SNP (i.e. where Strain2 is the same as GRCm39)
 		print ALL_STRAIN_STRAIN2  "${strain}_${unique_ref}\t$chr\t$pos\t1\t$snps{$chr}->{$pos}->{snp}/$snps{$chr}->{$pos}->{ref}\n";
