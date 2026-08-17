@@ -35,7 +35,7 @@ Manually sets data to single-end. Skips AUTO-DETECT
 
 Paired-end mode. (Default: AUTO-DETECT)
 
-- `-o/--outdir <dir>`
+- `-o/--output_dir <dir>`
 
 Write all output files into this directory. By default the output files will be written into the same folder as the input file(s). If the specified folder does not exist, SNPsplit will attempt to create it first. The path to the output folder can be either relative or absolute.
 

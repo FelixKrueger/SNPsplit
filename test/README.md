@@ -304,7 +304,7 @@ always writes strand `1`, so a `-1` can only arrive through a hand-written `--sk
 
 ## Proving the fixtures assert anything
 
-`29 passed` alone only proves the fixtures are self-consistent. Two checks establish more, both run by
+`31 passed` alone only proves the fixtures are self-consistent. Two checks establish more, both run by
 hand:
 
 ```sh
