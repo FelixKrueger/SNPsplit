@@ -26,7 +26,7 @@ use lib "$Bin/../lib";
 my %counting;
 my %fhs;
 
-my $SNPsplit_version = '0.7.0';
+my $SNPsplit_version = '0.8.0';
 my %yaml;
 my $yaml_count = 0;
 
