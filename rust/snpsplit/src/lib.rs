@@ -1,3 +1,4 @@
+pub mod tool;
 pub mod version;
 
 /// The three tools the one binary provides.
