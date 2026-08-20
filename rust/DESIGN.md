@@ -53,7 +53,7 @@ rust/
   Cargo.toml          workspace
   Cargo.lock
   VERSION             suite version, single source of truth
-  justfile            just impl, just test, just fixtures
+  build-impl.sh       builds the binary and lays out the three classic names
   DESIGN.md           this file
   README.md           status journal: which module is ported, at what fidelity
   snpsplit/
@@ -87,7 +87,9 @@ The three classic names are installed as symlinks to the one binary, so existing
 and the fixture runners (which invoke `SNPsplit` and require `tag2sort` to sit beside it,
 `test/run_tests.pl:42`) are drop-in.
 
-During the port, `just impl` builds and links them into `rust/target/impl/`, so the gate is:
+During the port, `rust/build-impl.sh` builds and links them into `rust/target/impl/`, so the
+gate is (a shell script rather than a `justfile`, so running the gate needs cargo and
+nothing else):
 
 ```
 test/run_tests.pl --impl rust/target/impl/SNPsplit
@@ -123,6 +125,25 @@ not cosmetic:
 
 Every other output difference is a bug in the port, not a consequence of the design.
 
+### Why not `bismark-io`
+
+`bismark-io` 1.0.0 is on crates.io, GPL-3.0, from this author, described as "Bismark-aware
+BAM/SAM/CRAM I/O on top of noodles". Reusing it would make the two Rust tools share a layer,
+which is worth something. It is not used here for two reasons: it carries bisulfite-aware
+semantics that SNPsplit does not want in its BAM layer, and it puts a cross-repo dependency,
+whose release cadence this repo does not control, underneath a byte-identity gate. What
+SNPsplit needs (record read, record write, name sort) is a small subset that noodles covers
+directly. Worth revisiting if the two suites ever want a common release train.
+
+### The version flag is not harmonised
+
+`SNPsplit --versions` and `SNPsplit_genome_preparation --versions` are plural,
+`tag2sort --version` is singular, and `tag2sort --versions` is rejected with
+`Unknown option: versions`, `Please respecify command line options`, and exit status 255.
+That is observable from any shell script, so the port reproduces it rather than tidying it.
+The three banners are captured from the Perl and compiled in verbatim rather than retyped,
+so they cannot drift.
+
 ## The fidelity gate
 
 A port that lands in twenty pieces spends most of its life partially complete, and the
@@ -156,7 +177,7 @@ individual PRs serving as its readable history.
 
 | PR | Branch | Contents |
 |---|---|---|
-| 1 | `rs-scaffold` | Cargo workspace, `snpsplit` crate skeleton, multicall dispatch, `--version` and `--help` for all three names, `rust/README.md` journal, `just impl`, CI job for fmt/clippy/test |
+| 1 | `rs-scaffold` | Cargo workspace, `snpsplit` crate skeleton, multicall dispatch, byte-exact version banners for all three names, `rust/README.md` journal, `build-impl.sh`, CI job for fmt/clippy/test |
 | 2 | `rs-io` | noodles SAM/BAM reader and BAM writer, header and `@PG` handling, external name sort with disk spill, unit tests |
 | 3 | `rs-harness` | `test/rust_fixtures.txt` plus the two CI jobs; reconcile the Perl `die`-shape masking in both runners. Perl suites stay green |
 
