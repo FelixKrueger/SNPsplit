@@ -27,7 +27,7 @@ test/run_genome_tests.pl --impl rust/target/impl/SNPsplit_genome_preparation
 |---|---|---|
 | multicall dispatch, version banners | done | n/a |
 | `io` (BAM/SAM read, BAM write, name sort) | done | n/a |
-| `genome_prep` | not started | 0 / 31 |
+| `genome_prep` | done | 30 / 31 |
 | `sort` (tag2sort) | not started | 0 / 26 |
 | `tag` (SNPsplit) | not started | 0 / 26 |
 
@@ -78,5 +78,35 @@ owned `RecordBuf` only to re-encode it was two thirds of the cost.
 
 ## Known deviations from Perl v0.9.0
 
-None yet. Anything that lands here stays here: a deviation that is not written down is a
-bug the next person has to rediscover.
+Anything that lands here stays here: a deviation that is not written down is a bug the next
+person has to rediscover.
+
+- **`poison_gzip` cannot pass and is not listed.** It shims a failing `gzip` onto `PATH` to
+  prove that a failed compression aborts the run. The Rust build compresses in process, so
+  there is no subprocess for a shim to poison. The fixture is re-expressed alongside the four
+  samtools-architecture fixtures of the alignment suite rather than quietly skipped.
+- **Perl `die` suffixes are emulated.** Four genome fixtures diff messages that Perl stamps
+  with ` at <script> line <n>, <IN> line <m>.` because the `die` string has no trailing
+  newline. The script line number is masked by the runner and carries no information; the
+  input line number is not masked and is genuinely useful. The Rust build prints the same
+  shape, using the Perl line numbers as provenance. The real fix is a trailing newline in the
+  three `die` calls, which is raised upstream separately.
+
+## Perl behaviour reproduced deliberately
+
+These look like port bugs in a diff and are not. Each is raised upstream on its own.
+
+- An **empty chromosome** is reported as a chromosome-name mismatch. `create_modified_chromosome`
+  guards on `unless ($chromosomes{$chr})`, and an empty string is false in Perl, so a
+  chromosome that exists but carries no sequence takes the "not found in the reference
+  genome" path.
+- A **chromosome present in the VCF body but never declared in a `##contig` header** aborts
+  the run with `Can't use an undefined value as a symbol reference`: there is no filehandle
+  for it, and the Perl reaches `print {$fhs{$chr}}` with an undefined value.
+- **`Clearing SNP array...`** is printed for every chromosome with no SNP file. It announces
+  assigning an empty list to a list that is already empty.
+- The **dual hybrid report drops separators** that its stderr copy carries, differently on two
+  adjacent lines: the N-masked line says `strainstrain 2 [AB]` and the full-sequence line says
+  `strainstrain 2 [A/B]`, where stderr says `strain/strain 2 [A/B]` for both.
+- **Duplicate SNP positions are counted before being skipped**, so the per-chromosome total
+  does not reconcile with the applied and skipped counts.

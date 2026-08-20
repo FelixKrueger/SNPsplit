@@ -6,5 +6,41 @@
 #
 # One name per line. A `genome:` prefix means a fixture of test/run_genome_tests.pl;
 # anything else is a fixture of test/run_tests.pl. Blank lines and # comments are ignored.
+
+# SNPsplit_genome_preparation: 30 of 31.
 #
-# Nothing is listed yet: the foundation is built and no tool is ported.
+# poison_gzip is the exception, and it is not a port defect. It shims a failing `gzip` onto
+# PATH to prove that a failed compression aborts the run. The Rust build compresses in
+# process, so there is no subprocess for a shim to poison and the fixture cannot express
+# what it is testing. It is re-expressed alongside the four samtools-architecture fixtures
+# of the alignment suite, in its own PR, rather than quietly listed here.
+genome:chrom_name_mismatch
+genome:dual_hybrid
+genome:duplicate_chrom_name
+genome:empty_chromosome
+genome:empty_genome_folder
+genome:fasta_extension
+genome:full_sequence
+genome:genotypes
+genome:list_strains
+genome:missing_genome
+genome:multi_chrom
+genome:multifasta
+genome:nmask_basic
+genome:no_fi_field
+genome:no_format_column
+genome:no_nmasking
+genome:no_snp_folder
+genome:not_fasta
+genome:ref_mismatch
+genome:rerun_overwrite
+genome:reverse_strand
+genome:same_strain
+genome:skip_filtering
+genome:skip_filtering_dual
+genome:spaced_paths
+genome:strain_not_in_vcf
+genome:undeclared_contig
+genome:vcf_gzipped
+genome:vcf_missing
+genome:vcf_v7
