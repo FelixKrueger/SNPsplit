@@ -1,6 +1,6 @@
 use std::process::ExitCode;
 
-use snpsplit::{Tool, genome_prep, tool, version};
+use snpsplit::{Tool, genome_prep, sort, tool, version};
 
 fn main() -> ExitCode {
     let mut args: Vec<String> = std::env::args().collect();
@@ -54,6 +54,7 @@ fn run(tool: Tool, args: &[String]) -> ExitCode {
 
     match tool {
         Tool::Prepare => genome_prep::run(args),
+        Tool::Sort => sort::run(args),
         _ => {
             eprintln!("{tool:?} is not implemented in this build yet");
             ExitCode::FAILURE

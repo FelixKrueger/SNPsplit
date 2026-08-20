@@ -237,7 +237,7 @@ pub fn filter_snps(
         }
 
         report.total += 1;
-        if report.total % 1_000_000 == 0 {
+        if report.total.is_multiple_of(1_000_000) {
             writeln!(err, "processed {} lines", report.total)?;
         }
 

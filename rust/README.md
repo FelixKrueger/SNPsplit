@@ -28,7 +28,7 @@ test/run_genome_tests.pl --impl rust/target/impl/SNPsplit_genome_preparation
 | multicall dispatch, version banners | done | n/a |
 | `io` (BAM/SAM read, BAM write, name sort) | done | n/a |
 | `genome_prep` | done | 31 / 31 |
-| `sort` (tag2sort) | not started | 0 / 26 |
+| `sort` (tag2sort) | done | 25 / 26 driven by the Perl tagger |
 | `tag` (SNPsplit) | not started | 0 / 26 |
 
 The two fixture counts are the two suites, not two halves of one: the alignment suite runs
@@ -96,6 +96,41 @@ person has to rediscover.
   input line number is not masked and is genuinely useful. The Rust build prints the same
   shape, using the Perl line numbers as provenance. The real fix is a trailing newline in the
   three `die` calls, which is raised upstream separately.
+
+### The `@PG` chain
+
+Output files record who wrote them. The Perl pipeline records only the `samtools` invocations
+it shells out to, so the tool that actually did the work never appears in its own output. A
+self-contained build has no excuse for that, so `tag2sort` writes its own record:
+
+```
+@PG	ID:SNPsplit	PN:SNPsplit	VN:0.9.0	CL:<the command line>	PP:<the previous record>
+```
+
+This is the one place the port writes something the Perl does not, and it is deliberate: the
+alternative that would have matched byte for byte was emitting `PN:samtools` records for
+invocations that never happened, which is false provenance in a data file.
+
+The fixture runner now drops the provenance record an implementation's own I/O layer adds,
+on either side, for the same reason it already masked those records' `VN:` and `CL:` fields.
+Every other `@PG` record, including the aligner's that `check_for_bs` reads, is compared as
+before.
+
+### `bam_write_fails` is not listed
+
+It poisons `samtools` so that writing `genome1.bam` fails, and asserts the run aborts rather
+than reporting success over a truncated file. With no samtools to poison the write succeeds,
+and the abort message it pins names samtools explicitly:
+
+```
+samtools failed while writing:
+  bam_write_fails.genome1.bam
+These output files are incomplete
+```
+
+Printing that from a build that never ran samtools is the same false claim as the `@PG`
+records. Re-expressing the fixture needs the Perl message to drop the tool name so both
+implementations can share it, which is raised upstream.
 
 ## Perl behaviour reproduced deliberately
 

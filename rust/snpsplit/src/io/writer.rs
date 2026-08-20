@@ -11,8 +11,45 @@ use noodles_sam::alignment::RecordBuf;
 // The record-writing method lives on this trait rather than on the concrete writers, which
 // is what lets one enum cover both formats without a per-format record type.
 use noodles_sam::alignment::io::Write as AlignmentWrite;
+use noodles_sam::header::record::value::Map;
+use noodles_sam::header::record::value::map::Program;
+use noodles_sam::header::record::value::map::program::tag;
 
 use super::Format;
+
+/// Record this tool in the header's `@PG` chain.
+///
+/// Every program that writes an alignment file is supposed to say so, and the chain is how a
+/// user reconstructs what touched their data. The Perl pipeline records only the samtools
+/// invocations it shells out to, so the tool that actually did the work never appears; a
+/// self-contained build has no excuse for that, and records itself.
+///
+/// `add` assigns a unique ID from the prefix and links `PP:` to the previous entry, which is
+/// the same bookkeeping samtools does.
+pub fn add_pg_line(
+    header: &mut Header,
+    id_prefix: &str,
+    version: &str,
+    command_line: &str,
+) -> Result<()> {
+    let program = Map::<Program>::builder()
+        .insert(tag::NAME, id_prefix)
+        .insert(tag::VERSION, version)
+        .insert(tag::COMMAND_LINE, command_line)
+        .build()
+        .context("Failed to build the @PG record")?;
+
+    header
+        .programs_mut()
+        .add(id_prefix, program)
+        .context("Failed to add the @PG record to the header")?;
+    Ok(())
+}
+
+/// The command line as invoked, for the `CL:` field.
+pub fn command_line() -> String {
+    std::env::args().collect::<Vec<_>>().join(" ")
+}
 
 enum Inner {
     Sam(noodles_sam::io::Writer<BufWriter<File>>),

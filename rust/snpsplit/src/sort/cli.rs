@@ -83,7 +83,12 @@ mod tests {
 
     #[test]
     fn collects_input_files_and_flags() {
-        let o = parse(&args(&["--paired", "--conflicting", "sample.allele_flagged.bam"])).unwrap();
+        let o = parse(&args(&[
+            "--paired",
+            "--conflicting",
+            "sample.allele_flagged.bam",
+        ]))
+        .unwrap();
         assert!(o.paired);
         assert!(o.conflict);
         assert_eq!(o.files.len(), 1);
