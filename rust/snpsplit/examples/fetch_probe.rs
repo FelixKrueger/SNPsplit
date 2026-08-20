@@ -5,6 +5,9 @@ fn main() -> anyhow::Result<()> {
     let dir = tempfile::tempdir()?;
     let dest = dir.path().join("probe");
     let bytes = snpsplit::genome_prep::download::fetch(&url, &dest, &mut std::io::stderr())?;
-    println!("fetched {bytes} bytes, sha256 {}", snpsplit::genome_prep::download::sha256(&dest)?);
+    println!(
+        "fetched {bytes} bytes, sha256 {}",
+        snpsplit::genome_prep::download::sha256(&dest)?
+    );
     Ok(())
 }

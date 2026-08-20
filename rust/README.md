@@ -41,7 +41,7 @@ directions.
 ## Verified equivalences
 
 - All three version banners are byte-identical to Perl v0.9.0, checked by `diff` against the
-  Perl scripts and pinned by a test that fails if `rust/VERSION` moves without the banners
+  Perl scripts and pinned by a test that fails if `the package manifest` moves without the banners
   being regenerated.
 - Name sort: `io::sort_by_name` reproduces `samtools sort -n` ordering, cross-checked over
   5000 shuffled names with a 500-record memory budget (so the spill and merge paths are the

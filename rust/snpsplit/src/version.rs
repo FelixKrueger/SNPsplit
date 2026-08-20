@@ -5,8 +5,13 @@
 
 use crate::Tool;
 
-/// The suite version, from `rust/VERSION`.
-pub const SUITE_VERSION: &str = include_str!("../../VERSION").trim_ascii_end();
+/// The suite version.
+///
+/// Taken from the package manifest rather than from a `VERSION` file beside it. The file was
+/// the obvious "single source of truth" and turned out to be unpublishable: `include_str!`
+/// cannot reach outside the package directory, so `cargo package` refused the crate. The
+/// manifest is a source of truth that ships with the code.
+pub const SUITE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const BANNER_SNPSPLIT: &str = include_str!("../banners/snpsplit.txt");
 const BANNER_TAG2SORT: &str = include_str!("../banners/tag2sort.txt");
@@ -25,8 +30,9 @@ pub fn banner(tool: Tool) -> &'static str {
 mod tests {
     use super::*;
 
-    /// The banners carry the version as literal text. If VERSION moves and the banners are
-    /// not regenerated, the tool would report two different versions depending on the flag.
+    /// The banners carry the version as literal text. If the package version moves and the
+    /// banners are not regenerated, the tool would report two different versions depending on
+    /// the flag.
     #[test]
     fn every_banner_states_the_suite_version() {
         for tool in [Tool::Tag, Tool::Sort, Tool::Prepare] {
