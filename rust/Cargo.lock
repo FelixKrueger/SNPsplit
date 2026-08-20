@@ -694,6 +694,7 @@ dependencies = [
  "noodles-bgzf",
  "noodles-sam",
  "predicates",
+ "rayon",
  "tempfile",
 ]
 

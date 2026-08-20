@@ -51,6 +51,30 @@ directions.
   `read007` precedes `read7`.
 - Our BAM output is readable by samtools, asserted directly rather than by comparing BGZF
   bytes. What the fixtures diff is samtools-rendered SAM text, so that is the contract.
+- Worker-count invariance: the sorted output is identical at 1, 2 and 8 workers, and
+  identical across memory budgets of 64, 333 and 100000 records. Both are tests, not claims.
+
+## Measured
+
+Name sort of 2,000,000 shuffled 50bp reads (18 MB BAM), 400k records in memory, on a
+16-core machine:
+
+| workers | elapsed |
+|---|---|
+| 1 | 4.29s |
+| 2 | 3.05s |
+| 4 | 2.45s |
+| 8 | 2.17s |
+| 16 | 2.06s |
+
+`samtools sort -n` on the same input: 2.59s at one thread, 0.93s at eight. We are still
+slower, and the remaining gap is the per-record write path, not the sort. Recorded here
+rather than omitted: the point of the port is dropping the samtools dependency, not beating
+it.
+
+Scaling flattens after four workers because the merge is sequential by design. Before the
+raw-record path landed, the single-worker time was 9.28s; decoding every record into an
+owned `RecordBuf` only to re-encode it was two thirds of the cost.
 
 ## Known deviations from Perl v0.9.0
 

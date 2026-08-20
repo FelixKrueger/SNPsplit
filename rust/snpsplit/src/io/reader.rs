@@ -2,6 +2,7 @@
 
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
+use std::num::NonZero;
 use std::path::Path;
 
 use anyhow::{Context, Result};
@@ -48,7 +49,7 @@ fn read_up_to(file: &mut File, buf: &mut [u8]) -> Result<usize> {
 
 enum Inner {
     Sam(noodles_sam::io::Reader<BufReader<File>>),
-    Bam(noodles_bam::io::Reader<noodles_bgzf::io::Reader<File>>),
+    Bam(noodles_bam::io::Reader<noodles_bgzf::io::MultithreadedReader<File>>),
 }
 
 /// Streams owned alignment records out of a SAM or BAM file.
@@ -62,8 +63,17 @@ pub struct RecordReader {
 }
 
 impl RecordReader {
-    /// Open `path`, reading its header. Format is sniffed, not taken from the extension.
+    /// Open `path` for single-threaded reading.
     pub fn open(path: &Path) -> Result<Self> {
+        Self::open_with_workers(path, NonZero::new(1).expect("1 is not zero"))
+    }
+
+    /// Open `path`, reading its header, decompressing BGZF across `workers` threads.
+    ///
+    /// Format is sniffed, not taken from the extension. The BGZF path is always the
+    /// multithreaded reader, even at one worker: one code path cannot drift from itself, and
+    /// worker-count invariance is a contract this port has to keep.
+    pub fn open_with_workers(path: &Path, workers: NonZero<usize>) -> Result<Self> {
         let opening = || format!("Failed to open file '{}'", path.display());
 
         let (inner, header) = match sniff(path)? {
@@ -75,7 +85,9 @@ impl RecordReader {
             }
             Format::Bam => {
                 let file = File::open(path).with_context(opening)?;
-                let mut reader = noodles_bam::io::Reader::new(file);
+                let decoder =
+                    noodles_bgzf::io::MultithreadedReader::with_worker_count(workers, file);
+                let mut reader = noodles_bam::io::Reader::from(decoder);
                 let header = reader.read_header().with_context(opening)?;
                 (Inner::Bam(reader), header)
             }

@@ -254,3 +254,116 @@ fn the_whole_sort_matches_samtools_over_five_thousand_shuffled_names() {
     );
     assert_eq!(ours, samtools_order);
 }
+
+use snpsplit::io::{RecordWriter as W2, sort_by_name_with_workers, worker_count};
+
+/// Build an unsorted SAM of `n` shuffled reads, deterministically.
+fn shuffled_sam(dir: &TempDir, n: usize) -> PathBuf {
+    let mut order: Vec<usize> = (1..=n).collect();
+    let mut state: u64 = 0x9E3779B97F4A7C15;
+    for i in (1..order.len()).rev() {
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        let j = (state >> 33) as usize % (i + 1);
+        order.swap(i, j);
+    }
+
+    let mut sam = String::from("@HD\tVN:1.6\tSO:unsorted\n@SQ\tSN:chr1\tLN:10000000\n");
+    for i in &order {
+        sam.push_str(&format!(
+            "read{i}\t0\tchr1\t1\t42\t4M\t*\t0\t0\tACGT\tIIII\n"
+        ));
+    }
+    let path = dir.path().join("shuffled.sam");
+    std::fs::File::create(&path)
+        .unwrap()
+        .write_all(sam.as_bytes())
+        .unwrap();
+    path
+}
+
+/// The contract for every parallel path in this port: the output does not depend on the
+/// worker count. Not "is deterministic for a given worker count", which is weaker and is the
+/// thing that is easy to ship by accident.
+#[test]
+fn the_sorted_output_does_not_depend_on_the_worker_count() {
+    let dir = TempDir::new().unwrap();
+    let src = shuffled_sam(&dir, 3000);
+    let header = RecordReader::open(&src).unwrap().header().clone();
+
+    let mut results = Vec::new();
+    for workers in [1usize, 2, 8] {
+        let dst = dir.path().join(format!("sorted-{workers}.bam"));
+        sort_by_name_with_workers(&src, &dst, &header, 250, worker_count(workers)).unwrap();
+        results.push((workers, names_of(&dst)));
+    }
+
+    let (_, baseline) = &results[0];
+    assert_eq!(baseline.len(), 3000);
+    for (workers, names) in &results[1..] {
+        let divergence = baseline
+            .iter()
+            .zip(names)
+            .position(|(a, b)| a != b)
+            .map(|i| {
+                format!(
+                    "at {i}: 1 worker gave {} , {workers} gave {}",
+                    baseline[i], names[i]
+                )
+            });
+        assert_eq!(divergence, None, "worker count changed the output");
+    }
+}
+
+/// The memory budget decides where run boundaries fall, and an unstable parallel sort would
+/// let that leak into the order of records that compare equal. It must not.
+#[test]
+fn the_sorted_output_does_not_depend_on_the_memory_budget() {
+    let dir = TempDir::new().unwrap();
+    let src = shuffled_sam(&dir, 2000);
+    let header = RecordReader::open(&src).unwrap().header().clone();
+
+    let mut previous: Option<Vec<String>> = None;
+    for budget in [64usize, 333, 100_000] {
+        let dst = dir.path().join(format!("sorted-b{budget}.bam"));
+        sort_by_name_with_workers(&src, &dst, &header, budget, worker_count(4)).unwrap();
+        let names = names_of(&dst);
+        assert_eq!(names.len(), 2000);
+        if let Some(prev) = &previous {
+            assert_eq!(&names, prev, "memory budget {budget} changed the output");
+        }
+        previous = Some(names);
+    }
+}
+
+/// A BAM written by the multithreaded encoder is still a BAM. Skipped when samtools is
+/// absent.
+#[test]
+fn samtools_reads_a_multithreaded_bam() {
+    let dir = TempDir::new().unwrap();
+    let src = sam_file(&dir);
+    let dst = dir.path().join("mt.bam");
+
+    let mut reader = RecordReader::open(&src).unwrap();
+    let header = reader.header().clone();
+    let mut writer = W2::create_with_workers(&dst, Format::Bam, &header, worker_count(8)).unwrap();
+    for record in reader.by_ref() {
+        writer.write(&header, &record.unwrap()).unwrap();
+    }
+    writer.finish().unwrap();
+
+    let Ok(out) = std::process::Command::new("samtools")
+        .args(["view", "-h", dst.to_str().unwrap()])
+        .output()
+    else {
+        return;
+    };
+    assert!(
+        out.status.success(),
+        "samtools refused a multithreaded BAM: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert!(text.contains("read1") && text.contains("read2"));
+}
