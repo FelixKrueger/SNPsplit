@@ -1,0 +1,21 @@
+[workspace]
+members = ["snpsplit"]
+resolver = "3"
+
+[workspace.package]
+version = "0.9.0"
+edition = "2024"
+rust-version = "1.89"
+license = "GPL-3.0-only"
+repository = "https://github.com/FelixKrueger/SNPsplit"
+
+[workspace.dependencies]
+anyhow = "1.0"
+clap = { version = "4.6", features = ["derive"] }
+flate2 = "1.1"
+noodles-bam = "0.94"
+noodles-bgzf = "0.51"
+noodles-sam = "0.89"
+tempfile = "3.27"
+assert_cmd = "2.2"
+predicates = "3.1"
