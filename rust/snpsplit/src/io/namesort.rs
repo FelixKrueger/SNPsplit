@@ -92,7 +92,6 @@ pub fn strnum_cmp(a: &[u8], b: &[u8]) -> Ordering {
     }
 }
 
-
 use std::collections::BinaryHeap;
 use std::path::{Path, PathBuf};
 
