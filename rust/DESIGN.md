@@ -180,6 +180,7 @@ individual PRs serving as its readable history.
 | 1 | `rs-scaffold` | Cargo workspace, `snpsplit` crate skeleton, multicall dispatch, byte-exact version banners for all three names, `rust/README.md` journal, `build-impl.sh`, CI job for fmt/clippy/test |
 | 2 | `rs-io` | noodles SAM/BAM reader and BAM writer, header and `@PG` handling, external name sort with disk spill, unit tests |
 | 3 | `rs-harness` | `test/rust_fixtures.txt` plus the two CI jobs; reconcile the Perl `die`-shape masking in both runners. Perl suites stay green |
+| 3b | `rs-io-mt` | multithreaded BGZF read and write, parallel run sorting, and the worker-count-invariance test that the later tools inherit |
 
 ### Phase 1: genome preparation (31 fixtures, no BAM)
 
@@ -221,6 +222,7 @@ runner stages both from `dirname(--impl)`, so a mixed directory is a valid gate.
 | PR | Branch | Contents |
 |---|---|---|
 | 18 | `rs-fixtures-samtools` | re-express the four samtools-architecture fixtures. Alignment suite complete at 26/26 |
+| 18b | `rs-parallel-gate` | run both suites at `--parallel 1` and `--parallel 4` in CI, and publish measured timings |
 | 19 | `rs-packaging` | cargo metadata, release workflow, prebuilt binaries, container image |
 | 20 | `rs-gp-download` | `--download`: fetch the MGP VCF and the reference genome. The one deliberate behaviour addition, isolated on purpose |
 | 21 | `rs-docs` | documentation site pages, README, CHANGELOG, and the body of the umbrella PR |
@@ -268,7 +270,62 @@ already the folder-of-chromosomes layout `--reference_genome` expects.
 - **Fails loudly.** A 404, a checksum mismatch or a truncated stream aborts with the URL in
   the message. No falling back to a partial file.
 
-### Testing
+### Parallelism
+
+The Perl tools are single-threaded. This port is not, and the reason it can afford not to be
+is the same reason the port is tractable at all: the fixture suites can prove that the
+output did not move.
+
+### The invariant
+
+**Output is byte-identical regardless of the worker count.** Not "deterministic per worker
+count", which is a much weaker claim and the one that is easy to accidentally ship.
+Everything below is arranged so that parallelism changes when work happens, never what is
+written or in what order.
+
+This is checkable, so it is checked: the CI gate runs both fixture suites twice, at
+`--parallel 1` and `--parallel 4`, and compares each against the same committed `expected/`
+trees. A parallel path that reorders output fails the same gate that a mis-ported CIGAR walk
+would.
+
+### The knob
+
+One flag, `--parallel N`, on all three tools. Default `1`, so an existing command line
+behaves exactly as it does today. `--parallel 0` means every available core.
+
+One knob rather than a knob per stage: the stages below are sequential with respect to each
+other, so a single number is enough to describe the whole run, and a single number is what a
+job scheduler can be told about.
+
+### Where the time actually goes, and what each part buys
+
+1. **BGZF encode and decode.** Compression is the largest single cost in any BAM-in,
+   BAM-out tool, and `noodles-bgzf` already ships `MultithreadedWriter` and
+   `MultithreadedReader`. Block boundaries make this order-preserving by construction. The
+   compressed bytes may differ from the single-threaded encoding; the decoded content does
+   not, and the fixtures compare `samtools view` output, not BGZF bytes.
+2. **Per-record work, with ordered writeback.** Tagging walks a CIGAR against the SNP table
+   for every read; sorting classifies every read or pair. Records are handed to workers in
+   fixed-size batches and results are written back in batch order through a bounded reorder
+   buffer, so the output stream is the serial stream. The batch size is fixed in the source,
+   not a flag, because it is not a user's decision and varying it would make the invariant
+   harder to state.
+3. **Per-chromosome work in the genome preparation.** Each chromosome is N-masked
+   independently and written to its own file, which is the cleanest parallelism in the whole
+   codebase: separate inputs, separate outputs, no ordering question. This is also the stage
+   #89 argues gains nothing from being fast, and it is right that a single-use step matters
+   less; it is parallelised because it is nearly free to do, not because it was the goal.
+4. **Run sorting inside the external name sort.** Each in-memory run is sorted independently
+   before it spills. The merge stays sequential, because it is the merge that fixes the
+   order.
+
+### What is deliberately not parallelised
+
+The merge phase of the name sort, and the writing of any single output file beyond its BGZF
+encoding. Both are the points where order is decided, and a faster wrong order is worse than
+a slower right one.
+
+## Testing
 
 CI does not contact EBI or Ensembl. The fixtures run against a local HTTP server serving
 canned responses: `download_fresh`, `download_resume` (a truncated file plus a range
@@ -306,8 +363,5 @@ Perl message, not a panic.
   of `--download` below. This is a port. Anything that would change output belongs in its
   own issue against the Perl version first, so the fixture suite records the change once and
   both implementations agree on it.
-- Multithreading. The Perl tools are single-threaded, output order is part of the contract,
-  and #89 is explicit that performance is not the motivation. Parallelism can come later,
-  behind a flag, once byte-identity is established and can prove it did not break anything.
 - Retiring the Perl scripts. That is Felix's call, after this lands, and it is a one-line
   change to make.
