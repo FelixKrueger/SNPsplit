@@ -77,3 +77,77 @@ fn reads_a_real_fixture_converted_to_bam() {
     assert!(!from_sam.is_empty(), "fixture had no records");
     assert_eq!(from_sam, from_bam, "BAM and SAM paths disagreed");
 }
+
+use snpsplit::io::{Format, RecordWriter};
+
+#[test]
+fn a_bam_round_trip_preserves_every_record() {
+    let dir = TempDir::new().unwrap();
+    let src = sam_file(&dir);
+    let dst = dir.path().join("out.bam");
+
+    let mut reader = RecordReader::open(&src).unwrap();
+    let header = reader.header().clone();
+    let mut writer = RecordWriter::create(&dst, Format::Bam, &header).unwrap();
+    for record in reader.by_ref() {
+        writer.write(&header, &record.unwrap()).unwrap();
+    }
+    writer.finish().unwrap();
+
+    assert_eq!(names_of(&dst), vec!["read1", "read2"]);
+}
+
+/// tag2sort held BAM writers open for a whole run and did not check them (#116). A write
+/// that cannot land has to surface rather than leaving a zero-byte file and a success
+/// report.
+#[test]
+fn creating_a_bam_where_it_cannot_be_written_is_an_error_not_a_silent_success() {
+    let dir = TempDir::new().unwrap();
+    let src = sam_file(&dir);
+    let readonly = dir.path().join("readonly");
+    std::fs::create_dir(&readonly).unwrap();
+    let mut perms = std::fs::metadata(&readonly).unwrap().permissions();
+    perms.set_readonly(true);
+    std::fs::set_permissions(&readonly, perms).unwrap();
+
+    let header = RecordReader::open(&src).unwrap().header().clone();
+    let result = RecordWriter::create(&readonly.join("out.bam"), Format::Bam, &header);
+
+    assert!(
+        result.is_err(),
+        "creating a BAM in a read-only directory should fail",
+    );
+}
+
+/// What the fixtures compare is samtools-rendered SAM text, so the contract for our BAM is
+/// that samtools can read it. Skipped when samtools is absent.
+#[test]
+fn samtools_can_read_the_bam_we_write() {
+    let dir = TempDir::new().unwrap();
+    let src = sam_file(&dir);
+    let dst = dir.path().join("out.bam");
+
+    let mut reader = RecordReader::open(&src).unwrap();
+    let header = reader.header().clone();
+    let mut writer = RecordWriter::create(&dst, Format::Bam, &header).unwrap();
+    for record in reader.by_ref() {
+        writer.write(&header, &record.unwrap()).unwrap();
+    }
+    writer.finish().unwrap();
+
+    let Ok(out) = std::process::Command::new("samtools")
+        .args(["view", "-h", dst.to_str().unwrap()])
+        .output()
+    else {
+        return;
+    };
+    if !out.status.success() {
+        panic!(
+            "samtools refused our BAM: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert!(text.contains("read1"), "samtools output lost read1: {text}");
+    assert!(text.contains("read2"), "samtools output lost read2: {text}");
+}
