@@ -54,6 +54,18 @@ directions.
 - Worker-count invariance: the sorted output is identical at 1, 2 and 8 workers, and
   identical across memory budgets of 64, 333 and 100000 records. Both are tests, not claims.
 
+## Container image
+
+```sh
+docker run --rm ghcr.io/felixkrueger/snpsplit:latest --help
+```
+
+The three classic names are on the `PATH` inside it, so a pipeline that calls `SNPsplit` or
+`tag2sort` is a drop-in. The image is distroless: no shell, no package manager, **no Perl**.
+That last one needs saying because every Debian base image ships `perl-base` as an essential
+package, so a "no Perl" claim on a `debian:*-slim` base would be false. Verified by exporting
+the image and counting: zero entries. 55 MB.
+
 ## Fetching the references
 
 ```sh
