@@ -464,16 +464,62 @@ fn write_reports(
         )?;
     }
 
-    let file = File::create(all_snps_name)
-        .with_context(|| format!("Failed to write to file {all_snps_name}"))?;
-    let mut gz = flate2::write::GzEncoder::new(file, flate2::Compression::default());
-    for snp in all_snps.values() {
-        writeln!(gz, "{snp}")?;
-    }
-    gz.finish()
-        .with_context(|| format!("Failed to write the SNP list to {all_snps_name}"))?;
+    write_gzipped(all_snps_name, all_snps)?;
 
     writeln!(err, "complete\n")?;
+    Ok(())
+}
+
+/// Write the all-SNP list, compressed.
+///
+/// Through `gzip -c` when there is one to run, in process when there is not.
+///
+/// Compressing in process would be the obvious choice, and the bytes it produces decompress
+/// to exactly the same text. The reason to prefer the subprocess is that a *failing* gzip is
+/// observable behaviour: SNPsplit reads this file, and a truncated one means it loads no SNPs
+/// at all, so the Perl treats a gzip failure as fatal and a fixture pins that. With no
+/// subprocess there is nothing to fail in that way, and the fixture could not express what it
+/// tests.
+///
+/// The in-process fallback keeps the binary self-sufficient where the Perl would simply not
+/// run. The only difference between the two paths is which failures are possible, never the
+/// content.
+fn write_gzipped(path: &str, snps: &BTreeMap<(String, u64), String>) -> Result<()> {
+    use std::process::{Command, Stdio};
+
+    let file = File::create(path).with_context(|| format!("Failed to write to file {path}"))?;
+
+    let spawned = Command::new("gzip")
+        .arg("-c")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::from(file.try_clone()?))
+        .spawn();
+
+    let Ok(mut child) = spawned else {
+        let mut gz = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+        for snp in snps.values() {
+            writeln!(gz, "{snp}")?;
+        }
+        gz.finish()
+            .with_context(|| format!("Failed to write the SNP list to {path}"))?;
+        return Ok(());
+    };
+
+    {
+        let mut stdin = child.stdin.take().expect("stdin was piped");
+        for snp in snps.values() {
+            // A gzip that has already died closes the pipe, and the write fails rather than
+            // killing us with SIGPIPE. Either way the status check below is what reports it.
+            if writeln!(stdin, "{snp}").is_err() {
+                break;
+            }
+        }
+    }
+
+    let status = child.wait()?;
+    if !status.success() {
+        anyhow::bail!("Failed to write the SNP list to {path} via gzip: the file is incomplete\n");
+    }
     Ok(())
 }
 

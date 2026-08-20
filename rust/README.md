@@ -27,7 +27,7 @@ test/run_genome_tests.pl --impl rust/target/impl/SNPsplit_genome_preparation
 |---|---|---|
 | multicall dispatch, version banners | done | n/a |
 | `io` (BAM/SAM read, BAM write, name sort) | done | n/a |
-| `genome_prep` | done | 30 / 31 |
+| `genome_prep` | done | 31 / 31 |
 | `sort` (tag2sort) | not started | 0 / 26 |
 | `tag` (SNPsplit) | not started | 0 / 26 |
 
@@ -81,10 +81,15 @@ owned `RecordBuf` only to re-encode it was two thirds of the cost.
 Anything that lands here stays here: a deviation that is not written down is a bug the next
 person has to rediscover.
 
-- **`poison_gzip` cannot pass and is not listed.** It shims a failing `gzip` onto `PATH` to
-  prove that a failed compression aborts the run. The Rust build compresses in process, so
-  there is no subprocess for a shim to poison. The fixture is re-expressed alongside the four
-  samtools-architecture fixtures of the alignment suite rather than quietly skipped.
+- **The all-SNP list is compressed through `gzip -c` when there is one to run**, and in
+  process when there is not. Compressing in process throughout would be the obvious choice
+  and produces bytes that decompress to the same text. The reason not to is that a *failing*
+  gzip is observable behaviour: SNPsplit reads this file, and a truncated one means it loads
+  no SNPs at all, so a gzip failure is fatal and `poison_gzip` pins that. With no subprocess
+  there is nothing for the fixture's shim to poison. The fallback keeps the binary working
+  where the Perl would not run at all. The two paths differ in which failures are possible,
+  never in content. Reading a gzipped VCF is in process unconditionally: no fixture depends on
+  that being a subprocess, and not forking is strictly better.
 - **Perl `die` suffixes are emulated.** Four genome fixtures diff messages that Perl stamps
   with ` at <script> line <n>, <IN> line <m>.` because the `die` string has no trailing
   newline. The script line number is masked by the runner and carries no information; the
