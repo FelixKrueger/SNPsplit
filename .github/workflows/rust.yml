@@ -1,0 +1,31 @@
+name: rust
+on:
+  push:
+    branches:
+      - master
+      - dev
+      - rust
+  pull_request:
+    branches:
+      - master
+      - dev
+      - rust
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record versions
+        run: cargo --version && rustc --version
+      - name: Formatting
+        run: cargo fmt --all --check
+      - name: Lints
+        # Warnings are failures here on purpose. A port accumulates dead code between
+        # phases, and an allow-by-default warning stream is one nobody reads.
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: Tests
+        run: cargo test --all-targets --locked
