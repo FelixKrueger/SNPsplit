@@ -1,6 +1,6 @@
 use std::process::ExitCode;
 
-use snpsplit::{Tool, genome_prep, sort, tool, version};
+use snpsplit::{Tool, genome_prep, sort, tag, tool, version};
 
 fn main() -> ExitCode {
     let mut args: Vec<String> = std::env::args().collect();
@@ -29,9 +29,7 @@ fn main() -> ExitCode {
     run(selected, &args[1..])
 }
 
-/// Phase 0 stops here: the tools themselves land in later PRs. Everything except the
-/// version flag exits non-zero with a message that names the tool, so a fixture that
-/// reaches an unported path fails loudly rather than producing an empty output tree.
+/// Run the selected tool.
 fn run(tool: Tool, args: &[String]) -> ExitCode {
     let flag = format!("--{}", tool::version_flag(tool));
 
@@ -55,10 +53,7 @@ fn run(tool: Tool, args: &[String]) -> ExitCode {
     match tool {
         Tool::Prepare => genome_prep::run(args),
         Tool::Sort => sort::run(args),
-        _ => {
-            eprintln!("{tool:?} is not implemented in this build yet");
-            ExitCode::FAILURE
-        }
+        Tool::Tag => tag::run(args),
     }
 }
 

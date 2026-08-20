@@ -28,8 +28,8 @@ test/run_genome_tests.pl --impl rust/target/impl/SNPsplit_genome_preparation
 | multicall dispatch, version banners | done | n/a |
 | `io` (BAM/SAM read, BAM write, name sort) | done | n/a |
 | `genome_prep` | done | 31 / 31 |
-| `sort` (tag2sort) | done | 25 / 26 driven by the Perl tagger |
-| `tag` (SNPsplit) | not started | 0 / 26 |
+| `sort` (tag2sort) | done | see below |
+| `tag` (SNPsplit) | done | 24 / 26 with both tools in Rust |
 
 The two fixture counts are the two suites, not two halves of one: the alignment suite runs
 `SNPsplit` and `tag2sort` together, so its 26 fixtures only pass once both are ported.
@@ -116,11 +116,12 @@ on either side, for the same reason it already masked those records' `VN:` and `
 Every other `@PG` record, including the aligner's that `check_for_bs` reads, is compared as
 before.
 
-### `bam_write_fails` is not listed
+### Two alignment fixtures are not listed
 
-It poisons `samtools` so that writing `genome1.bam` fails, and asserts the run aborts rather
-than reporting success over a truncated file. With no samtools to poison the write succeeds,
-and the abort message it pins names samtools explicitly:
+`bam_write_fails` and `sam2bam_fails` both put a failing `samtools` on `PATH` to prove that a
+failed BAM write aborts the run rather than leaving a truncated file behind. This build
+writes BAM itself, so there is no subprocess for the shim to poison, and the abort messages
+they pin name samtools explicitly:
 
 ```
 samtools failed while writing:
@@ -128,9 +129,15 @@ samtools failed while writing:
 These output files are incomplete
 ```
 
-Printing that from a build that never ran samtools is the same false claim as the `@PG`
-records. Re-expressing the fixture needs the Perl message to drop the tool name so both
-implementations can share it, which is raised upstream.
+```
+SAM to BAM conversion failed with exit status 127
+```
+
+The property they assert is implemented: `RecordWriter::finish` returns a `Result` and a
+failed write aborts. Only the mechanism they use to reach it is gone. Printing "samtools
+failed" from a build that never ran samtools would be the same false claim as the `@PG`
+records, so the fixtures stay unlisted until the messages name the problem rather than the
+tool. Raised upstream.
 
 ## Perl behaviour reproduced deliberately
 

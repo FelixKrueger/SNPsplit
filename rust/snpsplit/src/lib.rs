@@ -1,6 +1,7 @@
 pub mod genome_prep;
 pub mod io;
 pub mod sort;
+pub mod tag;
 pub mod tool;
 pub mod version;
 

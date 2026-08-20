@@ -39,3 +39,37 @@ genome:undeclared_contig
 genome:vcf_gzipped
 genome:vcf_missing
 genome:vcf_v7
+
+# SNPsplit + tag2sort: 24 of 26.
+#
+# bam_write_fails and sam2bam_fails are the exceptions, and neither is a port defect. Both
+# put a failing `samtools` on PATH to prove that a failed BAM write aborts the run rather
+# than leaving a truncated file behind. This build writes BAM itself, so there is no
+# subprocess for the shim to poison, and the abort messages they pin name samtools
+# explicitly. The property they assert is implemented (RecordWriter::finish returns a
+# Result); only the mechanism they use to reach it is gone. Re-expressing them needs the
+# messages to name the problem rather than the tool, which is raised upstream.
+bismark_autodetect
+bismark_autodetect_se
+bisulfite_se
+cigar_complex
+cigar_eqx
+gp_generated
+gp_per_chrom
+header_only
+hic
+hic_no_g1
+multi_input
+n_deletions
+output_dir
+pe_basic
+pe_namesort
+pe_singletons
+sam_input
+sam_output
+samtools_path
+samtools_path_spaced
+se_basic
+se_skipped
+skip_tag2sort
+tag2sort_fails
