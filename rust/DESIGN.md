@@ -201,7 +201,59 @@ runner stages both from `dirname(--impl)`, so a mixed directory is a valid gate.
 |---|---|---|
 | 18 | `rs-fixtures-samtools` | re-express the four samtools-architecture fixtures. Alignment suite complete at 26/26 |
 | 19 | `rs-packaging` | cargo metadata, release workflow, prebuilt binaries, container image |
-| 20 | `rs-docs` | documentation site pages, README, CHANGELOG, and the body of the umbrella PR |
+| 20 | `rs-gp-download` | `--download`: fetch the MGP VCF and the reference genome. The one deliberate behaviour addition, isolated on purpose |
+| 21 | `rs-docs` | documentation site pages, README, CHANGELOG, and the body of the umbrella PR |
+
+## The one deliberate addition: fetching the references
+
+Everything else in this stack is a port. This is not, and it is called out separately so a
+reviewer can hold it to a different standard.
+
+Today, running `SNPsplit_genome_preparation` means first finding and downloading two things
+by hand: the Mouse Genomes Project SNP VCF (currently `mgp_REL2021_snps.vcf.gz`, v8, from
+the EBI mirror) and a reference genome folder of per-chromosome FASTA files. Both URLs live
+in comments in the Perl source (`SNPsplit_genome_preparation:27`) and in the documentation,
+which is where users go looking for them. A tool that already knows which build it wants
+can fetch them.
+
+### Surface
+
+```
+--download                 fetch whatever of the two inputs is missing
+--download_dir PATH        where they land. Default: ./SNPsplit_references/
+--ensembl_release N        reference genome release to fetch. Default: pinned, documented
+```
+
+`--genome_build` (default GRCm39) and `--v7_VCF` already exist and are honoured: v8 comes
+from the EBI `REL-2112-v8-SNPs_Indels` path, v7 from the Sanger `REL-2004-v7-SNPs_Indels`
+path, and the genome is Ensembl's per-chromosome FASTA set for the requested build, which is
+already the folder-of-chromosomes layout `--reference_genome` expects.
+
+### Rules
+
+- **Opt-in, and nothing else touches the network.** Without `--download` the binary makes no
+  outbound connection at all. With it, only the two known hosts are contacted.
+- **Never overwrites what the user passed.** If `--vcf_file` or `--reference_genome` names an
+  existing path, that path wins and is not re-fetched.
+- **Resumable.** A partial file is continued with an HTTP range request rather than
+  restarted, because the VCF is large enough that losing a download to a dropped connection
+  is a real cost.
+- **Verified.** Ensembl publishes a `CHECKSUMS` file per directory, which is checked. The MGP
+  VCF has no published checksum, so it is verified by decompressing the whole gzip stream and
+  requiring a valid VCF header, which catches the truncation and error-page cases that
+  actually happen. Whatever is fetched, its URL, size and SHA-256 are recorded in
+  `<download_dir>/manifest.txt`, so a later run can say whether the remote file has changed
+  rather than silently using a different input.
+- **Fails loudly.** A 404, a checksum mismatch or a truncated stream aborts with the URL in
+  the message. No falling back to a partial file.
+
+### Testing
+
+CI does not contact EBI or Ensembl. The fixtures run against a local HTTP server serving
+canned responses: `download_fresh`, `download_resume` (a truncated file plus a range
+request), `download_checksum_mismatch`, and `download_no_flag` (asserting no socket is
+opened without `--download`). Live URLs are exercised by hand before release, not on every
+push.
 
 ## Testing
 
@@ -229,9 +281,10 @@ Perl message, not a panic.
 
 ## Deliberately out of scope
 
-- Behaviour changes, new options, and output-format improvements. This is a port. Anything
-  that would change output belongs in its own issue against the Perl version first, so the
-  fixture suite records the change once and both implementations agree on it.
+- Behaviour changes, new options, and output-format improvements, with the single exception
+  of `--download` below. This is a port. Anything that would change output belongs in its
+  own issue against the Perl version first, so the fixture suite records the change once and
+  both implementations agree on it.
 - Multithreading. The Perl tools are single-threaded, output order is part of the contract,
   and #89 is explicit that performance is not the motivation. Parallelism can come later,
   behind a flag, once byte-identity is established and can prove it did not break anything.
