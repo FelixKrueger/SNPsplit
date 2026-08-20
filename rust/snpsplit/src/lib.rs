@@ -1,3 +1,4 @@
+pub mod io;
 pub mod tool;
 pub mod version;
 
