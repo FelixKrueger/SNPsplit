@@ -15,7 +15,7 @@ All three tools:
 |---|---|---|
 | `SNPsplit` | 1996 | `test/run_tests.pl`, 26 fixtures |
 | `tag2sort` | 1311 | same suite (driven by `SNPsplit`) |
-| `SNPsplit_genome_preparation` | 1788 | `test/run_genome_tests.pl`, 13 fixtures |
+| `SNPsplit_genome_preparation` | 1788 | `test/run_genome_tests.pl`, 31 fixtures |
 
 Issue #89 records a narrower option (`SNPsplit` + `tag2sort` as one binary, genome
 preparation left in Perl) on the grounds that genome preparation is single-use and gains
@@ -181,7 +181,7 @@ individual PRs serving as its readable history.
 | 2 | `rs-io` | noodles SAM/BAM reader and BAM writer, header and `@PG` handling, external name sort with disk spill, unit tests |
 | 3 | `rs-harness` | `test/rust_fixtures.txt` plus the two CI jobs; reconcile the Perl `die`-shape masking in both runners. Perl suites stay green |
 
-### Phase 1: genome preparation (13 fixtures, no BAM)
+### Phase 1: genome preparation (31 fixtures, no BAM)
 
 Ported first because it touches no alignments and has its own runner, so it proves the whole
 chain (cargo, CI, allowlist, report fidelity) without waiting on `rs-io`.
@@ -191,7 +191,7 @@ chain (cargo, CI, allowlist, report fidelity) without waiting on `rs-io`.
 | 4 | `rs-gp-cli` | CLI surface, argument validation, `detect_chroms`, `detect_strains`; fixture `list_strains` |
 | 5 | `rs-gp-vcf` | VCF filtering, high-confidence SNP selection, `SNPs_<strain>/chr*.txt`, gzipped `all_SNPs_*`, skipped-position reporting |
 | 6 | `rs-gp-genome` | genome into memory, N-masking and full-sequence genomes; `nmask_basic`, `full_sequence`, `multi_chrom`, `multifasta`, `fasta_extension` |
-| 7 | `rs-gp-dual` | dual hybrid path, `genotypes`, and the five failure fixtures (`chrom_name_mismatch`, `duplicate_chrom_name`, `empty_chromosome`, `empty_genome_folder`, `missing_genome`). Genome preparation suite complete at 13/13 |
+| 7 | `rs-gp-dual` | dual hybrid path, `genotypes`, `skip_filtering`, `same_strain`, and the failure fixtures (`chrom_name_mismatch`, `duplicate_chrom_name`, `empty_chromosome`, `empty_genome_folder`, `missing_genome`, `not_fasta`, `no_snp_folder`, `strain_not_in_vcf`, `undeclared_contig`, `vcf_missing`, `ref_mismatch`, `poison_gzip`, ...). Genome preparation suite complete at 31/31 |
 
 ### Phase 2: tag2sort
 
