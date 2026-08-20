@@ -101,6 +101,32 @@ struct Counts {
     ct_snp: usize,
 }
 
+impl Counts {
+    /// Fold one record's counters in.
+    ///
+    /// Every counter is a sum, so folding is associative and the result does not depend on
+    /// the order the records were scored in. That is what makes scoring them in parallel
+    /// safe, and it is the only reason the totals are worker-count invariant.
+    fn merge(&mut self, other: &Counts) {
+        self.total += other.total;
+        self.unmapped += other.unmapped;
+        self.hardclipped += other.hardclipped;
+        self.unassigned += other.unassigned;
+        self.genome1 += other.genome1;
+        self.genome2 += other.genome2;
+        self.conflicting += other.conflicting;
+        self.no_snp += other.no_snp;
+        self.unassigned_but_ct += other.unassigned_but_ct;
+        self.n_containing += other.n_containing;
+        self.non_n_containing += other.non_n_containing;
+        self.n_deletion += other.n_deletion;
+        self.multi_n_deletion += other.multi_n_deletion;
+        self.snp_found += other.snp_found;
+        self.no_snp_found += other.no_snp_found;
+        self.ct_snp += other.ct_snp;
+    }
+}
+
 fn percentage(part: usize, total: usize) -> String {
     if total == 0 {
         "N/A".to_string()
@@ -346,7 +372,8 @@ fn process(
     table: &Table,
     err: &mut impl Write,
 ) -> Result<Counts> {
-    let mut reader = RecordReader::open(file)?;
+    let mut reader =
+        RecordReader::open_with_workers(file, crate::io::worker_count(config.parallel))?;
     writeln!(err, "Reading from sorted mapping file '{}'", file.display())?;
 
     let mut header = reader.header().clone();
@@ -367,53 +394,98 @@ fn process(
 
     let format = if config.bam { Format::Bam } else { Format::Sam };
     let path = format!("{}{outfile}", config.output_dir);
-    let mut writer = RecordWriter::create(Path::new(&path), format, &header)?;
+    let mut writer =
+        RecordWriter::create_with_workers(Path::new(&path), format, &header, workers_for(config))?;
 
     let mut counts = Counts::default();
+    let workers = crate::io::worker_count(config.parallel);
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(workers.get())
+        .build()?;
 
-    for record in reader.by_ref() {
-        let mut record = record?;
-        counts.total += 1;
+    // Records are scored in batches and written back in the order they were read.
+    //
+    // Scoring is where the work is: a CIGAR walk, an MD walk and a table lookup per read.
+    // Writing is not, and neither is deciding what to write, so the batch is scored in
+    // parallel and then drained in order. The output stream is the serial stream, whatever
+    // the worker count.
+    const BATCH: usize = 4096;
+    let mut batch: Vec<RecordBuf> = Vec::with_capacity(BATCH);
 
-        if record.flags().is_unmapped() {
-            counts.unmapped += 1;
-            continue;
+    loop {
+        batch.clear();
+        for record in reader.by_ref().take(BATCH) {
+            batch.push(record?);
+        }
+        if batch.is_empty() {
+            break;
         }
 
-        let cigar_text = cigar_string(&record);
-        if cigar_text.contains('H') {
-            counts.hardclipped += 1;
-            continue;
+        let scored: Vec<Result<(Counts, Option<Assignment>)>> = pool.install(|| {
+            use rayon::prelude::*;
+            batch
+                .par_iter()
+                .map(|record| score_one(config, record, table, &names))
+                .collect()
+        });
+
+        for (record, outcome) in batch.iter_mut().zip(scored) {
+            // Errors surface in file order, so which record aborted the run does not depend
+            // on which worker reached it first.
+            let (delta, assignment) = outcome?;
+            counts.merge(&delta);
+            let Some(assignment) = assignment else {
+                continue;
+            };
+            record
+                .data_mut()
+                .insert(Tag::new(b'X', b'X'), Value::String(assignment.tag().into()));
+            writer.write(&header, record)?;
         }
-        if let Some(op) = cigar::unsupported_operation(&cigar_text) {
-            anyhow::bail!(
-                "Found CIGAR operations other than M, I, D, S or N: '{op}'. Not allowed at the moment\n"
-            );
-        }
-
-        let Some(md) = string_tag(&record, b"MD") else {
-            // No MD tag means nothing can be said about masked positions.
-            continue;
-        };
-
-        let assignment = assign(
-            config,
-            &record,
-            &cigar_text,
-            &md,
-            table,
-            &names,
-            &mut counts,
-        );
-
-        record
-            .data_mut()
-            .insert(Tag::new(b'X', b'X'), Value::String(assignment.tag().into()));
-        writer.write(&header, &record)?;
     }
 
     writer.finish()?;
     Ok(counts)
+}
+
+/// Score one record on its own, returning what it contributed and how it should be tagged.
+///
+/// `None` means the record is not written out at all: unmapped, hard-clipped, or without an
+/// MD tag to read.
+fn score_one(
+    config: &cli::Config,
+    record: &RecordBuf,
+    table: &Table,
+    names: &[String],
+) -> Result<(Counts, Option<Assignment>)> {
+    let mut counts = Counts {
+        total: 1,
+        ..Counts::default()
+    };
+
+    if record.flags().is_unmapped() {
+        counts.unmapped += 1;
+        return Ok((counts, None));
+    }
+
+    let cigar_text = cigar_string(record);
+    if cigar_text.contains('H') {
+        counts.hardclipped += 1;
+        return Ok((counts, None));
+    }
+    if let Some(op) = cigar::unsupported_operation(&cigar_text) {
+        anyhow::bail!(
+            "Found CIGAR operations other than M, I, D, S or N: '{op}'. Not allowed at the moment\n"
+        );
+    }
+
+    let Some(md) = string_tag(record, b"MD") else {
+        // No MD tag means nothing can be said about masked positions.
+        return Ok((counts, None));
+    };
+
+    let assignment = assign(config, record, &cigar_text, &md, table, names, &mut counts);
+    Ok((counts, Some(assignment)))
 }
 
 /// Decide which allele one read belongs to.
@@ -545,6 +617,10 @@ fn count_deleted_ns(md: &str) -> usize {
         i = j.max(i + 1);
     }
     count
+}
+
+fn workers_for(config: &cli::Config) -> std::num::NonZero<usize> {
+    crate::io::worker_count(config.parallel)
 }
 
 fn cigar_string(record: &RecordBuf) -> String {

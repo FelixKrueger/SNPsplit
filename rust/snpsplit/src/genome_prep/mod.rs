@@ -248,6 +248,7 @@ fn resolve(opts: cli::Options) -> Result<Option<cli::Config>> {
         dual_hybrid,
         genome_build: opts.genome_build.unwrap_or_else(|| "GRCm39".to_string()),
         v7,
+        parallel: opts.parallel,
     }))
 }
 
@@ -509,121 +510,38 @@ fn build_genome(
     let mut new_n_total = 0usize;
     let mut new_snp_total = 0usize;
 
-    for (chr, sequence) in genome {
-        if chroms.contains(chr) {
-            match pass {
-                Pass::DualHybrid => writeln!(
-                    err,
-                    "Got SNP information for chromosome {chr}. Creating modified chromosome"
-                )?,
-                _ => writeln!(err, "Processing chromosome {chr} (for strain {label})")?,
-            }
+    // Chromosomes are independent: each reads its own SNP track and writes its own file. The
+    // work runs in parallel and the output is emitted in genome order afterwards, so the
+    // logs, the report and the totals are the same whatever the worker count. An abort
+    // surfaces in genome order too, so which chromosome stops the run does not depend on
+    // which worker reached it first.
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(crate::io::worker_count(config.parallel).get())
+        .build()?;
 
-            if pass == Pass::DualHybrid {
-                writeln!(
-                    err,
-                    "Processing chr{chr} (to create new genome for {}/{})",
-                    config.strain,
-                    config.strain2.as_deref().unwrap_or("")
-                )?;
-            }
+    let outcomes: Vec<ChromosomeOutcome> = pool.install(|| {
+        use rayon::prelude::*;
+        genome
+            .par_iter()
+            .map(|(chr, sequence)| {
+                one_chromosome(
+                    config, parent, genome, chroms, pass, label, preloaded, chr, sequence,
+                )
+            })
+            .collect()
+    });
 
-            // The Perl guards this loop with `unless ($chromosomes{$chr})`, and an empty
-            // string is false in Perl, so a chromosome that exists but carries no sequence is
-            // reported as a name mismatch rather than as an empty chromosome. Reproduced; the
-            // misleading diagnostic is raised upstream separately.
-            if sequence.is_empty() && pass != Pass::DualHybrid {
-                writeln!(
-                    err,
-                    "\nThe chromosome name given in the VCF file was '{chr}' and was not found in the reference genome.\nA rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)\nbut the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)"
-                )?;
-                writeln!(
-                    err,
-                    "The chromosome names in the reference genome folder were:"
-                )?;
-                for name in genome.keys() {
-                    writeln!(err, "{name}")?;
-                }
-                anyhow::bail!(
-                    "[FATAL ERROR] Please ensure that the same version of the genome is used for both VCF annotations and reference genome (FastA files). Exiting...\n\n"
-                );
-            }
-
-            let owned;
-            let snps: &[genome::Snp] = match preloaded {
-                Some(map) => map.get(chr).map(Vec::as_slice).unwrap_or(&[]),
-                None => {
-                    owned = genome::read_snps(parent, chr, label, err)?;
-                    if owned.is_empty() {
-                        // Assigning an empty list to an already-empty list, announced. Dead in
-                        // effect but not in output: the line is in the expected run.log.
-                        writeln!(err, "Clearing SNP array...")?;
-                    }
-                    &owned
-                }
-            };
-
-            let (counts, masked, full) =
-                genome::apply_snps(sequence, snps, config.nmasking, config.full_sequence);
-
-            if let Some(masked) = masked {
-                genome::write_chromosome(parent, chr, &masked, true, label, err)?;
-            }
-            if let Some(full) = full {
-                genome::write_chromosome(parent, chr, &full, false, label, err)?;
-            }
-
-            new_n_total += counts.new_n;
-            new_snp_total += counts.new_snp;
-
-            writeln!(err, "{} SNPs total for chromosome {chr}", counts.total)?;
-            if counts.already_carried > 0 {
-                let line = format!(
-                    "{} positions on chromosome {chr} already carried the SNP base and were left alone",
-                    counts.already_carried
-                );
-                writeln!(err, "{line}")?;
-                writeln!(report, "{line}")?;
-            }
-            if counts.mismatched > 0 {
-                let line = format!(
-                    "{} positions on chromosome {chr} were skipped because the reference base did not match the annotation",
-                    counts.mismatched
-                );
-                writeln!(err, "{line}")?;
-                writeln!(report, "{line}")?;
-            }
-            if config.nmasking {
-                let line = format!(
-                    "{} positions on chromosome {chr} were changed to 'N'",
-                    counts.new_n
-                );
-                writeln!(err, "{line}")?;
-                writeln!(report, "{line}")?;
-            }
-            if config.full_sequence {
-                let line = format!(
-                    "{} reference positions on chromosome {chr} were changed to the SNP alternative base\n",
-                    counts.new_snp
-                );
-                writeln!(err, "{line}")?;
-                writeln!(report, "{line}")?;
-            }
-            writeln!(err)?;
-        } else {
-            if pass == Pass::DualHybrid {
-                writeln!(
-                    err,
-                    "Got no SNP information for chromosome {chr}. Printing sequence only..."
-                )?;
-            }
-            if config.nmasking {
-                genome::write_chromosome(parent, chr, sequence, true, label, err)?;
-            }
-            if config.full_sequence {
-                genome::write_chromosome(parent, chr, sequence, false, label, err)?;
-            }
+    for outcome in outcomes {
+        err.write_all(&outcome.log)?;
+        if let Some(e) = outcome.error {
+            return Err(e);
         }
+        report.write_all(&outcome.report)?;
+        for (path, chr, sequence) in &outcome.writes {
+            genome::write_planned(path, chr, sequence)?;
+        }
+        new_n_total += outcome.new_n;
+        new_snp_total += outcome.new_snp;
     }
 
     write_summary(
@@ -637,6 +555,216 @@ fn build_genome(
     )?;
     report.flush()?;
     Ok(())
+}
+
+/// What one chromosome produced: its log, its report lines, and its counters.
+struct ChromosomeOutcome {
+    log: Vec<u8>,
+    report: Vec<u8>,
+    new_n: usize,
+    new_snp: usize,
+    /// Files this chromosome wants written, performed by the caller in genome order so an
+    /// earlier abort leaves none of them behind.
+    writes: Vec<(std::path::PathBuf, String, Vec<u8>)>,
+    /// An abort, carried rather than returned so it surfaces during the ordered replay. A
+    /// worker that returned it directly would lose the lines it had already logged, and would
+    /// report the failure before earlier chromosomes had reported their success.
+    error: Option<anyhow::Error>,
+}
+
+/// Process one chromosome, buffering everything it would have printed.
+///
+/// Buffering is what makes the parallelism invisible: the caller replays these in genome
+/// order, so the log and the report read exactly as they would from a serial run.
+#[allow(clippy::too_many_arguments)]
+fn one_chromosome(
+    config: &cli::Config,
+    parent: &Path,
+    genome: &genome::Genome,
+    chroms: &BTreeSet<String>,
+    pass: Pass,
+    label: &str,
+    preloaded: Option<&BTreeMap<String, Vec<genome::Snp>>>,
+    chr: &str,
+    sequence: &[u8],
+) -> ChromosomeOutcome {
+    let mut log: Vec<u8> = Vec::new();
+    let mut report: Vec<u8> = Vec::new();
+    let mut writes: Vec<(std::path::PathBuf, String, Vec<u8>)> = Vec::new();
+
+    let result = chromosome_body(
+        config,
+        parent,
+        genome,
+        chroms,
+        pass,
+        label,
+        preloaded,
+        chr,
+        sequence,
+        &mut log,
+        &mut report,
+        &mut writes,
+    );
+
+    match result {
+        Ok((new_n, new_snp)) => ChromosomeOutcome {
+            log,
+            report,
+            new_n,
+            new_snp,
+            writes,
+            error: None,
+        },
+        Err(e) => ChromosomeOutcome {
+            log,
+            report,
+            new_n: 0,
+            new_snp: 0,
+            // An aborting chromosome leaves nothing behind.
+            writes: Vec::new(),
+            error: Some(e),
+        },
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn chromosome_body(
+    config: &cli::Config,
+    parent: &Path,
+    genome: &genome::Genome,
+    chroms: &BTreeSet<String>,
+    pass: Pass,
+    label: &str,
+    preloaded: Option<&BTreeMap<String, Vec<genome::Snp>>>,
+    chr: &str,
+    sequence: &[u8],
+    log: &mut Vec<u8>,
+    report: &mut Vec<u8>,
+    writes: &mut Vec<(std::path::PathBuf, String, Vec<u8>)>,
+) -> Result<(usize, usize)> {
+    if !chroms.contains(chr) {
+        let err = &mut *log;
+        if pass == Pass::DualHybrid {
+            writeln!(
+                err,
+                "Got no SNP information for chromosome {chr}. Printing sequence only..."
+            )?;
+        }
+        if config.nmasking {
+            let path = genome::plan_chromosome(parent, chr, true, label, err)?;
+            writes.push((path, chr.to_string(), sequence.to_vec()));
+        }
+        if config.full_sequence {
+            let path = genome::plan_chromosome(parent, chr, false, label, err)?;
+            writes.push((path, chr.to_string(), sequence.to_vec()));
+        }
+        return Ok((0, 0));
+    }
+
+    {
+        let err = &mut *log;
+        match pass {
+            Pass::DualHybrid => writeln!(
+                err,
+                "Got SNP information for chromosome {chr}. Creating modified chromosome"
+            )?,
+            _ => writeln!(err, "Processing chromosome {chr} (for strain {label})")?,
+        }
+
+        if pass == Pass::DualHybrid {
+            writeln!(
+                err,
+                "Processing chr{chr} (to create new genome for {}/{})",
+                config.strain,
+                config.strain2.as_deref().unwrap_or("")
+            )?;
+        }
+    }
+
+    // The Perl guards this loop with `unless ($chromosomes{$chr})`, and an empty string is
+    // false in Perl, so a chromosome that exists but carries no sequence is reported as a
+    // name mismatch. Reproduced; the misleading diagnostic is raised upstream separately.
+    if sequence.is_empty() && pass != Pass::DualHybrid {
+        let err = &mut *log;
+        writeln!(
+            err,
+            "\nThe chromosome name given in the VCF file was '{chr}' and was not found in the reference genome.\nA rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)\nbut the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)"
+        )?;
+        writeln!(
+            err,
+            "The chromosome names in the reference genome folder were:"
+        )?;
+        for name in genome.keys() {
+            writeln!(err, "{name}")?;
+        }
+        anyhow::bail!(
+            "[FATAL ERROR] Please ensure that the same version of the genome is used for both VCF annotations and reference genome (FastA files). Exiting...\n\n"
+        );
+    }
+
+    let err = &mut *log;
+    let owned;
+    let snps: &[genome::Snp] = match preloaded {
+        Some(map) => map.get(chr).map(Vec::as_slice).unwrap_or(&[]),
+        None => {
+            owned = genome::read_snps(parent, chr, label, err)?;
+            if owned.is_empty() {
+                // Assigning an empty list to a list that is already empty, announced.
+                writeln!(err, "Clearing SNP array...")?;
+            }
+            &owned
+        }
+    };
+
+    let (counts, masked, full) =
+        genome::apply_snps(sequence, snps, config.nmasking, config.full_sequence);
+
+    if let Some(masked) = masked {
+        let path = genome::plan_chromosome(parent, chr, true, label, err)?;
+        writes.push((path, chr.to_string(), masked));
+    }
+    if let Some(full) = full {
+        let path = genome::plan_chromosome(parent, chr, false, label, err)?;
+        writes.push((path, chr.to_string(), full));
+    }
+
+    writeln!(err, "{} SNPs total for chromosome {chr}", counts.total)?;
+    if counts.already_carried > 0 {
+        let line = format!(
+            "{} positions on chromosome {chr} already carried the SNP base and were left alone",
+            counts.already_carried
+        );
+        writeln!(err, "{line}")?;
+        writeln!(report, "{line}")?;
+    }
+    if counts.mismatched > 0 {
+        let line = format!(
+            "{} positions on chromosome {chr} were skipped because the reference base did not match the annotation",
+            counts.mismatched
+        );
+        writeln!(err, "{line}")?;
+        writeln!(report, "{line}")?;
+    }
+    if config.nmasking {
+        let line = format!(
+            "{} positions on chromosome {chr} were changed to 'N'",
+            counts.new_n
+        );
+        writeln!(err, "{line}")?;
+        writeln!(report, "{line}")?;
+    }
+    if config.full_sequence {
+        let line = format!(
+            "{} reference positions on chromosome {chr} were changed to the SNP alternative base\n",
+            counts.new_snp
+        );
+        writeln!(err, "{line}")?;
+        writeln!(report, "{line}")?;
+    }
+    writeln!(err)?;
+
+    Ok((counts.new_n, counts.new_snp))
 }
 
 fn write_summary(

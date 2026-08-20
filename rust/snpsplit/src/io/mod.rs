@@ -25,6 +25,22 @@ pub fn worker_count(requested: usize) -> NonZero<usize> {
     }
 }
 
+/// The default worker count when `--parallel` was not given.
+///
+/// `SNPSPLIT_PARALLEL` sets it, which is how a container or a scheduler can hand every tool
+/// in a pipeline the same core budget without rewriting the command lines. The flag always
+/// wins when it is present, and an unparseable value is ignored rather than fatal: a stray
+/// environment variable should not stop a run.
+///
+/// It is also what lets the fixture suites run at more than one worker count without the
+/// runners growing a way to pass extra arguments.
+pub fn default_parallel() -> usize {
+    std::env::var("SNPSPLIT_PARALLEL")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

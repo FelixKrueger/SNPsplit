@@ -54,6 +54,27 @@ directions.
 - Worker-count invariance: the sorted output is identical at 1, 2 and 8 workers, and
   identical across memory budgets of 64, 333 and 100000 records. Both are tests, not claims.
 
+## Parallelism
+
+`--parallel N` on all three tools. Default 1, so an existing command line is unchanged; `0`
+means every core. `SNPSPLIT_PARALLEL` sets the default when the flag is absent, which is how
+a container or a scheduler hands every tool in a pipeline the same budget.
+
+**Output is byte-identical whatever the worker count.** Not "deterministic for a given count",
+which is weaker and easy to ship by accident. Both fixture suites run at 1 and at 4 workers
+in CI, against the same expected output.
+
+Where it is used, and where it deliberately is not:
+
+| | |
+|---|---|
+| BGZF encode and decode | all three tools. Order-preserving by block boundary |
+| Per-record scoring | the tagger. Batched, written back in read order |
+| Per-chromosome work | the genome preparation. Logs, report lines and file writes are buffered and replayed in genome order, so an abort leaves nothing behind that a serial run would not have |
+| Run sorting in the external sort | the name sort. `par_sort_by`, which is stable |
+| The merge phase of the sort | **not parallelised, and will not be.** It is where the final order is decided |
+| Per-record work in `tag2sort` | **not parallelised.** It is a tag lookup and a copy; the cost is I/O, which the BGZF workers already cover |
+
 ## Measured
 
 Name sort of 2,000,000 shuffled 50bp reads (18 MB BAM), 400k records in memory, on a
@@ -75,6 +96,22 @@ it.
 Scaling flattens after four workers because the merge is sequential by design. Before the
 raw-record path landed, the single-worker time was 9.28s; decoding every record into an
 owned `RecordBuf` only to re-encode it was two thirds of the cost.
+
+Allele-tagging of 2,000,000 50bp reads, every one of them overlapping a masked position, on
+the same machine:
+
+| workers | elapsed |
+|---|---|
+| 1 | 2.14s |
+| 2 | 2.00s |
+| 4 | 1.55s |
+| 8 | 1.54s |
+| 16 | 1.62s |
+
+1.4x, and worth stating plainly: the CIGAR and MD walk is real work but it is small next to
+reading and writing the alignments, so most of what is left is I/O. The 2,000,000 tagged
+records are byte-identical between 1 and 16 workers, checked by comparing the output, not by
+comparing the counters.
 
 ## Known deviations from Perl v0.9.0
 

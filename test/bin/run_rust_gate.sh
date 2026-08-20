@@ -6,10 +6,16 @@
 # (a stale list). The second case is not pedantry: it is what keeps a long port honest,
 # because it makes claiming your own work mandatory rather than optional.
 #
-# Usage: test/bin/run_rust_gate.sh alignment|genome
+# A second argument is a worker count, exported as SNPSPLIT_PARALLEL so the same fixtures run
+# against the same expected output at a different worker count. Output is supposed to be
+# identical whatever the worker count, so this is that claim checked by the fixtures rather
+# than asserted in a comment.
+#
+# Usage: test/bin/run_rust_gate.sh alignment|genome [workers]
 set -eu
 
-suite=${1:?usage: run_rust_gate.sh alignment|genome}
+suite=${1:?usage: run_rust_gate.sh alignment|genome [workers]}
+workers=${2:-}
 root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root"
 
@@ -33,6 +39,12 @@ case "$suite" in
 esac
 
 [ -x "$impl" ] || { echo "no Rust build at $impl; run rust/build-impl.sh first" >&2; exit 2; }
+
+if [ -n "$workers" ]; then
+    SNPSPLIT_PARALLEL=$workers
+    export SNPSPLIT_PARALLEL
+    echo "running with SNPSPLIT_PARALLEL=$workers"
+fi
 
 expected=$(grep -v '^[[:space:]]*#' test/rust_fixtures.txt | grep -v '^[[:space:]]*$' || true)
 

@@ -31,6 +31,7 @@ pub struct Options {
     pub v7: bool,
     pub help: bool,
     pub version: bool,
+    pub parallel: usize,
 }
 
 /// Parse the command line the way Getopt::Long does for this option set.
@@ -38,7 +39,10 @@ pub struct Options {
 /// Returns `Err` with the Getopt::Long message on an unknown option or a missing value, which
 /// the caller turns into the `Please respecify command line options` die.
 pub fn parse(args: &[String]) -> Result<Options, String> {
-    let mut opts = Options::default();
+    let mut opts = Options {
+        parallel: crate::io::default_parallel(),
+        ..Options::default()
+    };
     let mut i = 0;
 
     while i < args.len() {
@@ -80,10 +84,7 @@ pub fn parse(args: &[String]) -> Result<Options, String> {
             "reference_genome" => opts.genome_folder = Some(take_value(&mut i)?),
             "genome_build" => opts.genome_build = Some(take_value(&mut i)?),
             "v7_VCF" => opts.v7 = true,
-            // The port's one addition, documented in rust/DESIGN.md.
-            "parallel" => {
-                let _ = take_value(&mut i)?;
-            }
+            "parallel" => opts.parallel = take_value(&mut i)?.parse().unwrap_or(1),
             other => return Err(format!("Unknown option: {other}")),
         }
 
@@ -107,6 +108,7 @@ pub struct Config {
     pub dual_hybrid: bool,
     pub genome_build: String,
     pub v7: bool,
+    pub parallel: usize,
 }
 
 /// Whether a VCF path names the v7 combined SNP and INDEL release.

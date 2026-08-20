@@ -212,7 +212,8 @@ fn sort_one(
     writeln!(err, "\n")?;
 
     let input = format!("{output_dir}{name}");
-    let reader = RecordReader::open(Path::new(&input))?;
+    let reader =
+        RecordReader::open_with_workers(Path::new(&input), crate::io::worker_count(opts.parallel))?;
     let mut header = reader.header().clone();
     crate::io::add_pg_line(
         &mut header,

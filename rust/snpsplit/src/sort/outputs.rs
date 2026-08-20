@@ -20,8 +20,13 @@ pub struct Sink {
 }
 
 impl Sink {
-    fn create(path: &str, format: Format, header: &Header) -> Result<Self> {
-        let writer = RecordWriter::create(Path::new(path), format, header)
+    fn create(
+        path: &str,
+        format: Format,
+        header: &Header,
+        workers: std::num::NonZero<usize>,
+    ) -> Result<Self> {
+        let writer = RecordWriter::create_with_workers(Path::new(path), format, header, workers)
             .with_context(|| format!("Unable to write to file '{path}'"))?;
         Ok(Self {
             writer: Some(writer),
@@ -93,6 +98,7 @@ impl Outputs {
         let bam = !opts.sam;
         let format = if bam { Format::Bam } else { Format::Sam };
         let stem = stem(infile);
+        let workers = crate::io::worker_count(opts.parallel);
 
         let name = |suffix: &str| named(&stem, suffix, bam);
         let path = |n: &str| format!("{output_dir}{n}");
@@ -109,12 +115,12 @@ impl Outputs {
         let yaml_file = format!("{base}SNPsplit_sort.yaml");
 
         let mut outputs = Self {
-            genome1: Sink::create(&path(&genome1_file), format, header)?,
-            genome2: Sink::create(&path(&genome2_file), format, header)?,
-            unassigned: Sink::create(&path(&unassigned_file), format, header)?,
+            genome1: Sink::create(&path(&genome1_file), format, header, workers)?,
+            genome2: Sink::create(&path(&genome2_file), format, header, workers)?,
+            unassigned: Sink::create(&path(&unassigned_file), format, header, workers)?,
             conflicting: opts
                 .conflict
-                .then(|| Sink::create(&path(&conflicting_file), format, header))
+                .then(|| Sink::create(&path(&conflicting_file), format, header, workers))
                 .transpose()?,
             genome1_st: None,
             genome2_st: None,
@@ -136,9 +142,9 @@ impl Outputs {
 
         let (g1_ua_file, g2_ua_file, g1_g2_file) = (name("G1_UA"), name("G2_UA"), name("G1_G2"));
         if opts.hic {
-            outputs.g1_ua = Some(Sink::create(&path(&g1_ua_file), format, header)?);
-            outputs.g2_ua = Some(Sink::create(&path(&g2_ua_file), format, header)?);
-            outputs.g1_g2 = Some(Sink::create(&path(&g1_g2_file), format, header)?);
+            outputs.g1_ua = Some(Sink::create(&path(&g1_ua_file), format, header, workers)?);
+            outputs.g2_ua = Some(Sink::create(&path(&g2_ua_file), format, header, workers)?);
+            outputs.g1_g2 = Some(Sink::create(&path(&g1_g2_file), format, header, workers)?);
         }
 
         let (genome1_st, genome2_st, unassigned_st, conflicting_st) = (
@@ -148,12 +154,17 @@ impl Outputs {
             name("conflicting_st"),
         );
         if opts.singletons {
-            outputs.genome1_st = Some(Sink::create(&path(&genome1_st), format, header)?);
-            outputs.genome2_st = Some(Sink::create(&path(&genome2_st), format, header)?);
-            outputs.unassigned_st = Some(Sink::create(&path(&unassigned_st), format, header)?);
+            outputs.genome1_st = Some(Sink::create(&path(&genome1_st), format, header, workers)?);
+            outputs.genome2_st = Some(Sink::create(&path(&genome2_st), format, header, workers)?);
+            outputs.unassigned_st = Some(Sink::create(
+                &path(&unassigned_st),
+                format,
+                header,
+                workers,
+            )?);
             outputs.conflicting_st = opts
                 .conflict
-                .then(|| Sink::create(&path(&conflicting_st), format, header))
+                .then(|| Sink::create(&path(&conflicting_st), format, header, workers))
                 .transpose()?;
         }
 

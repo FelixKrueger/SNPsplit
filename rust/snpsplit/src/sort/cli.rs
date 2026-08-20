@@ -22,7 +22,10 @@ pub struct Options {
 
 /// Parse the command line the way Getopt::Long does for this option set.
 pub fn parse(args: &[String]) -> Result<Options, String> {
-    let mut opts = Options::default();
+    let mut opts = Options {
+        parallel: crate::io::default_parallel(),
+        ..Options::default()
+    };
     let mut i = 0;
 
     while i < args.len() {

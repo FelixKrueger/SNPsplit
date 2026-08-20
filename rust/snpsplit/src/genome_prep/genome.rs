@@ -293,15 +293,18 @@ pub fn apply_snps(
     (counts, masked, full)
 }
 
-/// Write one chromosome out at 100 bases per line.
-pub fn write_chromosome(
+/// Announce a chromosome write and return where it goes, without performing it.
+///
+/// Splitting the announcement from the write is what lets chromosomes be processed in
+/// parallel without their files appearing out of order, or at all when an earlier
+/// chromosome aborts the run.
+pub fn plan_chromosome(
     parent: &Path,
     chr: &str,
-    sequence: &[u8],
     nmasked: bool,
     strain: &str,
     err: &mut impl Write,
-) -> Result<()> {
+) -> Result<std::path::PathBuf> {
     if nmasked {
         writeln!(err, "Writing modified chromosome (N-masking)")?;
     } else {
@@ -314,20 +317,25 @@ pub fn write_chromosome(
         ("full_sequence", format!("chr{chr}.SNPs_introduced.fa"))
     };
 
-    let folder = parent.join(format!("{strain}_{kind}"));
-    let path = folder.join(&outfile);
+    let path = parent.join(format!("{strain}_{kind}")).join(&outfile);
     if nmasked {
         writeln!(err, "Writing N-masked output to: {}", path.display())?;
     } else {
         writeln!(err, "Writing full sequence output to: {}", path.display())?;
     }
+    Ok(path)
+}
 
-    if !folder.is_dir() {
-        let _ = std::fs::create_dir(&folder);
+/// Perform a write planned by `plan_chromosome`.
+pub fn write_planned(path: &Path, chr: &str, sequence: &[u8]) -> Result<()> {
+    if let Some(folder) = path.parent()
+        && !folder.is_dir()
+    {
+        let _ = std::fs::create_dir(folder);
     }
 
     let mut fh = std::io::BufWriter::new(
-        File::create(&path)
+        File::create(path)
             .with_context(|| format!("Failed to write to file {}: ", path.display()))?,
     );
     writeln!(fh, ">{chr}")?;
