@@ -54,6 +54,32 @@ directions.
 - Worker-count invariance: the sorted output is identical at 1, 2 and 8 workers, and
   identical across memory budgets of 64, 333 and 100000 records. Both are tests, not claims.
 
+## Fetching the references
+
+```sh
+SNPsplit_genome_preparation --download --strain 129S1_SvImJ --reference_genome ...
+```
+
+`--download` fetches whatever of the two inputs is missing: the Mouse Genomes Project SNP VCF
+and a folder of per-chromosome FastA files. `--download_dir PATH` says where (default
+`./SNPsplit_references/`), and `--ensembl_release N` picks the genome release.
+
+This is the one thing the port does that the Perl does not, so it is held to a different
+standard:
+
+- **Opt-in.** Without `--download` nothing here contacts the network.
+- **A path you named always wins.** If `--vcf_file` or `--reference_genome` points at
+  something that exists, it is used as given and nothing is downloaded over it.
+- **Resumable.** A partial file is continued with a range request. The v8 VCF is
+  23,305,938,445 bytes, so this is not a nicety.
+- **Verified.** The VCF is checked by decompressing the whole stream and requiring a VCF
+  header, which catches the two failures that actually happen: a truncated transfer, and an
+  HTML error page saved under a `.vcf.gz` name. `--v7_VCF` fetches the older combined SNP and
+  INDEL release from its own location.
+- **Recorded.** URL, size and SHA-256 of everything fetched go into
+  `<download_dir>/manifest.txt`, so a later run can say whether the remote file changed rather
+  than silently using a different input.
+
 ## Parallelism
 
 `--parallel N` on all three tools. Default 1, so an existing command line is unchanged; `0`

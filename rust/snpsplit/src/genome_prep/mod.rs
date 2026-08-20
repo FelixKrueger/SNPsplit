@@ -1,6 +1,7 @@
 //! `SNPsplit_genome_preparation`: build N-masked and full-sequence genomes from a VCF.
 
 pub mod cli;
+pub mod download;
 pub mod dual;
 pub mod genome;
 pub mod vcf;
@@ -10,7 +11,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 use crate::version;
 
@@ -52,8 +53,14 @@ fn execute(args: &[String]) -> Result<ExitCode> {
 /// Validate the options and look up the strain columns, mirroring `process_commandline`.
 ///
 /// `Ok(None)` means the run is over: `--list_strains` prints and exits successfully.
-fn resolve(opts: cli::Options) -> Result<Option<cli::Config>> {
+fn resolve(mut opts: cli::Options) -> Result<Option<cli::Config>> {
     let mut v7 = opts.v7;
+
+    // Before anything is validated, because what it fetches is what the validation then
+    // looks at. Nothing below contacts the network when the flag is absent.
+    if opts.download {
+        fetch_inputs(&mut opts, v7)?;
+    }
 
     if let Some(vcf) = &opts.vcf_file {
         if !vcf.exists() {
@@ -250,6 +257,125 @@ fn resolve(opts: cli::Options) -> Result<Option<cli::Config>> {
         v7,
         parallel: opts.parallel,
     }))
+}
+
+/// Fetch whatever of the two inputs is missing.
+///
+/// A path the user named always wins: if `--vcf_file` or `--reference_genome` points at
+/// something that exists, it is used as given and nothing is downloaded over it. This is the
+/// one place in the port that reaches the network, and only with `--download`.
+fn fetch_inputs(opts: &mut cli::Options, v7: bool) -> Result<()> {
+    let mut err = std::io::stderr();
+    let dir = PathBuf::from(
+        opts.download_dir
+            .clone()
+            .unwrap_or_else(|| "SNPsplit_references".to_string()),
+    );
+    let build = opts
+        .genome_build
+        .clone()
+        .unwrap_or_else(|| "GRCm39".to_string());
+    let release = opts.ensembl_release.unwrap_or(DEFAULT_ENSEMBL_RELEASE);
+    let sources = download::sources(v7, &build, release);
+
+    std::fs::create_dir_all(&dir)
+        .with_context(|| format!("Failed to create download directory {}", dir.display()))?;
+    writeln!(err, "Downloading reference data into {}\n", dir.display())?;
+
+    let mut fetched = Vec::new();
+
+    let wanted_vcf = opts
+        .vcf_file
+        .clone()
+        .unwrap_or_else(|| dir.join(&sources.vcf_name));
+    if wanted_vcf.exists() {
+        writeln!(
+            err,
+            "Using the VCF already present at '{}'",
+            wanted_vcf.display()
+        )?;
+    } else {
+        let bytes = download::fetch(&sources.vcf_url, &wanted_vcf, &mut err)?;
+        download::verify_vcf(&wanted_vcf)?;
+        writeln!(err, "Verified '{}'", wanted_vcf.display())?;
+        fetched.push(download::Fetched {
+            url: sources.vcf_url.clone(),
+            path: wanted_vcf.clone(),
+            bytes,
+            sha256: download::sha256(&wanted_vcf)?,
+        });
+    }
+    opts.vcf_file = Some(wanted_vcf);
+
+    let wanted_genome = PathBuf::from(
+        opts.genome_folder
+            .clone()
+            .unwrap_or_else(|| dir.join(&build).to_string_lossy().to_string()),
+    );
+    if wanted_genome.is_dir() && has_fasta(&wanted_genome) {
+        writeln!(
+            err,
+            "Using the reference genome already present at '{}'",
+            wanted_genome.display()
+        )?;
+    } else {
+        std::fs::create_dir_all(&wanted_genome)?;
+        for chr in download::mouse_chromosomes() {
+            let name = format!("Mus_musculus.{build}.dna.chromosome.{chr}.fa.gz");
+            let target = wanted_genome.join(format!("{chr}.fa"));
+            if target.exists() {
+                continue;
+            }
+            let url = format!("{}/{name}", sources.genome_base);
+            let compressed = wanted_genome.join(&name);
+            let bytes = download::fetch(&url, &compressed, &mut err)?;
+            decompress(&compressed, &target)?;
+            fetched.push(download::Fetched {
+                url,
+                path: target,
+                bytes,
+                sha256: download::sha256(&compressed)?,
+            });
+            std::fs::remove_file(&compressed)?;
+        }
+    }
+    opts.genome_folder = Some(wanted_genome.to_string_lossy().to_string());
+
+    if !fetched.is_empty() {
+        download::record(&dir, &fetched)?;
+        writeln!(
+            err,
+            "\nRecorded {} download(s) in {}",
+            fetched.len(),
+            dir.join("manifest.txt").display()
+        )?;
+    }
+    writeln!(err)?;
+    Ok(())
+}
+
+/// The Ensembl release the genome is taken from when none is given.
+const DEFAULT_ENSEMBL_RELEASE: u32 = 115;
+
+fn has_fasta(dir: &Path) -> bool {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    entries.filter_map(|e| e.ok()).any(|e| {
+        let name = e.file_name().to_string_lossy().to_string();
+        name.ends_with(".fa") || name.ends_with(".fasta")
+    })
+}
+
+/// Decompress a downloaded chromosome, since the genome folder holds plain FastA.
+fn decompress(source: &Path, target: &Path) -> Result<()> {
+    let input = std::fs::File::open(source)?;
+    let mut reader = flate2::read::MultiGzDecoder::new(input);
+    let mut output = std::fs::File::create(target)
+        .with_context(|| format!("Failed to write to {}", target.display()))?;
+    std::io::copy(&mut reader, &mut output)
+        .with_context(|| format!("'{}' is truncated or corrupt", source.display()))?;
+    Ok(())
 }
 
 fn list_available(strains: &BTreeMap<String, usize>) {

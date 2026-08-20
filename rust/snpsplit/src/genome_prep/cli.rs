@@ -32,6 +32,9 @@ pub struct Options {
     pub help: bool,
     pub version: bool,
     pub parallel: usize,
+    pub download: bool,
+    pub download_dir: Option<String>,
+    pub ensembl_release: Option<u32>,
 }
 
 /// Parse the command line the way Getopt::Long does for this option set.
@@ -85,6 +88,17 @@ pub fn parse(args: &[String]) -> Result<Options, String> {
             "genome_build" => opts.genome_build = Some(take_value(&mut i)?),
             "v7_VCF" => opts.v7 = true,
             "parallel" => opts.parallel = take_value(&mut i)?.parse().unwrap_or(1),
+            // The port's one addition, documented in rust/DESIGN.md. Nothing here contacts
+            // the network unless --download is given.
+            "download" => opts.download = true,
+            "download_dir" => opts.download_dir = Some(take_value(&mut i)?),
+            "ensembl_release" => {
+                opts.ensembl_release = Some(
+                    take_value(&mut i)?
+                        .parse()
+                        .map_err(|_| "Option ensembl_release requires a number".to_string())?,
+                );
+            }
             other => return Err(format!("Unknown option: {other}")),
         }
 
@@ -163,6 +177,29 @@ mod tests {
     fn a_value_may_contain_spaces() {
         let o = parse(&args(&["--genome_build", "test build"])).unwrap();
         assert_eq!(o.genome_build.unwrap(), "test build");
+    }
+
+    #[test]
+    fn the_download_options_parse() {
+        let o = parse(&args(&[
+            "--download",
+            "--download_dir",
+            "refs",
+            "--ensembl_release",
+            "115",
+        ]))
+        .unwrap();
+        assert!(o.download);
+        assert_eq!(o.download_dir.unwrap(), "refs");
+        assert_eq!(o.ensembl_release.unwrap(), 115);
+    }
+
+    /// Without the flag the tool has no reason to touch the network, and the other two
+    /// options are inert.
+    #[test]
+    fn downloading_is_off_unless_asked_for() {
+        let o = parse(&args(&["--download_dir", "refs"])).unwrap();
+        assert!(!o.download);
     }
 
     #[test]
