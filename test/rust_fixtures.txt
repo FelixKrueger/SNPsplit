@@ -1,0 +1,75 @@
+# Fixtures the Rust implementation is expected to pass.
+#
+# Checked in both directions by test/bin/run_rust_gate.sh: a listed fixture that fails is a
+# regression, and an unlisted fixture that passes means this file is stale. The second
+# direction is the point. A plain skip list rots silently; this one cannot.
+#
+# One name per line. A `genome:` prefix means a fixture of test/run_genome_tests.pl;
+# anything else is a fixture of test/run_tests.pl. Blank lines and # comments are ignored.
+
+# SNPsplit_genome_preparation: all 31.
+genome:chrom_name_mismatch
+genome:dual_hybrid
+genome:duplicate_chrom_name
+genome:empty_chromosome
+genome:empty_genome_folder
+genome:fasta_extension
+genome:full_sequence
+genome:genotypes
+genome:list_strains
+genome:missing_genome
+genome:multi_chrom
+genome:multifasta
+genome:nmask_basic
+genome:no_fi_field
+genome:no_format_column
+genome:no_nmasking
+genome:no_snp_folder
+genome:not_fasta
+genome:poison_gzip
+genome:ref_mismatch
+genome:rerun_overwrite
+genome:reverse_strand
+genome:same_strain
+genome:skip_filtering
+genome:skip_filtering_dual
+genome:spaced_paths
+genome:strain_not_in_vcf
+genome:undeclared_contig
+genome:vcf_gzipped
+genome:vcf_missing
+genome:vcf_v7
+
+# SNPsplit + tag2sort: 24 of 26.
+#
+# bam_write_fails and sam2bam_fails are the exceptions, and neither is a port defect. Both
+# put a failing `samtools` on PATH to prove that a failed BAM write aborts the run rather
+# than leaving a truncated file behind. This build writes BAM itself, so there is no
+# subprocess for the shim to poison, and the abort messages they pin name samtools
+# explicitly. The property they assert is implemented (RecordWriter::finish returns a
+# Result); only the mechanism they use to reach it is gone. Re-expressing them needs the
+# messages to name the problem rather than the tool, which is raised upstream.
+bismark_autodetect
+bismark_autodetect_se
+bisulfite_se
+cigar_complex
+cigar_eqx
+gp_generated
+gp_per_chrom
+header_only
+hic
+hic_no_g1
+multi_input
+n_deletions
+output_dir
+pe_basic
+pe_namesort
+pe_singletons
+sam_input
+sam_output
+samtools_path
+samtools_path_spaced
+se_basic
+se_skipped
+skip_tag2sort
+tag2sort_fails

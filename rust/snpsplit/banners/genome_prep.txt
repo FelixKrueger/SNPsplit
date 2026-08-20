@@ -1,0 +1,8 @@
+	
+                               SNPsplit Genome Preparation
+			           version: 0.9.0
+                             Copyright 2014-23, Felix Krueger
+                                  Altos Bioinformatics
+                        https://github.com/FelixKrueger/SNPsplit
+
+
