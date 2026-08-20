@@ -25,7 +25,11 @@ fn snpsplit_prints_its_banner_for_versions() {
         .output()
         .unwrap();
 
-    assert!(out.status.success(), "exit status was {:?}", out.status.code());
+    assert!(
+        out.status.success(),
+        "exit status was {:?}",
+        out.status.code()
+    );
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
         include_str!("../banners/snpsplit.txt"),

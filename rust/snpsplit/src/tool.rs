@@ -45,7 +45,10 @@ mod tests {
     fn classic_names_resolve() {
         assert_eq!(from_argv0("SNPsplit"), Some(Tool::Tag));
         assert_eq!(from_argv0("tag2sort"), Some(Tool::Sort));
-        assert_eq!(from_argv0("SNPsplit_genome_preparation"), Some(Tool::Prepare));
+        assert_eq!(
+            from_argv0("SNPsplit_genome_preparation"),
+            Some(Tool::Prepare)
+        );
     }
 
     #[test]
