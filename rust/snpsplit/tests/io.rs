@@ -151,3 +151,106 @@ fn samtools_can_read_the_bam_we_write() {
     assert!(text.contains("read1"), "samtools output lost read1: {text}");
     assert!(text.contains("read2"), "samtools output lost read2: {text}");
 }
+
+use snpsplit::io::{sort_by_name, strnum_cmp};
+
+/// The point of an external sort is the path where it spills, so this forces spilling with a
+/// tiny in-memory budget rather than trusting the in-memory path to represent it.
+#[test]
+fn sorting_spills_to_disk_and_still_produces_one_ordered_stream() {
+    let dir = TempDir::new().unwrap();
+    let src = dir.path().join("unsorted.sam");
+    let dst = dir.path().join("sorted.bam");
+
+    let mut sam = String::from("@HD\tVN:1.6\tSO:unsorted\n@SQ\tSN:chr1\tLN:100000\n");
+    // Descending, so nothing is accidentally already in order.
+    for i in (1..=200).rev() {
+        sam.push_str(&format!(
+            "read{i}\t0\tchr1\t{i}\t42\t4M\t*\t0\t0\tACGT\tIIII\n"
+        ));
+    }
+    std::fs::File::create(&src)
+        .unwrap()
+        .write_all(sam.as_bytes())
+        .unwrap();
+
+    let header = RecordReader::open(&src).unwrap().header().clone();
+    sort_by_name(&src, &dst, &header, 16).unwrap();
+
+    let names = names_of(&dst);
+    assert_eq!(names.len(), 200);
+
+    let mut expected: Vec<String> = (1..=200).map(|i| format!("read{i}")).collect();
+    expected.sort_by(|a, b| strnum_cmp(a.as_bytes(), b.as_bytes()));
+    assert_eq!(names, expected);
+    assert_eq!(names[0], "read1");
+    assert_eq!(
+        names[1],
+        "read2",
+        "numeric ordering lost: got {:?}",
+        &names[..3]
+    );
+}
+
+/// The comparator is checked against a handful of hand-picked names elsewhere. This checks
+/// the whole sort, at a size that spills, against real samtools output. Skipped when
+/// samtools is absent.
+#[test]
+fn the_whole_sort_matches_samtools_over_five_thousand_shuffled_names() {
+    let dir = TempDir::new().unwrap();
+    let src = dir.path().join("big.sam");
+    let dst = dir.path().join("big.bam");
+
+    // A fixed shuffle, so a failure is reproducible. Values are unrelated to their order.
+    let mut order: Vec<usize> = (1..=5000).collect();
+    let mut state: u64 = 0x2545F4914F6CDD1D;
+    for i in (1..order.len()).rev() {
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        let j = (state >> 33) as usize % (i + 1);
+        order.swap(i, j);
+    }
+
+    let mut sam = String::from("@HD\tVN:1.6\tSO:unsorted\n@SQ\tSN:chr1\tLN:1000000\n");
+    for i in &order {
+        sam.push_str(&format!(
+            "read{i}\t0\tchr1\t1\t42\t4M\t*\t0\t0\tACGT\tIIII\n"
+        ));
+    }
+    std::fs::File::create(&src)
+        .unwrap()
+        .write_all(sam.as_bytes())
+        .unwrap();
+
+    let Ok(out) = std::process::Command::new("samtools")
+        .args(["sort", "-n", "-O", "sam", src.to_str().unwrap()])
+        .output()
+    else {
+        return;
+    };
+    if !out.status.success() {
+        return;
+    }
+    let samtools_order: Vec<String> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter(|l| !l.starts_with('@'))
+        .map(|l| l.split('\t').next().unwrap().to_string())
+        .collect();
+    assert_eq!(samtools_order.len(), 5000);
+
+    let header = RecordReader::open(&src).unwrap().header().clone();
+    sort_by_name(&src, &dst, &header, 500).unwrap();
+
+    let ours = names_of(&dst);
+    let first_divergence = ours
+        .iter()
+        .zip(&samtools_order)
+        .position(|(a, b)| a != b)
+        .map(|i| format!("at {i}: ours {} vs samtools {}", ours[i], samtools_order[i]));
+    assert_eq!(
+        first_divergence, None,
+        "name sort diverged from samtools: {first_divergence:?}",
+    );
+    assert_eq!(ours, samtools_order);
+}
