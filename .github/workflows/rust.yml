@@ -29,3 +29,29 @@ jobs:
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: Tests
         run: cargo test --all-targets --locked
+
+  fixtures-rust:
+    # The alignment suite against the Rust build. Gated by test/rust_fixtures.txt, which
+    # fails both on a listed fixture that breaks and on an unlisted one that starts passing.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install samtools
+        # Still needed: the runner itself shells out to samtools to normalise output into
+        # comparable SAM text. The implementation under test does not.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y samtools
+      - name: Build the Rust implementation
+        run: ./rust/build-impl.sh
+      - name: Gate
+        run: test/bin/run_rust_gate.sh alignment
+
+  genome-fixtures-rust:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the Rust implementation
+        run: ./rust/build-impl.sh
+      - name: Gate
+        run: test/bin/run_rust_gate.sh genome

@@ -27,12 +27,16 @@ test/run_genome_tests.pl --impl rust/target/impl/SNPsplit_genome_preparation
 |---|---|---|
 | multicall dispatch, version banners | done | n/a |
 | `io` (BAM/SAM read, BAM write, name sort) | done | n/a |
-| `genome_prep` | not started | 0 / 13 |
+| `genome_prep` | not started | 0 / 31 |
 | `sort` (tag2sort) | not started | 0 / 26 |
 | `tag` (SNPsplit) | not started | 0 / 26 |
 
 The two fixture counts are the two suites, not two halves of one: the alignment suite runs
 `SNPsplit` and `tag2sort` together, so its 26 fixtures only pass once both are ported.
+
+Which fixtures the Rust build is expected to pass is not a claim in this table but a
+checked file, `test/rust_fixtures.txt`, enforced by `test/bin/run_rust_gate.sh` in both
+directions.
 
 ## Verified equivalences
 
