@@ -270,7 +270,23 @@ already the folder-of-chromosomes layout `--reference_genome` expects.
 - **Fails loudly.** A 404, a checksum mismatch or a truncated stream aborts with the URL in
   the message. No falling back to a partial file.
 
-### Parallelism
+### Testing
+
+CI does not contact EBI or Ensembl. What is worth testing is the transfer, and that is
+covered by integration tests against a one-file HTTP server on an ephemeral port: a fresh
+fetch, a partial file resumed with a range request rather than restarted, a 404 that fails
+loudly and names the URL, and a truncated archive that does not verify.
+
+These are Rust tests rather than fixtures, which corrects an earlier draft of this section. A
+fixture would have to start a server, and the fixture runners take an implementation and a
+set of arguments, not a service.
+
+The live endpoints are checked by hand, not on every push. The v8 VCF is 23,305,938,445
+bytes, which is the reason resuming is not optional. The local server speaks plain HTTP, so
+it proves nothing about TLS; a real fetch of the smallest Ensembl chromosome does, and
+`rust/snpsplit/examples/fetch_probe.rs` is that check.
+
+## Parallelism
 
 The Perl tools are single-threaded. This port is not, and the reason it can afford not to be
 is the same reason the port is tractable at all: the fixture suites can prove that the
@@ -283,15 +299,22 @@ count", which is a much weaker claim and the one that is easy to accidentally sh
 Everything below is arranged so that parallelism changes when work happens, never what is
 written or in what order.
 
-This is checkable, so it is checked: the CI gate runs both fixture suites twice, at
-`--parallel 1` and `--parallel 4`, and compares each against the same committed `expected/`
-trees. A parallel path that reorders output fails the same gate that a mis-ported CIGAR walk
-would.
+This is checkable, so it is checked: the CI gate runs both fixture suites twice, at one
+worker and at four, and compares each against the same committed `expected/` trees. A
+parallel path that reorders output fails the same gate that a mis-ported CIGAR walk would.
+
+The worker count reaches the tools through `SNPSPLIT_PARALLEL`, which is the default when
+`--parallel` is absent. The fixture runners take an implementation and a set of arguments and
+have no way to pass an extra flag, so an environment default is what makes the same fixtures
+runnable at a second worker count without changing them. It earns its place beyond the tests
+too: a container or a scheduler can hand every tool in a pipeline the same budget without
+rewriting command lines.
 
 ### The knob
 
 One flag, `--parallel N`, on all three tools. Default `1`, so an existing command line
-behaves exactly as it does today. `--parallel 0` means every available core.
+behaves exactly as it does today. `--parallel 0` means every available core, and
+`SNPSPLIT_PARALLEL` sets the default when the flag is absent.
 
 One knob rather than a knob per stage: the stages below are sequential with respect to each
 other, so a single number is enough to describe the whole run, and a single number is what a
@@ -305,16 +328,22 @@ job scheduler can be told about.
    compressed bytes may differ from the single-threaded encoding; the decoded content does
    not, and the fixtures compare `samtools view` output, not BGZF bytes.
 2. **Per-record work, with ordered writeback.** Tagging walks a CIGAR against the SNP table
-   for every read; sorting classifies every read or pair. Records are handed to workers in
-   fixed-size batches and results are written back in batch order through a bounded reorder
-   buffer, so the output stream is the serial stream. The batch size is fixed in the source,
-   not a flag, because it is not a user's decision and varying it would make the invariant
-   harder to state.
+   for every read. Records are scored in fixed-size batches and written back in read order,
+   so the output stream is the serial stream. The batch size is fixed in the source, not a
+   flag, because it is not a user's decision and varying it would make the invariant harder
+   to state. Measured, this is worth about 1.4x and no more: the walk is real work but small
+   next to reading and writing the alignments.
+
+   The sorting step is deliberately excluded. Its per-record work is a tag lookup and a copy,
+   so the cost is I/O, which the BGZF workers already cover; parallelising it would be
+   theatre.
 3. **Per-chromosome work in the genome preparation.** Each chromosome is N-masked
-   independently and written to its own file, which is the cleanest parallelism in the whole
-   codebase: separate inputs, separate outputs, no ordering question. This is also the stage
-   #89 argues gains nothing from being fast, and it is right that a single-use step matters
-   less; it is parallelised because it is nearly free to do, not because it was the goal.
+   independently and written to its own file. That looks like the cleanest parallelism in the
+   codebase and is not quite: a serial run prints its logs in genome order and stops writing
+   as soon as one chromosome aborts. So each chromosome buffers everything it would print and
+   everything it would write, and the caller replays that in genome order, with an abort
+   travelling alongside its log rather than being returned. Two fixtures caught the naive
+   version.
 4. **Run sorting inside the external name sort.** Each in-memory run is sorted independently
    before it spills. The merge stays sequential, because it is the merge that fixes the
    order.
@@ -324,14 +353,6 @@ job scheduler can be told about.
 The merge phase of the name sort, and the writing of any single output file beyond its BGZF
 encoding. Both are the points where order is decided, and a faster wrong order is worse than
 a slower right one.
-
-## Testing
-
-CI does not contact EBI or Ensembl. The fixtures run against a local HTTP server serving
-canned responses: `download_fresh`, `download_resume` (a truncated file plus a range
-request), `download_checksum_mismatch`, and `download_no_flag` (asserting no socket is
-opened without `--download`). Live URLs are exercised by hand before release, not on every
-push.
 
 ## Testing
 
