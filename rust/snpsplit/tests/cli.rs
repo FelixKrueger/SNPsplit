@@ -110,3 +110,21 @@ fn an_unknown_name_and_an_unknown_subcommand_both_fail_loudly() {
     assert!(!out.status.success());
     assert!(String::from_utf8_lossy(&out.stderr).contains("frobnicate"));
 }
+
+/// The fixture runners copy the implementation into a scratch directory rather than
+/// invoking it in place. Dispatch must therefore survive being copied under a classic name,
+/// not merely being linked as one.
+#[test]
+fn dispatch_survives_being_copied_under_a_classic_name() {
+    let dir = TempDir::new().unwrap();
+    let copied = dir.path().join("SNPsplit");
+    std::fs::copy(cargo_bin("snpsplit"), &copied).unwrap();
+
+    let out = Command::new(&copied).arg("--versions").output().unwrap();
+
+    assert!(out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        include_str!("../banners/snpsplit.txt"),
+    );
+}
