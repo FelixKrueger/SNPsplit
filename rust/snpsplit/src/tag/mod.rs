@@ -85,6 +85,13 @@ fn execute(args: &[String]) -> Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
+// `--verbose` is accepted and passed on to the sorting step, which does echo every alignment.
+// The tagger's own verbose output is not reproduced: in the Perl it is a running trace of the
+// CIGAR and MD walk, tens of lines per read, and the one part that echoes the alignment
+// itself is commented out. Nothing asserts any of it. Recorded in rust/README.md rather than
+// half-implemented, since a trace that is nearly the Perl's is worse than one that is
+// obviously not.
+
 /// Counters the tagging report prints.
 #[derive(Default)]
 struct Counts {

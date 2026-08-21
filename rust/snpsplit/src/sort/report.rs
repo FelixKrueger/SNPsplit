@@ -74,7 +74,7 @@ pub enum Counts {
 /// Single-end: every alignment is classified on its own.
 pub fn process_single_end(
     reader: RecordReader,
-    _header: &Header,
+    header: &Header,
     outputs: &mut Outputs,
     verbose: bool,
     err: &mut impl Write,
@@ -89,7 +89,7 @@ pub fn process_single_end(
             writeln!(err, "Processed {total} lines so far")?;
         }
         if verbose {
-            println!("{:?}", name_of(&record));
+            println!("{}", crate::io::render_sam_line(header, &record)?);
         }
 
         match require_allele(&record)? {

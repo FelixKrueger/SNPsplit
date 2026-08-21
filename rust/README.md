@@ -214,6 +214,16 @@ failed" from a build that never ran samtools would be the same false claim as th
 records, so the fixtures stay unlisted until the messages name the problem rather than the
 tool. Raised upstream.
 
+### `--verbose`
+
+Accepted everywhere, and passed from the tagger to the sorting step. The sorting step echoes
+every alignment, as the Perl does.
+
+The tagger's own verbose output is **not** reproduced. In the Perl it is a running trace of
+the CIGAR and MD walk, tens of lines per read, and the part that echoes the alignment itself
+is commented out. No fixture asserts any of it. A trace that is nearly the Perl's would be
+worse than one that is obviously not, so there is none.
+
 ## Perl behaviour reproduced deliberately
 
 These look like port bugs in a diff and are not. Each is raised upstream on its own.

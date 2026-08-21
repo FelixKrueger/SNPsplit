@@ -46,6 +46,19 @@ pub fn add_pg_line(
     Ok(())
 }
 
+/// Render one record as the SAM line it would be written as.
+///
+/// `--verbose` echoes every alignment, and the Perl can simply print the line it read because
+/// it reads text. This build reads records, so the line has to be rendered back.
+pub fn render_sam_line(header: &Header, record: &RecordBuf) -> Result<String> {
+    let mut buffer: Vec<u8> = Vec::new();
+    {
+        let mut writer = noodles_sam::io::Writer::new(&mut buffer);
+        writer.write_alignment_record(header, record)?;
+    }
+    Ok(String::from_utf8_lossy(&buffer).trim_end().to_string())
+}
+
 /// The command line as invoked, for the `CL:` field.
 pub fn command_line() -> String {
     std::env::args().collect::<Vec<_>>().join(" ")

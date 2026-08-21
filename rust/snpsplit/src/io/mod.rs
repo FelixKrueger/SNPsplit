@@ -8,7 +8,7 @@ use std::num::NonZero;
 
 pub use namesort::{sort_by_name, sort_by_name_with_workers, strnum_cmp};
 pub use reader::{Format, RecordReader, sniff};
-pub use writer::{RecordWriter, add_pg_line, command_line};
+pub use writer::{RecordWriter, add_pg_line, command_line, render_sam_line};
 
 /// Resolve a `--parallel N` value into a worker count.
 ///
