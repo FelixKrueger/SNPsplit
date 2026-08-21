@@ -1,3 +1,15 @@
+## Unreleased
+
+- SNPsplit, tag2sort and SNPsplit_genome_preparation have been ported to Rust and ship as a single binary with no Perl and no samtools needed at runtime ([#89](https://github.com/FelixKrueger/SNPsplit/issues/89))
+
+- 55 of the 57 committed fixtures produce byte-identical output to Perl v0.9.0. The two exceptions both poison samtools to prove a failed BAM write aborts, which a build with no samtools subprocess cannot reach ([#134](https://github.com/FelixKrueger/SNPsplit/issues/134))
+
+- New option `--parallel N` on all three tools, default 1. Output is byte-identical whatever the worker count, checked by running both fixture suites at two different counts
+
+- New option `--download` on SNPsplit_genome_preparation, fetching the Mouse Genomes Project VCF and the reference genome. Opt-in: nothing contacts the network without it
+
+- Output files now carry a `@PG` record naming SNPsplit. The Perl records only the samtools invocations it shells out to, so the tool that did the work never appeared in its own output
+
 ## v0.9.0 (Release 17 08 2026)
 
 - **Breaking:** all 34 samtools, gzip and gunzip invocations now run without a shell, so paths containing a space or a shell metacharacter work throughout ([#99](https://github.com/FelixKrueger/SNPsplit/issues/99))
