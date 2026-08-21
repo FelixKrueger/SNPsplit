@@ -62,3 +62,7 @@ jobs:
         run: test/bin/run_rust_gate.sh genome
       - name: Gate at four workers
         run: test/bin/run_rust_gate.sh genome 4
+      - name: Check the output is reproducible
+        # The gate cannot catch this: it compares against recorded output, which is the same
+        # every run by construction. This compares two runs of the implementation itself.
+        run: test/bin/check_reproducible.pl --impl rust/target/impl/SNPsplit_genome_preparation

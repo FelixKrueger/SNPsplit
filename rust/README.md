@@ -53,6 +53,12 @@ directions.
   bytes. What the fixtures diff is samtools-rendered SAM text, so that is the contract.
 - Worker-count invariance: the sorted output is identical at 1, 2 and 8 workers, and
   identical across memory budgets of 64, 333 and 100000 records. Both are tests, not claims.
+- Every option the Perl declares is declared here: 17 for the tagger, 13 for the sorter, 15
+  for the genome preparation, checked by diffing the two option sets rather than by reading.
+  The four additions are `--parallel`, `--download`, `--download_dir` and `--ensembl_release`.
+- `test/bin/check_reproducible.pl --impl` passes against this build: 23 output files
+  byte-identical across two runs. It is in CI, because the fixture gate cannot catch a
+  reproducibility problem on its own, comparing as it does against recorded output.
 
 ## Container image
 
@@ -213,6 +219,16 @@ failed write aborts. Only the mechanism they use to reach it is gone. Printing "
 failed" from a build that never ran samtools would be the same false claim as the `@PG`
 records, so the fixtures stay unlisted until the messages name the problem rather than the
 tool. Raised upstream.
+
+### Pauses
+
+The Perl calls `pause()` 28 times across the three tools, sleeping one to three seconds after
+certain warnings so a user has time to read them. This build never sleeps.
+
+The fixtures cannot see the difference: both runners set `SNPSPLIT_NO_SLEEP`, which is what
+makes the suites finish in seconds. So this is a deliberate divergence rather than an
+oversight, written down here because nothing else would catch it. Deliberate delays in a
+rewrite whose point is not being slow would be an odd thing to keep.
 
 ### `--verbose`
 
