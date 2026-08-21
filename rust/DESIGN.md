@@ -108,9 +108,14 @@ htslib build dependency.
 This is the single largest behavioural change in the port, and it has consequences that are
 not cosmetic:
 
-1. **`--samtools_path` loses its job.** It stays accepted, so no existing command line
-   breaks, but it is a no-op that prints a notice. The `Samtools path:` report line stays
+1. **`--samtools_path` loses its job.** It stays accepted and still validated, so a wrong
+   path is still reported, but nothing runs through it. The `Samtools path:` report line stays
    (masked by the runner anyway) so report layout is unchanged.
+
+   An earlier draft said it would print a notice saying so. It cannot: `samtools_path` and
+   `samtools_path_spaced` pin an exact 91-line log, and an extra line breaks both. The choice
+   is between telling the user something true and keeping two fixtures, and the fixtures win,
+   because byte-identity is the whole gate. It is documented instead.
 2. **Name sorting becomes ours.** `sort_by_name_paired_end` (`SNPsplit:1394`) shells out to
    `samtools sort -n`. In-memory sorting is not an option for real inputs, so PR 2 has to
    write an external merge sort with disk spill. This is the highest-risk item in the stack.
