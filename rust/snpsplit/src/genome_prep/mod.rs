@@ -36,6 +36,13 @@ fn execute(args: &[String]) -> Result<ExitCode> {
         }
     };
 
+    if opts.help {
+        print!("{}", crate::help::page(crate::Tool::Prepare));
+        return Ok(ExitCode::from(crate::help::exit_status(
+            crate::Tool::Prepare,
+        )));
+    }
+
     if opts.version {
         print!("{}", version::banner(crate::Tool::Prepare));
         return Ok(ExitCode::SUCCESS);

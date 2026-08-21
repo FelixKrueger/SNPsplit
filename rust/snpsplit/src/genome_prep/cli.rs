@@ -14,6 +14,36 @@ pub enum Stop {
     Died(String),
 }
 
+/// The option names this tool registers, in the order the Perl's GetOptions lists them.
+///
+/// Resolution goes through `optmatch`, which reproduces Getopt::Long's case-insensitivity
+/// and prefix matching, so every spelling an existing script might use still works.
+/// Options this port adds. A tie with an option the Perl already had goes to the
+/// original, so no existing abbreviation changes meaning.
+const ADDED: &[&str] = &["parallel", "download", "download_dir", "ensembl_release"];
+
+pub const NAMES: &[&str] = &[
+    "help",
+    "man",
+    "versions",
+    "strain",
+    "strain2",
+    "list_strains",
+    "skip_filtering",
+    "vcf_file",
+    "full_sequence",
+    "nmasking",
+    "no_nmasking",
+    "dual_hybrid",
+    "reference_genome",
+    "genome_build",
+    "v7_VCF",
+    "parallel",
+    "download",
+    "download_dir",
+    "ensembl_release",
+];
+
 /// Everything `process_commandline` resolves before the run proper begins.
 #[derive(Debug, Default)]
 pub struct Options {
@@ -56,10 +86,11 @@ pub fn parse(args: &[String]) -> Result<Options, String> {
             continue;
         };
 
-        let (name, inline) = match body.split_once('=') {
+        let (spelled, inline) = match body.split_once('=') {
             Some((n, v)) => (n, Some(v.to_string())),
             None => (body, None),
         };
+        let name = crate::optmatch::resolve_with(spelled, NAMES, ADDED)?;
 
         // A value-taking option consumes the next argument when there is no `=value`.
         let take_value = |i: &mut usize| -> Result<String, String> {

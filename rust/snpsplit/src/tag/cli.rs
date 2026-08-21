@@ -7,6 +7,35 @@ use anyhow::Result;
 
 use crate::io::RecordReader;
 
+/// The option names this tool registers, in the order the Perl's GetOptions lists them.
+///
+/// Resolution goes through `optmatch`, which reproduces Getopt::Long's case-insensitivity
+/// and prefix matching, so every spelling an existing script might use still works.
+/// Options this port adds. A tie with an option the Perl already had goes to the
+/// original, so no existing abbreviation changes meaning.
+const ADDED: &[&str] = &["parallel"];
+
+pub const NAMES: &[&str] = &[
+    "help",
+    "man",
+    "versions",
+    "output_dir",
+    "SNP_file",
+    "no_sorting",
+    "verbose",
+    "samtools_path",
+    "sam",
+    "paired",
+    "single_end",
+    "hic",
+    "conflicting",
+    "weird",
+    "singletons",
+    "bisulfite",
+    "skip_tag2sort",
+    "parallel",
+];
+
 /// Raw options, before validation.
 #[derive(Debug, Default)]
 pub struct Options {
@@ -64,10 +93,11 @@ pub fn parse(args: &[String]) -> Result<Options, String> {
             continue;
         };
 
-        let (name, inline) = match body.split_once('=') {
+        let (spelled, inline) = match body.split_once('=') {
             Some((n, v)) => (n, Some(v.to_string())),
             None => (body, None),
         };
+        let name = crate::optmatch::resolve_with(spelled, NAMES, ADDED)?;
 
         let take_value = |i: &mut usize| -> Result<String, String> {
             if let Some(v) = inline.clone() {
@@ -109,10 +139,13 @@ pub fn parse(args: &[String]) -> Result<Options, String> {
 /// Validate the options and work out the library type.
 pub fn resolve(mut opts: Options) -> Result<Option<Config>> {
     if opts.files.is_empty() {
+        // The warning alone is not actionable, which is why the Perl follows it with the
+        // whole help page.
         eprintln!(
             "You need to provide one or more SAM/BAM files to start the allele-specific pipeline. Please respecify!"
         );
-        return Ok(None);
+        print!("{}", crate::help::page(crate::Tool::Tag));
+        anyhow::bail!("");
     }
 
     let Some(snp_file) = opts.snp_file.clone() else {

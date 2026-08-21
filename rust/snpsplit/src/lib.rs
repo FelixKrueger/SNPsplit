@@ -1,5 +1,7 @@
 pub mod genome_prep;
+pub mod help;
 pub mod io;
+pub mod optmatch;
 pub mod sort;
 pub mod tag;
 pub mod tool;

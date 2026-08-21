@@ -74,6 +74,11 @@ fn execute(args: &[String]) -> Result<ExitCode> {
         }
     };
 
+    if opts.help {
+        print!("{}", crate::help::page(crate::Tool::Sort));
+        return Ok(ExitCode::from(crate::help::exit_status(crate::Tool::Sort)));
+    }
+
     if opts.version {
         print!("{}", version::banner(crate::Tool::Sort));
         return Ok(ExitCode::SUCCESS);
@@ -83,7 +88,8 @@ fn execute(args: &[String]) -> Result<ExitCode> {
         eprintln!(
             "You need to provide one or more allele-tagged SNPsplit files to start sorting them allele-specifically. Please respecify!\n"
         );
-        return Ok(ExitCode::SUCCESS);
+        print!("{}", crate::help::page(crate::Tool::Sort));
+        return Ok(ExitCode::FAILURE);
     }
 
     // An empty string is meaningful: SNPsplit passes one when it has no directory to add, and

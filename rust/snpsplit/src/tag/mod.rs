@@ -60,6 +60,11 @@ fn execute(args: &[String]) -> Result<ExitCode> {
         }
     };
 
+    if opts.help {
+        print!("{}", crate::help::page(crate::Tool::Tag));
+        return Ok(ExitCode::from(crate::help::exit_status(crate::Tool::Tag)));
+    }
+
     if opts.version {
         print!("{}", version::banner(crate::Tool::Tag));
         return Ok(ExitCode::SUCCESS);
