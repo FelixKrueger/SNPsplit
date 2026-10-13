@@ -73,15 +73,15 @@ pub fn read_genome_into_memory(
             let line = line?;
             let line = line.trim_end_matches('\r');
             if line.starts_with('>') {
-                store(&mut genome, &chromosome_name, &sequence, &name, out, true)?;
-                sequence = Vec::new();
+                let finished = std::mem::take(&mut sequence);
+                store(&mut genome, &chromosome_name, finished, &name, out, true)?;
                 chromosome_name = extract_chromosome_name(line)?;
             } else {
                 sequence.extend(line.bytes().map(|b| b.to_ascii_uppercase()));
             }
         }
 
-        store(&mut genome, &chromosome_name, &sequence, &name, out, false)?;
+        store(&mut genome, &chromosome_name, sequence, &name, out, false)?;
     }
 
     writeln!(out)?;
@@ -95,7 +95,7 @@ pub fn read_genome_into_memory(
 fn store(
     genome: &mut Genome,
     name: &str,
-    sequence: &[u8],
+    mut sequence: Vec<u8>,
     filename: &str,
     out: &mut impl Write,
     mid_file: bool,
@@ -124,7 +124,10 @@ fn store(
     }
 
     writeln!(out, "chr {name} ({} bp)", sequence.len())?;
-    genome.insert(name.to_string(), sequence.to_vec());
+    // Moved rather than copied, so a chromosome is never held twice while loading, and trimmed
+    // to its length: the vector grew by doubling and could be holding nearly twice that.
+    sequence.shrink_to_fit();
+    genome.insert(name.to_string(), sequence);
     Ok(())
 }
 
@@ -251,7 +254,10 @@ pub fn apply_snps(
     full_sequence: bool,
 ) -> (Applied, Option<Vec<u8>>, Option<Vec<u8>>) {
     let mut counts = Applied::default();
-    let mut full = sequence.to_vec();
+    // Copied only when asked for. The checks below read the original sequence, which is
+    // equivalent: positions are sorted and each is examined once, so a base changed here is
+    // never read again.
+    let mut full = full_sequence.then(|| sequence.to_vec());
     let mut masked = if nmasking {
         Some(sequence.to_vec())
     } else {
@@ -268,7 +274,7 @@ pub fn apply_snps(
         }
         last_pos = snp.pos;
 
-        let Some(&base) = full.get(snp.pos.wrapping_sub(1)) else {
+        let Some(&base) = sequence.get(snp.pos.wrapping_sub(1)) else {
             counts.mismatched += 1;
             continue;
         };
@@ -286,13 +292,12 @@ pub fn apply_snps(
             masked[snp.pos - 1] = b'N';
             counts.new_n += 1;
         }
-        if full_sequence {
+        if let Some(full) = full.as_mut() {
             full[snp.pos - 1] = snp.alternative;
             counts.new_snp += 1;
         }
     }
 
-    let full = full_sequence.then_some(full);
     (counts, masked, full)
 }
 

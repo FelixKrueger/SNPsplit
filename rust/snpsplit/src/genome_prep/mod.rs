@@ -649,29 +649,37 @@ fn build_genome(
         .num_threads(crate::io::worker_count(config.parallel).get())
         .build()?;
 
-    let outcomes: Vec<ChromosomeOutcome> = pool.install(|| {
-        use rayon::prelude::*;
-        genome
-            .par_iter()
-            .map(|(chr, sequence)| {
-                one_chromosome(
-                    config, parent, chroms, pass, label, preloaded, chr, sequence,
-                )
-            })
-            .collect()
-    });
+    //
+    // One batch of as many chromosomes as there are workers is in flight at a time, and its
+    // output is written before the next batch starts. Each outcome carries whole modified
+    // chromosomes, so collecting every outcome first held a second copy of the genome in
+    // memory (2.7 GB for GRCm39) on top of the one being read.
+    let entries: Vec<(&String, &Vec<u8>)> = genome.iter().collect();
+    for batch in entries.chunks(pool.current_num_threads()) {
+        let outcomes: Vec<ChromosomeOutcome> = pool.install(|| {
+            use rayon::prelude::*;
+            batch
+                .par_iter()
+                .map(|(chr, sequence)| {
+                    one_chromosome(
+                        config, parent, chroms, pass, label, preloaded, chr, sequence,
+                    )
+                })
+                .collect()
+        });
 
-    for outcome in outcomes {
-        err.write_all(&outcome.log)?;
-        if let Some(e) = outcome.error {
-            return Err(e);
+        for outcome in outcomes {
+            err.write_all(&outcome.log)?;
+            if let Some(e) = outcome.error {
+                return Err(e);
+            }
+            report.write_all(&outcome.report)?;
+            for (path, chr, sequence) in &outcome.writes {
+                genome::write_planned(path, chr, sequence)?;
+            }
+            new_n_total += outcome.new_n;
+            new_snp_total += outcome.new_snp;
         }
-        report.write_all(&outcome.report)?;
-        for (path, chr, sequence) in &outcome.writes {
-            genome::write_planned(path, chr, sequence)?;
-        }
-        new_n_total += outcome.new_n;
-        new_snp_total += outcome.new_snp;
     }
 
     write_summary(

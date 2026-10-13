@@ -122,6 +122,86 @@ pub enum StrainIdentity {
     Second,
 }
 
+/// Every high-confidence SNP, for the gzipped all-SNP list: by chromosome, then by position,
+/// with the first call at a position winning, as the Perl's `%all_SNPs` does.
+///
+/// An MGP strain has around twenty million of them. A map entry per SNP, with the chromosome
+/// name and the formatted line each in their own small allocation, came to about 160 bytes a
+/// SNP, and the allocator does not hand that many small blocks back to the system, so it
+/// stayed resident through the genome build that follows. One vector per chromosome, sorted
+/// once at the end, is 32 bytes a SNP in a handful of large allocations.
+#[derive(Default)]
+struct AllSnps {
+    by_chr: BTreeMap<String, Vec<SnpRecord>>,
+}
+
+struct SnpRecord {
+    pos: u64,
+    line: SnpLine,
+}
+
+enum SnpLine {
+    /// The usual case: single-base alleles, and a position that prints as it parses.
+    Compact { total: u64, reference: u8, alt: u8 },
+    /// Anything else keeps its line verbatim, so the output never depends on the encoding.
+    Verbatim(Box<str>),
+}
+
+impl AllSnps {
+    fn insert(&mut self, chr: &str, pos: &str, total: usize, reference: &str, alt: &str) {
+        let parsed = pos.parse::<u64>().unwrap_or(0);
+        let canonical = !pos.is_empty()
+            && pos.bytes().all(|b| b.is_ascii_digit())
+            && (pos == "0" || !pos.starts_with('0'));
+        let line = match (reference.as_bytes(), alt.as_bytes()) {
+            ([r], [a]) if canonical => SnpLine::Compact {
+                total: total as u64,
+                reference: *r,
+                alt: *a,
+            },
+            _ => SnpLine::Verbatim(
+                format!("{total}\t{chr}\t{pos}\t1\t{reference}/{alt}").into_boxed_str(),
+            ),
+        };
+        let record = SnpRecord { pos: parsed, line };
+        match self.by_chr.get_mut(chr) {
+            Some(records) => records.push(record),
+            None => {
+                self.by_chr.insert(chr.to_string(), vec![record]);
+            }
+        }
+    }
+
+    /// Order each chromosome by position and keep the first call at each. The sort is stable,
+    /// so among calls at one position the earliest read comes first.
+    fn finish(&mut self) {
+        for records in self.by_chr.values_mut() {
+            records.sort_by_key(|r| r.pos);
+            records.dedup_by_key(|r| r.pos);
+        }
+    }
+
+    fn write_lines(&self, out: &mut impl Write) -> std::io::Result<()> {
+        for (chr, records) in &self.by_chr {
+            for record in records {
+                match &record.line {
+                    SnpLine::Compact {
+                        total,
+                        reference,
+                        alt,
+                    } => writeln!(
+                        out,
+                        "{total}\t{chr}\t{}\t1\t{}/{}",
+                        record.pos, *reference as char, *alt as char
+                    )?,
+                    SnpLine::Verbatim(line) => writeln!(out, "{line}")?,
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Everything the filter produces besides the files it writes.
 pub struct FilterOutcome {
     pub report: FilterReport,
@@ -165,8 +245,7 @@ pub fn filter_snps(
     }
 
     let mut report = FilterReport::default();
-    // Keyed by chr:pos, first occurrence wins, as the Perl's %all_SNPs does.
-    let mut all_snps: BTreeMap<(String, u64), String> = BTreeMap::new();
+    let mut all_snps = AllSnps::default();
 
     let mut format_index: Option<usize> = None;
     let mut info_index: Option<usize> = None;
@@ -320,9 +399,7 @@ pub fn filter_snps(
 
         if fi == "1" {
             report.high_confidence += 1;
-            let snp = format!("{}\t{chr}\t{pos}\t1\t{reference}/{alt}", report.total);
-            let key = (chr.to_string(), pos.parse::<u64>().unwrap_or(0));
-            all_snps.entry(key).or_insert(snp);
+            all_snps.insert(chr, pos, report.total, reference, &alt);
         } else {
             report.low_confidence += 1;
             continue;
@@ -347,6 +424,7 @@ pub fn filter_snps(
         fh.flush()?;
     }
 
+    all_snps.finish();
     let all_snps_name = format!("all_SNPs_{strain}_{genome_build}.txt.gz");
     write_reports(
         strain,
@@ -372,7 +450,7 @@ fn write_reports(
     report: &FilterReport,
     v7: bool,
     all_snps_name: &str,
-    all_snps: &BTreeMap<(String, u64), String>,
+    all_snps: &AllSnps,
     _out: &mut impl Write,
     err: &mut impl Write,
 ) -> Result<()> {
@@ -459,7 +537,7 @@ fn write_reports(
 /// The in-process fallback keeps the binary self-sufficient where the Perl would simply not
 /// run. The only difference between the two paths is which failures are possible, never the
 /// content.
-fn write_gzipped(path: &str, snps: &BTreeMap<(String, u64), String>) -> Result<()> {
+fn write_gzipped(path: &str, snps: &AllSnps) -> Result<()> {
     use std::process::{Command, Stdio};
 
     let file = File::create(path).with_context(|| format!("Failed to write to file {path}"))?;
@@ -472,23 +550,18 @@ fn write_gzipped(path: &str, snps: &BTreeMap<(String, u64), String>) -> Result<(
 
     let Ok(mut child) = spawned else {
         let mut gz = flate2::write::GzEncoder::new(file, flate2::Compression::default());
-        for snp in snps.values() {
-            writeln!(gz, "{snp}")?;
-        }
+        snps.write_lines(&mut gz)?;
         gz.finish()
             .with_context(|| format!("Failed to write the SNP list to {path}"))?;
         return Ok(());
     };
 
     {
-        let mut stdin = child.stdin.take().expect("stdin was piped");
-        for snp in snps.values() {
-            // A gzip that has already died closes the pipe, and the write fails rather than
-            // killing us with SIGPIPE. Either way the status check below is what reports it.
-            if writeln!(stdin, "{snp}").is_err() {
-                break;
-            }
-        }
+        // Buffered, since the lines are now formatted one write at a time. A gzip that has
+        // already died closes the pipe, and the write fails rather than killing us with
+        // SIGPIPE; either way the status check below is what reports it.
+        let mut stdin = std::io::BufWriter::new(child.stdin.take().expect("stdin was piped"));
+        let _ = snps.write_lines(&mut stdin).and_then(|()| stdin.flush());
     }
 
     let status = child.wait()?;
