@@ -609,13 +609,14 @@ fixture(
     );
 }
 
-### The two skips create_modified_chromosome counts. This is the one fixture that deliberately writes a
+### The three skips create_modified_chromosome counts. This is the one fixture that deliberately writes a
 ### SNP file disagreeing with its reference, so it bypasses the derive-never-type rule on purpose - and
 ### it is the only way to reach either counter, because a derived annotation always matches.
 ###
 ###   valid    : ref allele matches the reference, snp allele does not  -> applied
 ###   already  : snp allele already present in the reference            -> skipped, counted
 ###   mismatch : neither allele matches the reference                   -> skipped, counted
+###   duplicate: a second call at an applied position, different alt    -> skipped, counted (#133)
 {
     my @valid = (30, 60, 130);
     my $already_pos  = 200;
@@ -635,10 +636,16 @@ fixture(
     my @other = grep { $_ ne $mr } qw(A C G T);
     push @rows, [ $mismatch_pos, 1, "$other[0]/$other[1]" ];
 
+    ### a second call at the first valid position, with an alt the first call did not use. The sort is
+    ### stable, so the first call is the one applied and the full sequence shows which won
+    my $dr = substr($SEQ, $valid[0] - 1, 1);
+    my ($dup_alt) = grep { $_ ne $dr && $_ ne alt_for($dr) } qw(A C G T);
+    push @rows, [ $valid[0], 1, "$dr/$dup_alt" ];
+
     fixture(
         name    => 'ref_mismatch',
         args    => '--skip_filtering --reference_genome genome --strain STRAIN_A --full_sequence',
-        readme  => 'A SNP annotation that disagrees with its reference: one position already carrying the SNP base and one matching neither allele are both skipped, and both are now reported instead of only showing up as the SNP total exceeding the positions changed',
+        readme  => 'A SNP annotation that disagrees with its reference: one position already carrying the SNP base, one matching neither allele, and a second call at an applied position are all skipped, and all three are now reported instead of only showing up as the SNP total exceeding the positions changed',
         genome  => { '1.fa' => fasta('1', $SEQ) },
         snps_in => { 'SNPs_STRAIN_A/chr1.txt' => snp_file('1', @rows) },
     );

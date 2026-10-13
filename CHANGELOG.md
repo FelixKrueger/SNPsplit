@@ -10,6 +10,26 @@
 
 - Output files now carry a `@PG` record naming SNPsplit. The Perl records only the samtools invocations it shells out to, so the tool that did the work never appeared in its own output
 
+### SNPsplit
+
+- A failed SAM to BAM conversion now says which file is incomplete rather than reporting samtools' exit status ([#134](https://github.com/FelixKrueger/SNPsplit/issues/134))
+
+### tag2sort
+
+- A failed BAM write now reports the incomplete files without naming samtools, which is the mechanism rather than the problem ([#134](https://github.com/FelixKrueger/SNPsplit/issues/134))
+
+### SNPsplit_genome_preparation
+
+- A chromosome present in the reference genome but empty is reported as empty, instead of as a chromosome name mismatch ([#129](https://github.com/FelixKrueger/SNPsplit/issues/129))
+
+- A SNP call on a chromosome missing from the VCF's `##contig` header lines aborts with a message naming the chromosome and VCF line, instead of a Perl interpreter error ([#130](https://github.com/FelixKrueger/SNPsplit/issues/130))
+
+- Four VCF header errors no longer leak a script line number, and name the VCF line instead ([#131](https://github.com/FelixKrueger/SNPsplit/issues/131))
+
+- Fixed the dual hybrid report running the two strain names together, as in `strainstrain 2 [AB]` ([#132](https://github.com/FelixKrueger/SNPsplit/issues/132))
+
+- Duplicate SNP positions are now reported, so the SNP total adds up to the positions changed plus those skipped; removed four checks on `substr` that could never fire ([#133](https://github.com/FelixKrueger/SNPsplit/issues/133))
+
 ## v0.9.0 (Release 17 08 2026)
 
 - **Breaking:** all 34 samtools, gzip and gunzip invocations now run without a shell, so paths containing a space or a shell metacharacter work throughout ([#99](https://github.com/FelixKrueger/SNPsplit/issues/99))
