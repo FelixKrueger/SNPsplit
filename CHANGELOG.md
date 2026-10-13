@@ -1,3 +1,9 @@
+## Unreleased
+
+### SNPsplit_genome_preparation
+
+- A VCF position with more than one passing record is now written to the SNP files once, matching the archive, and repeated positions in a SNP file are reported ([#133](https://github.com/FelixKrueger/SNPsplit/issues/133))
+
 ## v0.9.0 (Release 17 08 2026)
 
 - **Breaking:** all 34 samtools, gzip and gunzip invocations now run without a shell, so paths containing a space or a shell metacharacter work throughout ([#99](https://github.com/FelixKrueger/SNPsplit/issues/99))
