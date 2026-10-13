@@ -11,6 +11,13 @@
 SNPsplit has now been updated to work with new release of the [Mouse Genomes Project](https://www.mousegenomes.org/). This means that it will now assume the GRCm39 mouse genome build by default, and use the latest SNP annotation file (v8: [mgp_REL2021_snps.vcf.gz](https://ftp.ebi.ac.uk/pub/databases/mousegenomes/REL-2112-v8-SNPs_Indels/mgp_REL2021_snps.vcf.gz)).
 
 
+## The Rust suite
+
+SNPsplit has been ported to Rust: the same three tools, the same options, the same output,
+as one binary that needs neither Perl nor samtools installed. It is proposed in
+[#89](https://github.com/FelixKrueger/SNPsplit/issues/89) and documented under
+[The Rust suite](https://felixkrueger.github.io/SNPsplit/rust/).
+
 ## Installation
 
 SNPsplit is written in Perl and is executed from the command line. To install SNPsplit simply download the latest release of the code from the [Releases page](https://github.com/FelixKrueger/SNPsplit/releases) and extract the files into a SNPsplit installation folder.

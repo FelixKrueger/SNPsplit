@@ -351,6 +351,16 @@ sub mask_sam_text {
     for my $line (split /^/, $text) {
         ### @PG is a control input, not decoration: check_for_bs reads it to decide library type and
         ### bisulfite mode, so the IDs and PP: chain stay and only the volatile fields are masked.
+        ###
+        ### The exception is the record an implementation's own I/O layer adds. The Perl shells out
+        ### to samtools and inherits one `PN:samtools` record per invocation; a build that reads and
+        ### writes BAM itself adds one `PN:SNPsplit` record instead. Those say how the tool was
+        ### built, not what it produced, and nothing reads them - check_for_bs looks for the
+        ### aligner's record. They are dropped for the same reason their VN: and CL: fields were
+        ### already masked. Every other @PG record is compared as before.
+        if ($line =~ /^\@PG\t/ && $line =~ /\tPN:(?:samtools|SNPsplit)\b/) {
+            next;
+        }
         if ($line =~ /^\@PG/) {
             $line =~ s/\tVN:[^\t\n]*/\tVN:<masked>/g;
             $line =~ s/\tCL:[^\t\n]*/\tCL:<masked>/g;
