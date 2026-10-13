@@ -117,13 +117,10 @@ of per-chromosome FastA files. `--download_dir PATH` says where (default
 
 Two fixtures do not pass, and neither is a difference in what the tools compute.
 
-`bam_write_fails` and `sam2bam_fails` put a deliberately failing `samtools` on the `PATH` to
-prove that a failed BAM write aborts the run rather than leaving a truncated file behind.
-That property holds in the Rust build, but there is no samtools subprocess for the fixtures to
-poison, and the messages they check name samtools explicitly. Printing "samtools failed" from
-a build that never ran samtools would be untrue, so the fixtures stay unlisted until the
-messages name the problem instead of the tool
-([#134](https://github.com/FelixKrueger/SNPsplit/issues/134)).
+`bam_write_fails` and `sam2bam_fails` make samtools fail to prove that a failed BAM write
+aborts the run rather than leaving a truncated file behind. That property holds in the Rust
+build, with the same messages, but there is no samtools subprocess for the fixtures to make
+fail.
 
 One thing the Rust build writes that the Perl does not: a `@PG` record naming itself in the
 output header. The Perl records only the samtools invocations it shells out to, so the tool

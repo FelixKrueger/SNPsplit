@@ -58,9 +58,11 @@ pub fn parse_allele(text: &str) -> Option<Allele> {
 pub fn run(args: &[String]) -> ExitCode {
     match execute(args) {
         Ok(code) => code,
+        // 255 is what a Perl `die` exits with, and SNPsplit reports the sorter's exit status
+        // verbatim, so this is observable in its output.
         Err(e) => {
             eprint!("{e}");
-            ExitCode::FAILURE
+            ExitCode::from(255)
         }
     }
 }

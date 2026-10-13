@@ -278,18 +278,24 @@ fn sam_to_bam(file: &Path, err: &mut impl Write) -> Result<PathBuf> {
         bamfile.display()
     )?;
 
-    // In process. The Perl shells out to `samtools view -bS`, and two fixtures pin that
-    // architecture by putting a failing samtools on PATH; neither can be satisfied without
-    // making every BAM write a subprocess, which is the dependency this port exists to drop.
-    // The property they assert, that a failed write aborts rather than leaving a truncated
-    // file to be tagged, is implemented here by RecordWriter::finish returning a Result.
+    // In process, where the Perl shells out to `samtools view -bS`. A failure to read the
+    // input keeps its own message; a failure to write the BAM is reported as the file being
+    // incomplete, with the same message the Perl prints (#134). sam2bam_fails cannot reach
+    // this path: it makes a samtools subprocess fail, and there is none here.
     let mut reader = RecordReader::open(file)?;
     let header = reader.header().clone();
-    let mut writer = RecordWriter::create(&bamfile, Format::Bam, &header)?;
+    let incomplete = || {
+        anyhow::anyhow!(
+            "SAM to BAM conversion failed, so '{}' is incomplete\n\n",
+            bamfile.display()
+        )
+    };
+    let mut writer =
+        RecordWriter::create(&bamfile, Format::Bam, &header).map_err(|_| incomplete())?;
     for record in reader.by_ref() {
-        writer.write(&header, &record?)?;
+        writer.write(&header, &record?).map_err(|_| incomplete())?;
     }
-    writer.finish()?;
+    writer.finish().map_err(|_| incomplete())?;
 
     writeln!(err, "BAM conversion finished\n")?;
     Ok(bamfile)

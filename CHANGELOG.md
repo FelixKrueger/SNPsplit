@@ -2,7 +2,7 @@
 
 - SNPsplit, tag2sort and SNPsplit_genome_preparation have been ported to Rust and ship as a single binary with no Perl and no samtools needed at runtime ([#89](https://github.com/FelixKrueger/SNPsplit/issues/89))
 
-- 55 of the 57 committed fixtures produce byte-identical output to Perl v0.9.0. The two exceptions both poison samtools to prove a failed BAM write aborts, which a build with no samtools subprocess cannot reach ([#134](https://github.com/FelixKrueger/SNPsplit/issues/134))
+- 55 of the 57 committed fixtures produce byte-identical output to the Perl scripts. The two exceptions both make samtools fail to prove a failed BAM write aborts, which a build with no samtools subprocess cannot reach ([#134](https://github.com/FelixKrueger/SNPsplit/issues/134))
 
 - New option `--parallel N` on all three tools, default 1. Output is byte-identical whatever the worker count, checked by running both fixture suites at two different counts
 

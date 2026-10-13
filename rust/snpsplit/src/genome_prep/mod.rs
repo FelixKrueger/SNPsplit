@@ -602,9 +602,6 @@ fn build_dual_hybrid(
         err,
     )?;
 
-    // The Perl writes these two summaries to the report without the separators its stderr
-    // copy carries, so the file says "strainstrain 2 [AB]" where the terminal says
-    // "strain/strain 2 [A/B]". Reproduced; raised upstream separately.
     Ok(())
 }
 
@@ -658,7 +655,7 @@ fn build_genome(
             .par_iter()
             .map(|(chr, sequence)| {
                 one_chromosome(
-                    config, parent, genome, chroms, pass, label, preloaded, chr, sequence,
+                    config, parent, chroms, pass, label, preloaded, chr, sequence,
                 )
             })
             .collect()
@@ -713,7 +710,6 @@ struct ChromosomeOutcome {
 fn one_chromosome(
     config: &cli::Config,
     parent: &Path,
-    genome: &genome::Genome,
     chroms: &BTreeSet<String>,
     pass: Pass,
     label: &str,
@@ -728,7 +724,6 @@ fn one_chromosome(
     let result = chromosome_body(
         config,
         parent,
-        genome,
         chroms,
         pass,
         label,
@@ -765,7 +760,6 @@ fn one_chromosome(
 fn chromosome_body(
     config: &cli::Config,
     parent: &Path,
-    genome: &genome::Genome,
     chroms: &BTreeSet<String>,
     pass: Pass,
     label: &str,
@@ -815,24 +809,11 @@ fn chromosome_body(
         }
     }
 
-    // The Perl guards this loop with `unless ($chromosomes{$chr})`, and an empty string is
-    // false in Perl, so a chromosome that exists but carries no sequence is reported as a
-    // name mismatch. Reproduced; the misleading diagnostic is raised upstream separately.
+    // A chromosome that is present but carries no sequence has nothing to apply SNPs to. The
+    // Perl used to report it as a name mismatch, because an empty string is false (#129).
     if sequence.is_empty() && pass != Pass::DualHybrid {
-        let err = &mut *log;
-        writeln!(
-            err,
-            "\nThe chromosome name given in the VCF file was '{chr}' and was not found in the reference genome.\nA rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)\nbut the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)"
-        )?;
-        writeln!(
-            err,
-            "The chromosome names in the reference genome folder were:"
-        )?;
-        for name in genome.keys() {
-            writeln!(err, "{name}")?;
-        }
         anyhow::bail!(
-            "[FATAL ERROR] Please ensure that the same version of the genome is used for both VCF annotations and reference genome (FastA files). Exiting...\n\n"
+            "[FATAL ERROR] Chromosome '{chr}' is present in the reference genome but contains no sequence, so its SNPs cannot be applied. Please check the FastA file for chromosome {chr}. Exiting...\n\n"
         );
     }
 
@@ -863,6 +844,14 @@ fn chromosome_body(
     }
 
     writeln!(err, "{} SNPs total for chromosome {chr}", counts.total)?;
+    if counts.duplicate > 0 {
+        let line = format!(
+            "{} positions on chromosome {chr} were listed more than once; only the first SNP call at each was used",
+            counts.duplicate
+        );
+        writeln!(err, "{line}")?;
+        writeln!(report, "{line}")?;
+    }
     if counts.already_carried > 0 {
         let line = format!(
             "{} positions on chromosome {chr} already carried the SNP base and were left alone",
@@ -912,58 +901,31 @@ fn write_summary(
     let strain = &config.strain;
     let strain2 = config.strain2.as_deref().unwrap_or("");
 
-    // Only the first pass leads with two blank lines, and only the third one drops the
-    // separators from the report copy.
-    let (lead, warn_who, report_who) = match pass {
-        Pass::First => (
-            "\n\n",
-            format!("strain {strain}"),
-            format!("strain {strain}"),
-        ),
-        Pass::Second => (
-            "\n",
-            format!("strain 2 [{label}]"),
-            format!("strain 2 [{label}]"),
-        ),
-        Pass::DualHybrid => (
-            "\n",
-            format!("strain/strain 2 [{strain}/{strain2}]"),
-            format!("strainstrain 2 [{strain}{strain2}]"),
-        ),
+    // Only the first pass leads with two blank lines.
+    let (lead, who) = match pass {
+        Pass::First => ("\n\n", format!("strain {strain}")),
+        Pass::Second => ("\n", format!("strain 2 [{label}]")),
+        Pass::DualHybrid => ("\n", format!("strain/strain 2 [{strain}/{strain2}]")),
     };
 
     if config.nmasking {
         writeln!(
             err,
-            "{lead}Summary\n{new_n_total} Ns were newly introduced into the N-masked genome for {warn_who} in total"
+            "{lead}Summary\n{new_n_total} Ns were newly introduced into the N-masked genome for {who} in total"
         )?;
         writeln!(
             report,
-            "\nSummary\n{new_n_total} Ns were newly introduced into the N-masked genome for {report_who} in total"
+            "\nSummary\n{new_n_total} Ns were newly introduced into the N-masked genome for {who} in total"
         )?;
     }
     if config.full_sequence {
-        // The dual pass loses separators in both copies, but not the same ones: stderr says
-        // "strainstrain 2 [A/B]" and the report says the same, while the N-masked line above
-        // drops the slash inside the brackets too. Two adjacent lines, two different
-        // omissions, reproduced exactly and raised upstream separately.
-        let who = if pass == Pass::DualHybrid {
-            format!("strainstrain 2 [{strain}/{strain2}]")
-        } else {
-            warn_who.clone()
-        };
-        let report_who = if pass == Pass::DualHybrid {
-            format!("strainstrain 2 [{strain}/{strain2}]")
-        } else {
-            report_who.clone()
-        };
         writeln!(
             err,
             "{new_snp_total} SNPs were newly introduced into the full sequence genome version for {who} in total\n"
         )?;
         writeln!(
             report,
-            "{new_snp_total} SNPs were newly introduced into the full sequence genome version for {report_who} in total"
+            "{new_snp_total} SNPs were newly introduced into the full sequence genome version for {who} in total"
         )?;
     }
     // Only the first pass ends with a blank line: the Perl's `warn "\n"` sits in the strain-1

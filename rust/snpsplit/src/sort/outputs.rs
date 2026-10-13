@@ -17,6 +17,8 @@ pub struct Sink {
     // Taken by `finish`, which consumes the writer so its final flush can report a failure.
     writer: Option<RecordWriter>,
     header: Header,
+    // As announced, which is how a failed write names it.
+    path: String,
 }
 
 impl Sink {
@@ -31,6 +33,7 @@ impl Sink {
         Ok(Self {
             writer: Some(writer),
             header: header.clone(),
+            path: path.to_string(),
         })
     }
 
@@ -236,7 +239,11 @@ impl Outputs {
         self.yaml_lines.push(format!("{key}: {value}"));
     }
 
-    /// Close every record writer, surfacing any failure.
+    /// Close every record writer, then report every one that failed.
+    ///
+    /// All of them are closed before anything is reported, so one failure does not leave the
+    /// others unflushed, and the message names the incomplete files rather than whatever wrote
+    /// them (#134).
     pub fn finish(&mut self) -> Result<()> {
         let sinks = [
             Some(&mut self.genome1),
@@ -251,8 +258,17 @@ impl Outputs {
             self.g2_ua.as_mut(),
             self.g1_g2.as_mut(),
         ];
+        let mut failed = Vec::new();
         for sink in sinks.into_iter().flatten() {
-            sink.finish()?;
+            if sink.finish().is_err() {
+                failed.push(format!("  {}\n", sink.path));
+            }
+        }
+        if !failed.is_empty() {
+            anyhow::bail!(
+                "failed while writing:\n{}These output files are incomplete\n",
+                failed.concat()
+            );
         }
         Ok(())
     }

@@ -43,12 +43,13 @@ genome:vcf_v7
 # SNPsplit + tag2sort: 24 of 26.
 #
 # bam_write_fails and sam2bam_fails are the exceptions, and neither is a port defect. Both
-# put a failing `samtools` on PATH to prove that a failed BAM write aborts the run rather
-# than leaving a truncated file behind. This build writes BAM itself, so there is no
-# subprocess for the shim to poison, and the abort messages they pin name samtools
-# explicitly. The property they assert is implemented (RecordWriter::finish returns a
-# Result); only the mechanism they use to reach it is gone. Re-expressing them needs the
-# messages to name the problem rather than the tool, which is raised upstream.
+# make samtools fail (a wrapper that fails on genome1, a failing shim on PATH) to prove that
+# a failed BAM write aborts the run rather than leaving a truncated file behind. This build
+# writes BAM itself, so there is no subprocess to fail, and sam2bam_fails also records the
+# two samtools invocations it expects. The property they assert is implemented: every
+# writer is closed and checked, and the abort messages match the Perl's. Only the mechanism
+# the fixtures use to reach it is gone. Inducing the failure through the destination instead
+# (a FIFO whose reader leaves) was tried and is a race, so it was reverted.
 bismark_autodetect
 bismark_autodetect_se
 bisulfite_se

@@ -94,21 +94,6 @@ pub fn detect_strains(path: &Path) -> Result<BTreeMap<String, usize>> {
     Ok(strains)
 }
 
-/// Reproduce the way Perl reports a `die` whose message has no trailing newline.
-///
-/// Perl appends ` at <script> line <n>, <IN> line <m>.` in that case, and four fixtures diff
-/// it. The script line number is masked by the runner, so the value carries no information;
-/// the Perl line is used anyway, as provenance. The input line number is *not* masked and is
-/// genuinely useful, which is the half of this worth keeping.
-///
-/// The underlying defect is the missing newline: an internal message should not be leaking a
-/// script line number to a user at all. Raised upstream separately; emulated here because
-/// byte-identity is the gate and the fixture pins it.
-fn perl_die(message: &str, perl_line: u32, input_line: usize) -> anyhow::Error {
-    let script = std::env::args().next().unwrap_or_default();
-    anyhow::anyhow!("{message} at {script} line {perl_line}, <IN> line {input_line}.\n")
-}
-
 /// Counters the filter reports, in the order the report prints them.
 #[derive(Default)]
 pub struct FilterReport {
@@ -216,21 +201,17 @@ pub fn filter_snps(
             match format_index {
                 Some(i) => writeln!(err, "Using FORMAT field index: {i}")?,
                 None => {
-                    return Err(perl_die(
-                        "Failed to extract index of field 'FORMAT'. Hmmm...",
-                        1001,
-                        input_line,
-                    ));
+                    anyhow::bail!(
+                        "Failed to extract index of field 'FORMAT' from the VCF header (line {input_line}). Hmmm...\n"
+                    );
                 }
             }
             match info_index {
                 Some(i) => writeln!(err, "Using INFO field index: {i}")?,
                 None => {
-                    return Err(perl_die(
-                        "Failed to extract index of field 'INFO'. Hmmm...",
-                        1007,
-                        input_line,
-                    ));
+                    anyhow::bail!(
+                        "Failed to extract index of field 'INFO' from the VCF header (line {input_line}). Hmmm...\n"
+                    );
                 }
             }
             continue;
@@ -247,8 +228,8 @@ pub fn filter_snps(
         let pos = get(1);
         let reference = get(3);
         let mut alt = get(4).to_string();
-        let info = info_index.map(&get).unwrap_or("");
-        let format = format_index.map(&get).unwrap_or("");
+        let info = info_index.map(get).unwrap_or("");
+        let format = format_index.map(get).unwrap_or("");
         let sample = get(strain_index);
 
         if gt_index.is_none() {
@@ -260,11 +241,9 @@ pub fn filter_snps(
                     writeln!(err, "Setting GT index to >>{i}<<")?;
                 }
                 None => {
-                    return Err(perl_die(
-                        "Failed to extract GT index. I am afraid this will need some manual looking into...",
-                        1044,
-                        input_line,
-                    ));
+                    anyhow::bail!(
+                        "Failed to extract GT index from the FORMAT field of the first SNP call (VCF line {input_line}). I am afraid this will need some manual looking into...\n"
+                    );
                 }
             }
             match keys.iter().position(|k| *k == "FI") {
@@ -273,11 +252,9 @@ pub fn filter_snps(
                     writeln!(err, "Setting FI index to >>{i}<<")?;
                 }
                 None => {
-                    return Err(perl_die(
-                        "Failed to extract FI index. I am afraid this will need some manual looking into...",
-                        1051,
-                        input_line,
-                    ));
+                    anyhow::bail!(
+                        "Failed to extract FI index from the FORMAT field of the first SNP call (VCF line {input_line}). I am afraid this will need some manual looking into...\n"
+                    );
                 }
             }
         }
@@ -351,15 +328,13 @@ pub fn filter_snps(
             continue;
         }
 
-        // A chromosome that appears in the body but was never declared in a ##contig header
-        // has no filehandle. The Perl reaches `print {$fhs{$chr}}` with an undefined value and
-        // the interpreter aborts; the fixture pins that abort, so the run has to end here too.
+        // One handle exists per ##contig header line, so a chromosome the header never
+        // declared has none. Checked here, at the point of use, so a low-confidence call on an
+        // undeclared contig is still filtered out rather than aborting the run (#130).
         let Some(fh) = handles.get_mut(chr) else {
-            return Err(perl_die(
-                "Can't use an undefined value as a symbol reference",
-                1190,
-                input_line,
-            ));
+            anyhow::bail!(
+                "The SNP call on VCF line {input_line} is on chromosome '{chr}', which is not declared in a ##contig line of the VCF header.\nPlease make sure the VCF header declares every chromosome its SNP calls use. Exiting...\n\n"
+            );
         };
         writeln!(
             fh,

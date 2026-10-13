@@ -233,6 +233,7 @@ pub fn complement(base: u8) -> u8 {
 #[derive(Default)]
 pub struct Applied {
     pub total: usize,
+    pub duplicate: usize,
     pub already_carried: usize,
     pub mismatched: usize,
     pub new_n: usize,
@@ -261,6 +262,8 @@ pub fn apply_snps(
     for snp in snps {
         counts.total += 1;
         if snp.pos == last_pos {
+            // The first call at a position is the one applied; the sort is stable.
+            counts.duplicate += 1;
             continue;
         }
         last_pos = snp.pos;
@@ -416,11 +419,11 @@ mod tests {
         assert_eq!(counts.new_n, 0);
     }
 
-    /// Duplicate positions are skipped but still counted in the total, which is why the total
-    /// does not always reconcile with the applied and skipped counts. Reproduced, and raised
-    /// upstream separately.
+    /// Duplicate positions stay in the total, which means "positions read", and are counted
+    /// on their own so the total reconciles with the applied and skipped counts (#133). The
+    /// first call wins, which the full sequence shows.
     #[test]
-    fn a_duplicate_position_is_counted_but_applied_once() {
+    fn a_duplicate_position_is_counted_and_applied_once() {
         let seq = b"ACGT".to_vec();
         let snps = vec![
             Snp {
@@ -431,11 +434,13 @@ mod tests {
             Snp {
                 pos: 1,
                 reference: b'A',
-                alternative: b'C',
+                alternative: b'G',
             },
         ];
-        let (counts, _, _) = apply_snps(&seq, &snps, true, false);
+        let (counts, _, full) = apply_snps(&seq, &snps, true, true);
         assert_eq!(counts.total, 2);
+        assert_eq!(counts.duplicate, 1);
         assert_eq!(counts.new_n, 1);
+        assert_eq!(full.unwrap(), b"CCGT".to_vec());
     }
 }

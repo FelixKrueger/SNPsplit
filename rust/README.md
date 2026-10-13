@@ -171,12 +171,6 @@ person has to rediscover.
   where the Perl would not run at all. The two paths differ in which failures are possible,
   never in content. Reading a gzipped VCF is in process unconditionally: no fixture depends on
   that being a subprocess, and not forking is strictly better.
-- **Perl `die` suffixes are emulated.** Four genome fixtures diff messages that Perl stamps
-  with ` at <script> line <n>, <IN> line <m>.` because the `die` string has no trailing
-  newline. The script line number is masked by the runner and carries no information; the
-  input line number is not masked and is genuinely useful. The Rust build prints the same
-  shape, using the Perl line numbers as provenance. The real fix is a trailing newline in the
-  three `die` calls, which is raised upstream separately.
 
 ### The `@PG` chain
 
@@ -199,26 +193,32 @@ before.
 
 ### Two alignment fixtures are not listed
 
-`bam_write_fails` and `sam2bam_fails` both put a failing `samtools` on `PATH` to prove that a
-failed BAM write aborts the run rather than leaving a truncated file behind. This build
-writes BAM itself, so there is no subprocess for the shim to poison, and the abort messages
-they pin name samtools explicitly:
+`bam_write_fails` and `sam2bam_fails` make samtools fail to prove that a failed BAM write
+aborts the run rather than leaving a truncated file behind: a samtools wrapper that fails
+when writing genome1, and a failing samtools first on `PATH`. This build writes BAM itself,
+so there is no subprocess to fail.
+
+The property they assert is implemented. `RecordWriter::finish` returns a `Result`, the
+sorter closes every writer before reporting the ones that failed, and the messages are the
+Perl's, which no longer name samtools (#134):
 
 ```
-samtools failed while writing:
+failed while writing:
   bam_write_fails.genome1.bam
 These output files are incomplete
 ```
 
 ```
-SAM to BAM conversion failed with exit status 127
+SAM to BAM conversion failed, so 'sam2bam_fails.bam' is incomplete
 ```
 
-The property they assert is implemented: `RecordWriter::finish` returns a `Result` and a
-failed write aborts. Only the mechanism they use to reach it is gone. Printing "samtools
-failed" from a build that never ran samtools would be the same false claim as the `@PG`
-records, so the fixtures stay unlisted until the messages name the problem rather than the
-tool. Raised upstream.
+Only the mechanism the fixtures use to reach that path is gone. Inducing the failure through
+the destination instead, a FIFO whose reader leaves at once, was tried: it is a race between
+the reader closing and the writer flushing, and it hung once, so it was reverted.
+`/dev/full` would do it deterministically but exists only on Linux.
+
+The sorter exits 255 on an error, as a Perl `die` does, because the tagger reports its exit
+status verbatim.
 
 ### Pauses
 
@@ -244,17 +244,5 @@ worse than one that is obviously not, so there is none.
 
 These look like port bugs in a diff and are not. Each is raised upstream on its own.
 
-- An **empty chromosome** is reported as a chromosome-name mismatch. `create_modified_chromosome`
-  guards on `unless ($chromosomes{$chr})`, and an empty string is false in Perl, so a
-  chromosome that exists but carries no sequence takes the "not found in the reference
-  genome" path.
-- A **chromosome present in the VCF body but never declared in a `##contig` header** aborts
-  the run with `Can't use an undefined value as a symbol reference`: there is no filehandle
-  for it, and the Perl reaches `print {$fhs{$chr}}` with an undefined value.
 - **`Clearing SNP array...`** is printed for every chromosome with no SNP file. It announces
   assigning an empty list to a list that is already empty.
-- The **dual hybrid report drops separators** that its stderr copy carries, differently on two
-  adjacent lines: the N-masked line says `strainstrain 2 [AB]` and the full-sequence line says
-  `strainstrain 2 [A/B]`, where stderr says `strain/strain 2 [A/B]` for both.
-- **Duplicate SNP positions are counted before being skipped**, so the per-chromosome total
-  does not reconcile with the applied and skipped counts.
