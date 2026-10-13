@@ -1,3 +1,4 @@
+1 positions on chromosome 1 were listed more than once; only the first SNP call at each was used
 1 positions on chromosome 1 already carried the SNP base and were left alone
 1 positions on chromosome 1 were skipped because the reference base did not match the annotation
 3 positions on chromosome 1 were changed to 'N'

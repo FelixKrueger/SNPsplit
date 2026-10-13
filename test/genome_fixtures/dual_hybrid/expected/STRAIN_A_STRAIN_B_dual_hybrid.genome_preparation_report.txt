@@ -15,5 +15,5 @@ Reading and storing all new SNPs with Ref/SNP: STRAIN_A/STRAIN_B from 'all_STRAI
 
 
 Summary
-16 Ns were newly introduced into the N-masked genome for strainstrain 2 [STRAIN_ASTRAIN_B] in total
-16 SNPs were newly introduced into the full sequence genome version for strainstrain 2 [STRAIN_A/STRAIN_B] in total
+16 Ns were newly introduced into the N-masked genome for strain/strain 2 [STRAIN_A/STRAIN_B] in total
+16 SNPs were newly introduced into the full sequence genome version for strain/strain 2 [STRAIN_A/STRAIN_B] in total

@@ -18,4 +18,6 @@ Using INFO field index: 7
 GT index not defined, checking...
 Setting GT index to >>0<<
 Setting FI index to >>3<<
-Can't use an undefined value as a symbol reference at <scratch>/bin/SNPsplit_genome_preparation line <n>, <IN> line 3.
+The SNP call on VCF line 3 is on chromosome '1', which is not declared in a ##contig line of the VCF header.
+Please make sure the VCF header declares every chromosome its SNP calls use. Exiting...
+

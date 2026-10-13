@@ -263,10 +263,9 @@ Four were written to pin behaviour that was wrong and now assert the fix, since 
   `--skip_filtering` skips. It now builds all six genomes from committed SNP files with no VCF at all,
   which is the only fixture reaching `read_snp_files` against pre-made archives.
 
-**`empty_chromosome`** reaches the Ensembl-versus-UCSC abort from the other direction: a header-only
-FastA entry is stored as the empty string, which is falsy, so the per-chromosome check fires for a
-chromosome that *is* present — reporting it as not found and then listing it among the names it found.
-That path is unchanged and still worth knowing about.
+**`empty_chromosome`** is a header-only FastA entry, stored as the empty string. That is falsy, so the
+per-chromosome check used to report a chromosome that *is* present as not found, and then list it among
+the names it found. It now gets its own message saying the sequence is empty (#129).
 
 **`no_format_column`** renames the `FORMAT` column rather than deleting it. Deleting it leaves nine
 columns, `detect_strains` skips indices up to 8, and the run dies earlier on an empty strain list, which
@@ -279,8 +278,10 @@ identical.
 
 **`ref_mismatch`** is the only fixture that deliberately writes a SNP annotation disagreeing with its
 reference, so it is the one exception to the derive-never-type rule above — and the only way to reach
-either skip counter, because a derived annotation always matches. It pins that 5 SNPs total, 3 applied,
-1 already present and 1 mismatched all appear, rather than leaving two positions unaccounted for (#112).
+any skip counter, because a derived annotation always matches. It pins that 6 SNPs total, 3 applied,
+1 already present, 1 mismatched and 1 duplicate all appear, rather than leaving positions unaccounted for
+(#112, #133). The duplicate is a second call at an applied position with a different alt, so the full
+sequence also shows that the first call is the one applied.
 
 **`bam_write_fails`** stages a samtools that runs normally and then reports failure when writing
 genome1. Exiting straight away would be a different test: that kills `tag2sort` mid-write and was already
