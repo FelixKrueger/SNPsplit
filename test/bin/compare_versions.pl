@@ -39,17 +39,41 @@ usage(0) if $help;
 usage(1) unless defined $bam and defined $snps;
 $bam  = abs_path($bam);
 $snps = abs_path($snps);
-die "No such BAM: $bam\n"       unless -e $bam;
-die "No such SNP file: $snps\n" unless -e $snps;
+bail("No such BAM: $bam")       unless -e $bam;
+bail("No such SNP file: $snps") unless -e $snps;
 
 my $repo = abs_path(File::Spec->catdir(dirname(__FILE__), '..', '..'));
 
 ### SNPsplit tests --samtools_path with -e, so a bare program name is rejected. Resolved here rather
 ### than passed through, so the same binary is used for both runs and for the comparison.
 $samtools = defined $samtools ? abs_path($samtools) : which('samtools');
-die "samtools not found; pass --samtools PATH\n" unless defined $samtools && -x $samtools;
+bail("samtools not found; pass --samtools PATH") unless defined $samtools && -x $samtools;
 $outdir = defined $outdir ? abs_path($outdir)
                           : File::Spec->catdir(($ENV{TMPDIR} || '/tmp'), "snpsplit_compare_$$");
+
+### Both revisions are resolved before anything runs. Discovering a typo, or that the two sides are the
+### same commit, after the first run has finished costs an hour on a real library - which is the only
+### kind of input this script is for.
+my @sha;
+for my $rev ($old, $new) {
+    my $sha = `git -C '$repo' rev-parse --verify --quiet '$rev^{commit}' 2>/dev/null`;
+    chomp $sha;
+    unless (length $sha) {
+	warn "'$rev' is not a revision in $repo.\n";
+	my @tags = `git -C '$repo' tag`;
+	chomp @tags;
+	warn "Tags available: @{[ join ' ', @tags ]}\n";
+	bail("Pass a tag, branch or commit that exists.");
+    }
+    push @sha, substr($sha,0,7);
+}
+
+### A local branch nobody updated resolves silently to whatever it last pointed at, and comparing it
+### against itself produces a confident "no change" that says nothing about either version.
+if ($sha[0] eq $sha[1]) {
+    warn "'$old' and '$new' are both $sha[0]. There is nothing to compare.\n";
+    bail("A local branch is probably stale - try 'origin/master', or fetch and fast-forward it.");
+}
 
 warn "Comparing '$old' against '$new'\n";
 warn "BAM:       $bam\n";
@@ -57,6 +81,7 @@ warn "SNP file:  $snps\n";
 warn "Workspace: $outdir\n\n";
 
 my %ran;
+my @resolved;
 for my $rev ($old, $new) {
     my $label = label_for($rev);
     my $dir   = File::Spec->catdir($outdir, $label);
@@ -69,6 +94,16 @@ for my $rev ($old, $new) {
         run("git -C '$repo' show '$rev:$script' > '$dst'");
         chmod 0755, $dst;
     }
+
+    ### What the revision actually resolved to, and what it calls itself. A local branch that was never
+    ### updated resolves silently to whatever it last pointed at: 'master' compared against 'master'
+    ### once produced a confident "no change" because both sides were the same stale commit.
+    my $sha = `git -C '$repo' rev-parse --short '$rev^{commit}'`;
+    chomp $sha;
+    my ($stamp) = map { /_version = '([^']+)'/ ? $1 : () }
+                  split /^/, slurp(File::Spec->catfile($dir, 'SNPsplit'));
+    warn "[$label] $rev is $sha, and reports version @{[ $stamp || '?' ]}\n";
+    push @resolved, { label => $label, rev => $rev, sha => $sha, stamp => $stamp };
 
     my $work = File::Spec->catdir($dir, 'run');
     make_path($work);
@@ -154,6 +189,14 @@ exit $verdict;
 
 ###############################################################################
 
+### Everything that means "could not compare" leaves the same status, so a caller can tell that apart
+### from "compared, and something changed".
+sub bail {
+    my ($msg) = @_;
+    warn "$msg\n";
+    exit 2;
+}
+
 sub label_for { my $r = shift; $r =~ s/[^A-Za-z0-9._-]/_/g; return $r }
 
 sub listing {
@@ -177,6 +220,15 @@ sub same {
 sub run {
     my ($cmd) = @_;
     system($cmd) == 0 or die "failed: $cmd\n";
+}
+
+sub slurp {
+    my ($file) = @_;
+    open my $fh, '<', $file or return '';
+    local $/;
+    my $c = <$fh>;
+    close $fh;
+    return defined $c ? $c : '';
 }
 
 sub which {

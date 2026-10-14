@@ -37,6 +37,7 @@ Not included into STRAIN_A genome:
 0		had no clearly defined alternative base
 1		Calls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)
 2		were homozygous but the filtering call was low confidence
+0		repeated a position already included; only the first record was used
 
 Now printing a single list of all SNPs to >all_SNPs_STRAIN_A_TESTBUILD.txt.gz<...
 complete
@@ -86,6 +87,7 @@ Not included into STRAIN_B genome:
 0		had no clearly defined alternative base
 0		Calls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)
 2		were homozygous but the filtering call was low confidence
+0		repeated a position already included; only the first record was used
 
 Now printing a single list of all SNPs to >all_SNPs_STRAIN_B_TESTBUILD.txt.gz<...
 complete
@@ -152,7 +154,7 @@ Writing full sequence output to: <scratch>/STRAIN_A_STRAIN_B_dual_hybrid.based_o
 
 Summary
 16 Ns were newly introduced into the N-masked genome for strain/strain 2 [STRAIN_A/STRAIN_B] in total
-16 SNPs were newly introduced into the full sequence genome version for strainstrain 2 [STRAIN_A/STRAIN_B] in total
+16 SNPs were newly introduced into the full sequence genome version for strain/strain 2 [STRAIN_A/STRAIN_B] in total
 
 All done. Genome(s) are now ready to be indexed with your favourite aligner!
 FYI, aligners shown to work with SNPsplit are Bowtie2, STAR, HISAT2, HiCUP and Bismark (STAR and Hisat2 require disabling soft-clipping, please check the SNPsplit manual for details)

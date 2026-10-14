@@ -1072,7 +1072,7 @@ be assigned to a specific allele, and they are one of the following:
 
 --paired               Paired-end mode. (Default: OFF).
 
--o/--outdir <dir>      Write all output files into this directory. By default the output files will be written into
+-o/--output_dir <dir>  Write all output files into this directory. By default the output files will be written into
                        the same folder as the input file(s).
 
 --singletons           If the allele-tagged paired-end file also contains singleton alignments (which is the
@@ -1291,7 +1291,8 @@ sub open_bam_writer {
 ### Each writer is a pipe to samtools, so close is the only place a write failure can be seen: the pipe
 ### opens before samtools runs and its stderr is discarded. Every handle is closed, including the Hi-C
 ### and singleton ones that used to be left to process exit, and a failure aborts - a truncated BAM is
-### worse than none, because whatever reads it next will read part of the data and not notice
+### worse than none, because whatever reads it next will read part of the data and not notice. The
+### message names the problem rather than the tool, since the files are incomplete whatever wrote them
 sub close_bam_writers {
 
     my @failed;
@@ -1304,7 +1305,7 @@ sub close_bam_writers {
     @bam_writers = ();
 
     if (@failed){
-	die "samtools failed while writing:\n" . join('',map {"  $_\n"} @failed)
+	die "failed while writing:\n" . join('',map {"  $_\n"} @failed)
 	  . "These output files are incomplete\n";
     }
 

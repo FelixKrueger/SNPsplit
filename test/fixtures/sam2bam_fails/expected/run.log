@@ -20,5 +20,5 @@ Input format:			Single-End
 File appears to be in SAM format and needs conversion into BAM format first
 Now converting 'sam2bam_fails.sam' to 'sam2bam_fails.bam' ...
 samtools: shim reached - --samtools_path was ignored
-SAM to BAM conversion failed with exit status 127
+SAM to BAM conversion failed, so 'sam2bam_fails.bam' is incomplete
 

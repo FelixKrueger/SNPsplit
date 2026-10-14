@@ -271,12 +271,12 @@ if ($dual_hybrid){
 
     if ($nmasking){
 		warn "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain/strain 2 [${strain}/$strain2] in total\n";
-		print REPORT "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strainstrain 2 [${strain}$strain2] in total\n";
+		print REPORT "\nSummary\n$new_n_total Ns were newly introduced into the N-masked genome for strain/strain 2 [${strain}/$strain2] in total\n";
     }
 
     if ($full_sequence){
-		warn "$new_snp_total SNPs were newly introduced into the full sequence genome version for strainstrain 2 [${strain}/$strain2] in total\n\n";
-		print REPORT "$new_snp_total SNPs were newly introduced into the full sequence genome version for strainstrain 2 [${strain}/$strain2] in total\n";
+		warn "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain/strain 2 [${strain}/$strain2] in total\n\n";
+		print REPORT "$new_snp_total SNPs were newly introduced into the full sequence genome version for strain/strain 2 [${strain}/$strain2] in total\n";
     }
     close REPORT;
 
@@ -595,13 +595,18 @@ sub create_modified_chromosome {
     
     my ($chr,$strain) = @_; # $strain may be strain 1 or 2
     warn "Processing chromosome $chr (for strain $strain)\n";
-    unless ($chromosomes{$chr}){
+    ### Tested with exists rather than for truth: an empty sequence is false in Perl, and a chromosome that
+    ### is present but empty was reported as a naming mismatch, next to a list that contained its name
+    unless (exists $chromosomes{$chr}){
 		warn "\nThe chromosome name given in the VCF file was '$chr' and was not found in the reference genome.\nA rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)\nbut the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)\n";
 		warn "The chromosome names in the reference genome folder were:\n";
 		foreach my $c (sort keys %chromosomes){
 			warn "$c\n";
 		}
 		die "[FATAL ERROR] Please ensure that the same version of the genome is used for both VCF annotations and reference genome (FastA files). Exiting...\n\n";
+    }
+    unless (length $chromosomes{$chr}){
+		die "[FATAL ERROR] Chromosome '$chr' is present in the reference genome but contains no sequence, so its SNPs cannot be applied. Please check the FastA file for chromosome $chr. Exiting...\n\n";
     }
 
     my $sequence = $chromosomes{$chr};
@@ -623,15 +628,16 @@ sub create_modified_chromosome {
 
     my $already = 0;
     my $warn = 0;
+    my $duplicate = 0;
     my $new_n = 0;
     my $new_snp = 0;
 
     foreach my $snp (@snps) {
 	# Apply the SNP
-	++$count;
+	++$count; # positions read, including the duplicates skipped below
 	# warn "$snp->[0]\t$snp->[1]/$snp->[2]\n";
 	if ($snp->[0] == $lastPos) {
-	    # Duplicate SNP
+	    ++$duplicate;
 	    next;
 	}
       
@@ -655,18 +661,12 @@ sub create_modified_chromosome {
 		
 		### N-masking 
 		if ($nmasking){ # default
-			my $return =  substr($n_sequence,($snp->[0])-1,1,'N');  # Replacing the base with 'N'
-			unless ($return){
-			warn "Replacing failed...\n";
-			}
+			substr($n_sequence,($snp->[0])-1,1,'N');  # Replacing the base with 'N'
 			++$new_n;
 		}
 	
 		if ($full_sequence){
-			my $return = substr($sequence,$snp->[0]-1,1,$snp->[2]); # Replacing the reference with the SNP base
-			unless ($return){
-				warn "Replacing failed...\n";
-			}
+			substr($sequence,$snp->[0]-1,1,$snp->[2]); # Replacing the reference with the SNP base
 			++$new_snp;
 		}
     }
@@ -683,7 +683,7 @@ sub create_modified_chromosome {
     }
     
     warn "$count SNPs total for chromosome $chr\n";
-    report_skipped_positions($chr,$already,$warn);
+    report_skipped_positions($chr,$already,$warn,$duplicate);
     if ($nmasking){ # default
 		warn "$new_n positions on chromosome $chr were changed to 'N'\n";
 		print REPORT "$new_n positions on chromosome $chr were changed to 'N'\n";
@@ -696,12 +696,10 @@ sub create_modified_chromosome {
 
 }
 
-### Both skips were counted and never mentioned, so the only sign of them was the SNP total not
-### matching the number of positions changed. A reference base that disagrees with the annotation is
-### the one worth seeing: it means the VCF and the genome are not the same sequence
+### Every SNP read but not applied is reported here
 sub report_skipped_positions {
 
-    my ($chr,$already,$mismatched) = @_;
+    my ($chr,$already,$mismatched,$duplicate) = @_;
 
     if ($already){
 	warn "$already positions on chromosome $chr already carried the SNP base and were left alone\n";
@@ -710,6 +708,10 @@ sub report_skipped_positions {
     if ($mismatched){
 	warn "$mismatched positions on chromosome $chr were skipped because the reference base did not match the annotation\n";
 	print REPORT "$mismatched positions on chromosome $chr were skipped because the reference base did not match the annotation\n";
+    }
+    if ($duplicate){
+	warn "$duplicate entries on chromosome $chr repeated a position already listed; only the first entry was used\n";
+	print REPORT "$duplicate entries on chromosome $chr repeated a position already listed; only the first entry was used\n";
     }
 
 }
@@ -728,24 +730,16 @@ sub create_modified_chromosome_dual_hybrid {
 
     my $count = 0;
 
-    my $lastPos = 0;
-
     my $already = 0;
     my $warn = 0;
     my $new_n = 0;
     my $new_snp = 0;
 
+   ### Positions are hash keys here, so unlike the single-strain loop there are no duplicates to skip
    foreach my $pos (sort {$a <=> $b} keys %{$snps_dual_genome{$chr}}) {
 
        # Apply the SNP
        ++$count;
-
-       if ($pos == $lastPos) {
-	   # Duplicate SNP
-	   next;
-       }
-    
-       $lastPos = $pos;
 	
        # Check if the reference base is the same as the SNP base
        if (substr ($sequence,$pos-1,1) eq $snps_dual_genome{$chr}->{$pos}->{snp}) {
@@ -765,18 +759,12 @@ sub create_modified_chromosome_dual_hybrid {
 	
        ### N-masking 
        if ($nmasking){ # default
-	   my $return =  substr($n_sequence,$pos-1,1,'N');  # Replacing the base with 'N'
-	   unless ($return){
-	       warn "Replacing failed...\n";
-	   }
+	   substr($n_sequence,$pos-1,1,'N');  # Replacing the base with 'N'
 	   ++$new_n;
        }
        
        if ($full_sequence){
-			my $return = substr($sequence,$pos-1,1,$snps_dual_genome{$chr}->{$pos}->{snp}); # Replacing the reference with the SNP base
-			unless ($return){
-				warn "Replacing failed...\n";
-			}
+			substr($sequence,$pos-1,1,$snps_dual_genome{$chr}->{$pos}->{snp}); # Replacing the reference with the SNP base
 	   	++$new_snp;
        }
    }
@@ -793,7 +781,7 @@ sub create_modified_chromosome_dual_hybrid {
     }
     
     warn "$count SNPs total for chromosome $chr\n";
-    report_skipped_positions($chr,$already,$warn);
+    report_skipped_positions($chr,$already,$warn,0);
     if ($nmasking){ # default
 	warn "$new_n positions on chromosome $chr were changed to 'N'\n";
 	print REPORT "$new_n positions on chromosome $chr were changed to 'N'\n";
@@ -948,6 +936,7 @@ sub filter_relevant_SNP_calls_from_VCF{
     my %fhs;
     my $hcg_count = 0;
     my $low_confidence = 0;
+    my $repeated = 0;
     my $same = 0;
     my $homozygous = 0;
 
@@ -998,13 +987,13 @@ sub filter_relevant_SNP_calls_from_VCF{
 				warn "Using FORMAT field index: $format_index\n";
 			}
 			else{
-				die "Failed to extract index of field 'FORMAT'. Hmmm...";
+				die "Failed to extract index of field 'FORMAT' from the VCF header (line $.). Hmmm...\n";
 			}
 			if (defined $info_index){
 				warn "Using INFO field index: $info_index\n";
 			}
 			else{
-				die "Failed to extract index of field 'INFO'. Hmmm...";
+				die "Failed to extract index of field 'INFO' from the VCF header (line $.). Hmmm...\n";
 			}
 			next;	
 		}
@@ -1041,14 +1030,14 @@ sub filter_relevant_SNP_calls_from_VCF{
 				warn "Setting GT index to >>$strain_hash{'GT'}<<\n";
 			}
 			else{
-				die "Failed to extract GT index. I am afraid this will need some manual looking into..."
+				die "Failed to extract GT index from the FORMAT field of the first SNP call (VCF line $.). I am afraid this will need some manual looking into...\n";
 			}
 			if(exists($strain_hash{'FI'})){
 				$fi_index = $strain_hash{'FI'};
 				warn "Setting FI index to >>$strain_hash{'FI'}<<\n";
 			}
 			else{
-				die "Failed to extract FI index. I am afraid this will need some manual looking into..."
+				die "Failed to extract FI index from the FORMAT field of the first SNP call (VCF line $.). I am afraid this will need some manual looking into...\n";
 			}
 		}
 
@@ -1164,18 +1153,18 @@ sub filter_relevant_SNP_calls_from_VCF{
 	# Looking at the Filtering tag now
 	# warn "$fi\n"; sleep(1);
 	if ($fi == 1){
+	    ### The first passing record at a position is the one used, in the SNP files and the archive alike
+	    if (exists $all_SNPs{$location} ){
+		++$repeated;
+		next;
+	    }
 	    ++$hcg_count;
 	   
 	    my $SNP = join ("\t",$count,$chr,$pos,'1',join ("\/",$ref,$alt));
 	    # field 4: 1 means top strand, -1 means reverse strand
 	    # warn "$SNP\n";sleep(1);
 	    
-	    if (exists $all_SNPs{$location} ){
-		# warn "SNP $all_SNPs{$location} position was present already\n";
-	    }
-	    else{
-		$all_SNPs{$location} = $SNP;
-	    }
+	    $all_SNPs{$location} = $SNP;
 	}
 	else{
 	    ++$low_confidence;
@@ -1187,6 +1176,11 @@ sub filter_relevant_SNP_calls_from_VCF{
 	# Variation ID    Chromosome name Position on Chromosome (bp)     Strand  Allele
 	# rs2020560       10      98212004        1       A/T
 	
+	### One filehandle exists per ##contig header line, so a chromosome the header never declared has
+	### none. VCFs subset by tools that do not rewrite the header are the usual way to get one
+	unless ($fhs{$chr}){
+	    die "The SNP call on VCF line $. is on chromosome '$chr', which is not declared in a ##contig line of the VCF header.\nPlease make sure the VCF header declares every chromosome its SNP calls use. Exiting...\n\n";
+	}
 	print {$fhs{$chr}} join ("\t",$count,$chr,$pos,'1',join ("\/",$ref,$alt),$strain),"\n";
 	
     }
@@ -1207,7 +1201,8 @@ sub filter_relevant_SNP_calls_from_VCF{
     warn "$same\thad the same sequence as the reference\n";
     warn "$too_many\t\thad no clearly defined alternative base\n";
     warn "$other\t\tCalls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)\n";
-    warn "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
+    warn "$low_confidence\t\twere homozygous but the filtering call was low confidence\n";
+    warn "$repeated\t\trepeated a position already included; only the first record was used\n\n";
 
     print REPORT "SNP position summary for strain $strain (based on genome build $genome_build)\n";
     print REPORT "="x75,"\n\n";
@@ -1221,7 +1216,8 @@ sub filter_relevant_SNP_calls_from_VCF{
     print REPORT "$same\thad the same sequence as the reference\n";
     print REPORT "$too_many\t\thad no clearly defined alternative base\n";
     print REPORT "$other\t\tCalls were neither 0/0 (same as reference) or 1/1, 2/2, 3/3 (homozygous SNP)\n";
-    print REPORT "$low_confidence\t\twere homozygous but the filtering call was low confidence\n\n";
+    print REPORT "$low_confidence\t\twere homozygous but the filtering call was low confidence\n";
+    print REPORT "$repeated\t\trepeated a position already included; only the first record was used\n\n";
     
   
     # Also writing all SNP calls out to an all-SNP file

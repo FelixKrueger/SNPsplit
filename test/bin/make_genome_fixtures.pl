@@ -9,9 +9,8 @@ use Cwd qw(abs_path);
 ### Authors every genome-preparation fixture: references, VCFs, pre-made SNP files, args and markers.
 ###
 ### Every VCF REF base is read out of the reference the VCF is written against, never typed, and
-### asserted afterwards. A REF that disagrees with the reference is skipped silently by
-### create_modified_chromosome:626 - the counter that records it is never reported - so a mistyped REF
-### produces a fixture that records a plausible zero-SNP result and looks correct.
+### asserted afterwards. create_modified_chromosome skips a SNP whose REF disagrees with the reference,
+### so a mistyped REF produces a fixture that records a plausible result with SNPs quietly missing.
 ###
 ### Re-run after editing the tables, then re-record and read every diff:
 ###   test/bin/make_genome_fixtures.pl && test/run_genome_tests.pl --update
@@ -207,6 +206,29 @@ fixture(
     genome => \%STD_GENOME,
     vcf    => { 'snps.vcf' => $STD_VCF },
 );
+
+### A second passing record at 60 carries a different ALT, so the SNP file and the genome show which
+### record won. At 100 the first record is low confidence, so the second is the first passing one.
+{
+    my $pass = [ ['1/1', 1], ['0/0', 1] ];
+    my $low  = [ ['1/1', 0], ['0/0', 1] ];
+    my @rows = map { [ $_, $pass ] } @STD_POS;
+    splice @rows, 2, 0, [ 60, $pass, [1] ];
+    splice @rows, 3, 0, [ 100, $low ], [ 100, $pass, [1] ];
+
+    fixture(
+        name   => 'vcf_repeated_position',
+        args   => "$STD_ARGS --full_sequence",
+        readme => 'A VCF repeating a position: the first passing record goes into the SNP files, the archive and the genome, and the filtering report counts the repeat instead of including it',
+        genome => \%STD_GENOME,
+        vcf    => { 'snps.vcf' => vcf(
+            contigs => ['1'],
+            samples => ['STRAIN_A', 'STRAIN_B'],
+            seq     => $SEQ,
+            rows    => \@rows,
+        ) },
+    );
+}
 
 ### Every classification in read_snp_files, and five records of each so that hash iteration order can
 ### actually reorder the output. Below five, a run of identical output across two hash seeds proves
@@ -609,13 +631,15 @@ fixture(
     );
 }
 
-### The two skips create_modified_chromosome counts. This is the one fixture that deliberately writes a
+### The three skips create_modified_chromosome counts. This is the one fixture that deliberately writes a
 ### SNP file disagreeing with its reference, so it bypasses the derive-never-type rule on purpose - and
-### it is the only way to reach either counter, because a derived annotation always matches.
+### it is the only way to reach any of the counters, because a derived annotation always matches and
+### VCF filtering writes each position once.
 ###
-###   valid    : ref allele matches the reference, snp allele does not  -> applied
-###   already  : snp allele already present in the reference            -> skipped, counted
-###   mismatch : neither allele matches the reference                   -> skipped, counted
+###   valid     : ref allele matches the reference, snp allele does not  -> applied
+###   already   : snp allele already present in the reference            -> skipped, counted
+###   mismatch  : neither allele matches the reference                   -> skipped, counted
+###   duplicate : a second entry at a valid position, other snp allele   -> skipped, counted
 {
     my @valid = (30, 60, 130);
     my $already_pos  = 200;
@@ -635,10 +659,14 @@ fixture(
     my @other = grep { $_ ne $mr } qw(A C G T);
     push @rows, [ $mismatch_pos, 1, "$other[0]/$other[1]" ];
 
+    ### last in the file, so only the sort in read_snps places it next to the entry it repeats
+    my $dr = substr($SEQ, $valid[0] - 1, 1);
+    push @rows, [ $valid[0], 1, "$dr/" . alt_for($dr, 1) ];
+
     fixture(
         name    => 'ref_mismatch',
         args    => '--skip_filtering --reference_genome genome --strain STRAIN_A --full_sequence',
-        readme  => 'A SNP annotation that disagrees with its reference: one position already carrying the SNP base and one matching neither allele are both skipped, and both are now reported instead of only showing up as the SNP total exceeding the positions changed',
+        readme  => 'A SNP annotation that disagrees with its reference: one position already carrying the SNP base, one matching neither allele and one listed twice are all skipped and reported, so the SNP total adds up to the positions changed plus the three skips',
         genome  => { '1.fa' => fasta('1', $SEQ) },
         snps_in => { 'SNPs_STRAIN_A/chr1.txt' => snp_file('1', @rows) },
     );
