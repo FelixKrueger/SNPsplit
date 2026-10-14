@@ -1,1 +1,1 @@
-A SNP annotation that disagrees with its reference: one position already carrying the SNP base, one matching neither allele, and a second call at an applied position are all skipped, and all three are now reported instead of only showing up as the SNP total exceeding the positions changed
+A SNP annotation that disagrees with its reference: one position already carrying the SNP base, one matching neither allele and one listed twice are all skipped and reported, so the SNP total adds up to the positions changed plus the three skips

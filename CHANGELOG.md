@@ -18,7 +18,7 @@
 
 - Fixed the dual hybrid report running the two strain names together, as in `strainstrain 2 [AB]` ([#132](https://github.com/FelixKrueger/SNPsplit/issues/132))
 
-- Duplicate SNP positions are now reported, so the SNP total adds up to the positions changed plus those skipped; removed four checks on `substr` that could never fire ([#133](https://github.com/FelixKrueger/SNPsplit/issues/133))
+- A VCF position with more than one passing record is now written to the SNP files once, matching the archive, and repeated positions in a SNP file are reported ([#133](https://github.com/FelixKrueger/SNPsplit/issues/133))
 
 ## v0.9.0 (Release 17 08 2026)
 

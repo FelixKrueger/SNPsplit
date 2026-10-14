@@ -9,7 +9,7 @@ Point `--impl` at any implementation to diff it against the same expected output
 | Runner | Tools | Fixtures | Needs |
 |---|---|---|---|
 | `run_tests.pl` | `SNPsplit`, `tag2sort` | `fixtures/`, 26 | `samtools`, `gzip` |
-| `run_genome_tests.pl` | `SNPsplit_genome_preparation` | `genome_fixtures/`, 31 | `gzip` only |
+| `run_genome_tests.pl` | `SNPsplit_genome_preparation` | `genome_fixtures/`, 32 | `gzip` only |
 
 Two runners rather than one: the tools disagree on nearly every tool-specific decision a runner makes.
 Genome preparation needs no samtools, takes a VCF plus a reference *directory* instead of alignments,
@@ -197,9 +197,8 @@ git diff test/genome_fixtures      # READ THIS
 ## Rules that are not optional
 
 - **Never type a VCF `REF` base.** Read it out of the reference the VCF is written against.
-  `create_modified_chromosome` skips a SNP whose `REF` disagrees, and the counter that records the skip
-  is never reported, so a mistyped base produces a fixture that records a plausible zero-SNP result and
-  looks correct. `make_genome_fixtures.pl` asserts every `REF` after writing it.
+  `create_modified_chromosome` skips a SNP whose `REF` disagrees, so a mistyped base produces a fixture
+  that records a plausible result with SNPs quietly missing. `make_genome_fixtures.pl` asserts every `REF` after writing it.
 - **Give every hash-ordered output at least five records.** Below that the order cannot vary, or repeats
   by chance, and the fixture passes without exercising the normalisation it exists to prove. This is why
   `dual_hybrid` carries five records of each classification rather than one.
@@ -278,10 +277,13 @@ identical.
 
 **`ref_mismatch`** is the only fixture that deliberately writes a SNP annotation disagreeing with its
 reference, so it is the one exception to the derive-never-type rule above — and the only way to reach
-any skip counter, because a derived annotation always matches. It pins that 6 SNPs total, 3 applied,
-1 already present, 1 mismatched and 1 duplicate all appear, rather than leaving positions unaccounted for
-(#112, #133). The duplicate is a second call at an applied position with a different alt, so the full
-sequence also shows that the first call is the one applied.
+the three skip counters, because a derived annotation always matches and VCF filtering writes each
+position once. It pins that 6 SNPs total, 3 applied, 1 already present, 1 mismatched and 1 listed twice
+all appear, so no position goes unaccounted for (#112, #133).
+
+**`vcf_repeated_position`** repeats position 60 with a different ALT, and gives position 100 a
+low-confidence record before a passing one. The SNP file, the archive and the genome all carry the first
+passing record, and the filtering report counts the repeat rather than including it (#133).
 
 **`bam_write_fails`** stages a samtools that runs normally and then reports failure when writing
 genome1. Exiting straight away would be a different test: that kills `tag2sort` mid-write and was already
@@ -305,7 +307,7 @@ always writes strand `1`, so a `-1` can only arrive through a hand-written `--sk
 
 ## Proving the fixtures assert anything
 
-`31 passed` alone only proves the fixtures are self-consistent. Two checks establish more, both run by
+`32 passed` alone only proves the fixtures are self-consistent. Two checks establish more, both run by
 hand:
 
 ```sh
