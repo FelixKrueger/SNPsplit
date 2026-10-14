@@ -1,6 +1,22 @@
 ## Unreleased
 
+### SNPsplit
+
+- A failed SAM to BAM conversion now says which file is incomplete rather than reporting samtools' exit status ([#134](https://github.com/FelixKrueger/SNPsplit/issues/134))
+
+### tag2sort
+
+- A failed BAM write now reports the incomplete files without naming samtools, which is the mechanism rather than the problem ([#134](https://github.com/FelixKrueger/SNPsplit/issues/134))
+
 ### SNPsplit_genome_preparation
+
+- A chromosome present in the reference genome but empty is reported as empty, instead of as a chromosome name mismatch ([#129](https://github.com/FelixKrueger/SNPsplit/issues/129))
+
+- A SNP call on a chromosome missing from the VCF's `##contig` header lines aborts with a message naming the chromosome and VCF line, instead of a Perl interpreter error ([#130](https://github.com/FelixKrueger/SNPsplit/issues/130))
+
+- Four VCF header errors no longer leak a script line number, and name the VCF line instead ([#131](https://github.com/FelixKrueger/SNPsplit/issues/131))
+
+- Fixed the dual hybrid report running the two strain names together, as in `strainstrain 2 [AB]` ([#132](https://github.com/FelixKrueger/SNPsplit/issues/132))
 
 - A VCF position with more than one passing record is now written to the SNP files once, matching the archive, and repeated positions in a SNP file are reported ([#133](https://github.com/FelixKrueger/SNPsplit/issues/133))
 
