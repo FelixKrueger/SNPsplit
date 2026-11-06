@@ -1,0 +1,37 @@
+[package]
+name = "snpsplit"
+description = "Allele-specific alignment sorting: tag and split reads by parental genome"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage = "https://felixkrueger.github.io/SNPsplit"
+documentation = "https://felixkrueger.github.io/SNPsplit"
+readme = "../README.md"
+keywords = ["bioinformatics", "genomics", "allele-specific", "snp", "bam"]
+categories = ["science", "command-line-utilities"]
+# The fixtures and the Perl live outside this directory, so a published crate carries the
+# source and its own tests. Tests are included deliberately: a crate someone can install but
+# cannot verify is a crate they have to take on trust.
+include = ["src/**/*", "banners/*", "tests/**/*", "examples/**/*", "Cargo.toml"]
+
+[[bin]]
+name = "snpsplit"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+flate2.workspace = true
+noodles-bam.workspace = true
+noodles-bgzf.workspace = true
+noodles-sam.workspace = true
+rayon.workspace = true
+sha2.workspace = true
+ureq.workspace = true
+tempfile.workspace = true
+
+[dev-dependencies]
+assert_cmd.workspace = true
+predicates.workspace = true
