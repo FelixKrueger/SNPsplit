@@ -1,0 +1,10 @@
+# Fixtures the Rust implementation is expected to pass.
+#
+# Checked in both directions by test/bin/run_rust_gate.sh: a listed fixture that fails is a
+# regression, and an unlisted fixture that passes means this file is stale. The second
+# direction is the point. A plain skip list rots silently; this one cannot.
+#
+# One name per line. A `genome:` prefix means a fixture of test/run_genome_tests.pl;
+# anything else is a fixture of test/run_tests.pl. Blank lines and # comments are ignored.
+#
+# Nothing is listed yet: the foundation is built and no tool is ported.
