@@ -262,9 +262,8 @@ Four were written to pin behaviour that was wrong and now assert the fix, since 
   `--skip_filtering` skips. It now builds all six genomes from committed SNP files with no VCF at all,
   which is the only fixture reaching `read_snp_files` against pre-made archives.
 
-**`empty_chromosome`** is a header-only FastA entry, stored as the empty string. That is falsy, so the
-per-chromosome check used to report a chromosome that *is* present as not found, and then list it among
-the names it found. It now gets its own message saying the sequence is empty (#129).
+**`empty_chromosome`** is a header-only FastA entry, stored as the empty string. The run aborts with a
+message saying the chromosome has no sequence, not with the naming-mismatch abort (#129).
 
 **`no_format_column`** renames the `FORMAT` column rather than deleting it. Deleting it leaves nine
 columns, `detect_strains` skips indices up to 8, and the run dies earlier on an empty strain list, which

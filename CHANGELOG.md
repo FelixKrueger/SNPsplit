@@ -6,7 +6,7 @@
 
 ### tag2sort
 
-- A failed BAM write now reports the incomplete files without naming samtools, which is the mechanism rather than the problem ([#134](https://github.com/FelixKrueger/SNPsplit/issues/134))
+- A failed BAM write now reports the incomplete files without naming samtools ([#134](https://github.com/FelixKrueger/SNPsplit/issues/134))
 
 ### SNPsplit_genome_preparation
 
