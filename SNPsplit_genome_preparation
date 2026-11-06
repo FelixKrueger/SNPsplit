@@ -1236,6 +1236,8 @@ sub filter_relevant_SNP_calls_from_VCF{
 	open (STDOUT,'>',$all_SNPs) or die "Failed to write to file $all_SNPs: $!\n";
 	exec ('gzip','-c') or die "Failed to run gzip: $!\n";
     }
+    ### A gzip that exits early must reach the close below rather than kill this process
+    local $SIG{PIPE} = 'IGNORE';
 
     ### Sorted so the file is reproducible and diffable; hash order made it differ between runs
     foreach my $location (sort by_location keys %all_SNPs){
