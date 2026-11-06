@@ -26,7 +26,7 @@ use lib "$Bin/../lib";
 my %counting;
 my %fhs;
 
-my $SNPsplit_version = '0.9.0';
+my $SNPsplit_version = '0.9.1';
 my %yaml;
 my $yaml_count = 0;
 
@@ -1072,7 +1072,7 @@ be assigned to a specific allele, and they are one of the following:
 
 --paired               Paired-end mode. (Default: OFF).
 
--o/--outdir <dir>      Write all output files into this directory. By default the output files will be written into
+-o/--output_dir <dir>  Write all output files into this directory. By default the output files will be written into
                        the same folder as the input file(s).
 
 --singletons           If the allele-tagged paired-end file also contains singleton alignments (which is the
@@ -1304,7 +1304,7 @@ sub close_bam_writers {
     @bam_writers = ();
 
     if (@failed){
-	die "samtools failed while writing:\n" . join('',map {"  $_\n"} @failed)
+	die "failed while writing:\n" . join('',map {"  $_\n"} @failed)
 	  . "These output files are incomplete\n";
     }
 

@@ -23,7 +23,7 @@ use Cwd;
 ## along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.9.0';
+my $pipeline_version = '0.9.1';
 my $parent_dir = getcwd;
 my $full_commandline = join (" ","SNPsplit",@ARGV);
 # warn "Full commandline: $full_commandline\n"; sleep(5);
@@ -1379,10 +1379,9 @@ sub sam2bam_convert{
     pause(3);
 
     if (system ($samtools_path,'view','-bS','-o',$bamfile,$file) != 0){
-		my $why = $? == -1        ? "could not be started: $!"
-		        : ($? & 127)      ? 'was killed by signal ' . ($? & 127)
-		        :                   'failed with exit status ' . ($? >> 8);
-		die "SAM to BAM conversion $why\n\n";
+		die "SAM to BAM conversion could not be started: $!\n\n" if $? == -1;
+		die "SAM to BAM conversion was killed by signal " . ($? & 127) . ", so '$bamfile' is incomplete\n\n" if $? & 127;
+		die "SAM to BAM conversion failed, so '$bamfile' is incomplete\n\n";
     }
 
     warn "BAM conversion finished\n\n";
@@ -1917,7 +1916,7 @@ sub print_helpfile{
 
     --paired               Paired-end mode. (Default: AUTO-DETECT).
 
-    -o/--outdir <dir>      Write all output files into this directory. By default the output files will be written into
+    -o/--output_dir <dir>  Write all output files into this directory. By default the output files will be written into
                            the same folder as the input file(s). If the specified folder does not exist, SNPsplit will attempt
                            to create it first. The path to the output folder can be either relative or absolute.
 

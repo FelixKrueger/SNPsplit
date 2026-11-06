@@ -1,0 +1,1 @@
+A VCF repeating a position: the first passing record goes into the SNP files, the archive and the genome, and the filtering report counts the repeat instead of including it
