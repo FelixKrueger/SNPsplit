@@ -202,8 +202,8 @@ git diff test/genome_fixtures      # READ THIS
 - **Give every hash-ordered output at least five records.** Below that the order cannot vary, or repeats
   by chance, and the fixture passes without exercising the normalisation it exists to prove. This is why
   `dual_hybrid` carries five records of each classification rather than one.
-- **Keep `poison_gzip`'s SNP list small.** The failure is silent because a ~1 KB buffered write still
-  fits the pipe buffer before the dead child is noticed. A larger list would behave differently.
+- **`poison_gzip`'s SNP list fits the pipe buffer**, so its failure usually surfaces at `close` rather
+  than at a write. Both paths end in the same message.
 - **Prefer error fixtures whose `die` carries no `$!`.** `strerror` text is not guaranteed identical
   across platforms.
 - For `reverse_strand`, the reference base must be the *complement* of the file's ref allele, since
