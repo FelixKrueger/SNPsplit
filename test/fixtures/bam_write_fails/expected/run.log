@@ -82,7 +82,7 @@ Reads were specific for genome 2:		2 (22.22%)
 Reads contained conflicting SNP information:	1 (11.11)
 
 
-samtools failed while writing:
+failed while writing:
   bam_write_fails.genome1.bam
 These output files are incomplete
 Allele-specific sorting (tag2sort) failed with exit status 255

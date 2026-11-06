@@ -43,12 +43,5 @@ Now reading in and storing sequence information of the genome specified in: <scr
 
 Chromosome 1 in the file 1.fa did not contain any sequence information!
 Processing chromosome 1 (for strain STRAIN_A)
-
-The chromosome name given in the VCF file was '1' and was not found in the reference genome.
-A rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)
-but the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)
-The chromosome names in the reference genome folder were:
-1
-2
-[FATAL ERROR] Please ensure that the same version of the genome is used for both VCF annotations and reference genome (FastA files). Exiting...
+[FATAL ERROR] Chromosome '1' is present in the reference genome but contains no sequence, so its SNPs cannot be applied. Please check the FastA file for chromosome 1. Exiting...
 

@@ -1378,11 +1378,11 @@ sub sam2bam_convert{
     warn "Now converting '$file' to '$bamfile' ...\n";
     pause(3);
 
+    ### What failed is reported as the problem rather than as samtools' exit status: '$bamfile' is
+    ### incomplete whatever did the conversion, and samtools has already said why on stderr
     if (system ($samtools_path,'view','-bS','-o',$bamfile,$file) != 0){
-		my $why = $? == -1        ? "could not be started: $!"
-		        : ($? & 127)      ? 'was killed by signal ' . ($? & 127)
-		        :                   'failed with exit status ' . ($? >> 8);
-		die "SAM to BAM conversion $why\n\n";
+		die "SAM to BAM conversion could not be started: $!\n\n" if $? == -1;
+		die "SAM to BAM conversion failed, so '$bamfile' is incomplete\n\n";
     }
 
     warn "BAM conversion finished\n\n";
