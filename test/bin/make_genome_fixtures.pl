@@ -432,12 +432,11 @@ fixture(
     vcf    => { 'snps.vcf' => $STD_VCF },
 );
 
-### A header with no sequence is stored as the empty string, which is falsy, so the chromosome-name
-### check fires for a chromosome that is present - reporting it as not found and then listing it.
+### A header with no sequence is stored as the empty string, and its SNPs cannot be applied.
 fixture(
     name   => 'empty_chromosome',
     args   => $STD_ARGS,
-    readme => 'A header-only FastA entry triggers the Ensembl-versus-UCSC abort for a chromosome that is present, and the diagnostic lists the name it says was not found',
+    readme => 'A header-only FastA entry aborts with a message saying the chromosome has no sequence, not with the Ensembl-versus-UCSC naming abort',
     genome => { '1.fa' => ">1\n", '2.fa' => fasta('2', $SEQ2) },
     vcf    => {
         'snps.vcf' => do {

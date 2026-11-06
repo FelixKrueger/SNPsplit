@@ -595,8 +595,7 @@ sub create_modified_chromosome {
     
     my ($chr,$strain) = @_; # $strain may be strain 1 or 2
     warn "Processing chromosome $chr (for strain $strain)\n";
-    ### Tested with exists rather than for truth: an empty sequence is false in Perl, and a chromosome that
-    ### is present but empty was reported as a naming mismatch, next to a list that contained its name
+    ### An empty sequence is false in Perl, so emptiness is checked separately below
     unless (exists $chromosomes{$chr}){
 		warn "\nThe chromosome name given in the VCF file was '$chr' and was not found in the reference genome.\nA rather common mistake might be that the VCF file was downloaded from Ensembl (who use chromosome names such as 1, 2, X, MT)\nbut the genome from UCSC (who use chromosome names such as chr1, chr2, chrX, chrM)\n";
 		warn "The chromosome names in the reference genome folder were:\n";
