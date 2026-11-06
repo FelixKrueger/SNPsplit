@@ -2,7 +2,7 @@
 
 ### SNPsplit_genome_preparation
 
-- A gzip that fails while the SNP list is being written now always gets the "file is incomplete" message, instead of sometimes killing the run silently with SIGPIPE
+- A gzip that fails while the SNP list is being written now always gets the "file is incomplete" message, instead of sometimes killing the run silently with SIGPIPE ([#152](https://github.com/FelixKrueger/SNPsplit/pull/152))
 
 ## v0.9.1 (Release 06 11 2026)
 
