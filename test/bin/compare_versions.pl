@@ -48,8 +48,14 @@ my $repo = abs_path(File::Spec->catdir(dirname(__FILE__), '..', '..'));
 ### than passed through, so the same binary is used for both runs and for the comparison.
 $samtools = defined $samtools ? abs_path($samtools) : which('samtools');
 bail("samtools not found; pass --samtools PATH") unless defined $samtools && -x $samtools;
-$outdir = defined $outdir ? abs_path($outdir)
-                          : File::Spec->catdir(($ENV{TMPDIR} || '/tmp'), "snpsplit_compare_$$");
+$outdir = File::Spec->catdir(($ENV{TMPDIR} || '/tmp'), "snpsplit_compare_$$") unless defined $outdir;
+### The workspace is deleted afterwards unless --keep, so it must start out empty
+if (-e $outdir) {
+    opendir(my $dh, $outdir) or bail("--outdir $outdir is not a readable directory");
+    bail("--outdir $outdir is not empty") if grep { !/^\.\.?$/ } readdir $dh;
+}
+make_path($outdir);
+$outdir = abs_path($outdir);
 
 ### Both revisions are resolved before anything runs. Discovering a typo, or that the two sides are the
 ### same commit, after the first run has finished costs an hour on a real library - which is the only
@@ -180,8 +186,7 @@ if ($verdict) {
     print "SOMETHING CHANGED. Read the differing files before releasing.\n";
 }
 else {
-    print "No change in alignment records or reports. This is the expected result:\n";
-    print "neither #99 nor #116 touches allele assignment.\n";
+    print "No change in alignment records or reports.\n";
 }
 print "Workspace kept at $outdir\n" if $keep;
 remove_tree($outdir) unless $keep;
@@ -253,7 +258,7 @@ Run two versions of SNPsplit over the same BAM and compare the output.
   --new REV         Version under test. Default: dev
   --args 'STRING'   Extra SNPsplit arguments, e.g. '--paired --bisulfite'
   --samtools PATH   samtools to use. Default: samtools on PATH
-  --outdir DIR      Where to work. Default: a temporary directory
+  --outdir DIR      Where to work; must be new or empty. Default: a temporary directory
   --keep            Keep the workspace for inspection
   -h, --help        This message
 
