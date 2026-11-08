@@ -227,6 +227,29 @@ $F{sam_input} = {
 };
 
 ### --sam has to work end to end: SAM in, SAM out, sorting report merged, no intermediate left behind.
+### The report name drops the first "sorted." anywhere in the input name, not only a suffix.
+$F{sorted_name_se} = {
+    args       => '--single_end',
+    notes      => 'an input named x.sorted.bam gives x.SNPsplit_report.txt',
+    input_name => 'x.sorted.bam',
+    reads      => $F{se_basic}{reads},
+};
+
+$F{sorted_name_pe} = {
+    args       => '--paired --conflicting',
+    notes      => 'a coordinate-sorted x.sorted.bam is name-sorted and still reported as x.SNPsplit_report.txt',
+    input_name => 'x.sorted.bam',
+    exclude    => ['*.sortedByName.bam'],
+    reads      => $F{pe_namesort}{reads},
+};
+
+$F{unsorted_name} = {
+    args       => '--single_end',
+    notes      => 'the first "sorted." is removed wherever it is: sample.unsorted.bam gives sample.unSNPsplit_report.txt',
+    input_name => 'sample.unsorted.bam',
+    reads      => $F{se_basic}{reads},
+};
+
 $F{sam_output} = {
     args  => '--single_end --sam',
     notes => 'SAM output throughout, including the sorting report merge and cleanup',
@@ -416,6 +439,8 @@ for my $name (sort keys %F) {
         my $f = File::Spec->catfile($dir, $marker);
         $spec->{ $marker_key{$marker} || $marker } ? write_file($f, '') : unlink $f;
     }
+    my $inp = File::Spec->catfile($dir, 'input_name');
+    $spec->{input_name} ? write_file($inp, "$spec->{input_name}\n") : unlink $inp;
     my $exc = File::Spec->catfile($dir, 'exclude');
     $spec->{exclude} ? write_file($exc, join("\n", @{ $spec->{exclude} }) . "\n") : unlink $exc;
 
