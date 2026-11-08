@@ -366,9 +366,11 @@ sub mask_sam_text {
 
 sub mask_yaml {
     my ($text) = @_;
-    for my $key (qw(version date_run command)) {
+    for my $key (qw(version command)) {
         $text =~ s/^(\s*\Q$key\E:).*$/$1 <masked>/mg;
     }
+    ### The time varies, its form does not: anything else is left in and fails the comparison
+    $text =~ s/^(\s*date_run:) \d{4}-\d{1,2}-\d{1,2}T\d{2}:\d{2}:\d{2}\.1Z$/$1 <masked>/mg;
     return $text;
 }
 
