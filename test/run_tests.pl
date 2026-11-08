@@ -193,6 +193,7 @@ SHIM
     chdir $scratch or die "chdir $scratch: $!\n";
     local $ENV{PATH}             = $run_path;
     local $ENV{SNPSPLIT_NO_SLEEP} = 1;
+    local $ENV{PERL5OPT} = "-I@{[ File::Spec->catdir($test_root, 'lib') ]} -MFixedClock";
     my $status = system("$cmdline > stdout.log 2> stderr.log");
     my $exit   = $status == -1 ? -1 : $status >> 8;
     chdir $prev or die "chdir back: $!\n";
