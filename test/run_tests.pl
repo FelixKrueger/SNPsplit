@@ -218,6 +218,8 @@ sub prepare_inputs {
         check_md_tags($name, $dir, $src);
         $n++;
         my $stem = $n == 1 ? $name : "${name}_$n";
+        my ($given) = read_lines(File::Spec->catfile($dir, 'input_name'));
+        $stem = $1 if $n == 1 && defined $given && $given =~ /^(.+)\.(?:bam|sam)$/;
         if ($feed_sam) {
             my $dst = "$stem.sam";
             copy($src, File::Spec->catfile($scratch, $dst)) or die "copy $src: $!\n";
