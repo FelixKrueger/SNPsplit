@@ -24,6 +24,7 @@ path = "src/main.rs"
 anyhow.workspace = true
 clap.workspace = true
 flate2.workspace = true
+libc.workspace = true
 noodles-bam.workspace = true
 noodles-bgzf.workspace = true
 noodles-sam.workspace = true
