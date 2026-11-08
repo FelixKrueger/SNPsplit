@@ -203,3 +203,71 @@ fn the_worker_count_from_the_environment_reaches_the_sorter_too() {
     let calls = run_with_sorters(&[], Some("5"));
     assert!(calls.contains("--parallel 5"), "{calls}");
 }
+
+#[test]
+fn a_symlinked_snpsplit_runs_the_tag2sort_beside_its_target() {
+    let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../test/fixtures/se_basic");
+    let work = TempDir::new().unwrap();
+    let (bin, elsewhere) = (work.path().join("bin"), work.path().join("elsewhere"));
+    std::fs::create_dir_all(&bin).unwrap();
+    std::fs::create_dir_all(&elsewhere).unwrap();
+    std::fs::copy(cargo_bin("snpsplit"), bin.join("SNPsplit")).unwrap();
+    recording_sorter(&bin, "own");
+    symlink(bin.join("SNPsplit"), elsewhere.join("SNPsplit")).unwrap();
+    std::fs::copy(fixture.join("input.sam"), work.path().join("input.sam")).unwrap();
+    let log = work.path().join("sorter.log");
+
+    let out = Command::new(elsewhere.join("SNPsplit"))
+        .current_dir(work.path())
+        .env("SORTER_LOG", &log)
+        .env("SNPSPLIT_NO_SLEEP", "1")
+        .args([
+            "--snp_file",
+            fixture.join("snps.txt").to_str().unwrap(),
+            "--single_end",
+            "--sam",
+            "input.sam",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(std::fs::read_to_string(log).unwrap().starts_with("own "));
+}
+
+#[test]
+fn the_subcommand_form_sorts_without_a_tag2sort_beside_it() {
+    let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../test/fixtures/se_basic");
+    let work = TempDir::new().unwrap();
+    let alone = work.path().join("snpsplit");
+    std::fs::copy(cargo_bin("snpsplit"), &alone).unwrap();
+    std::fs::copy(fixture.join("input.sam"), work.path().join("input.sam")).unwrap();
+
+    let out = Command::new(&alone)
+        .current_dir(work.path())
+        .env("SNPSPLIT_NO_SLEEP", "1")
+        .args([
+            "tag",
+            "--snp_file",
+            fixture.join("snps.txt").to_str().unwrap(),
+            "--single_end",
+            "--sam",
+            "input.sam",
+        ])
+        .output()
+        .unwrap();
+
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(
+        work.path().join("input.genome1.sam").exists()
+            || work.path().join("input.genome1.bam").exists()
+    );
+}

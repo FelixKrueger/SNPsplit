@@ -807,12 +807,22 @@ fn hand_off_to_sort(config: &cli::Config, outfile: &str) -> Result<()> {
     args.push(config.parallel.to_string());
     args.push(outfile.to_string());
 
-    // The sorter beside the running binary, symlinks resolved, as the Perl's $RealBin
+    // The tag2sort beside the binary, symlinks resolved as by the Perl's $RealBin; without one,
+    // the binary itself runs as tag2sort
     let own = std::env::current_exe()
+        .and_then(std::fs::canonicalize)
         .context("Allele-specific sorting (tag2sort) could not be located")?;
-    let sorter = own.with_file_name("tag2sort");
+    let sibling = own.with_file_name("tag2sort");
+    let mut command = if sibling.exists() {
+        std::process::Command::new(&sibling)
+    } else {
+        use std::os::unix::process::CommandExt;
+        let mut c = std::process::Command::new(&own);
+        c.arg0("tag2sort");
+        c
+    };
 
-    let status = std::process::Command::new(&sorter).args(&args).status();
+    let status = command.args(&args).status();
     let status = match status {
         Ok(status) => status,
         Err(e) => anyhow::bail!("Allele-specific sorting (tag2sort) could not be started: {e}\n\n"),
