@@ -156,6 +156,7 @@ fn run_with_sorters(extra: &[&str], env_parallel: Option<&str>) -> String {
     std::fs::copy(cargo_bin("snpsplit"), bin.join("SNPsplit")).unwrap();
     recording_sorter(&bin, "own");
     recording_sorter(&decoy, "decoy");
+    std::fs::copy(fixture.join("input.sam"), work.path().join("input.sam")).unwrap();
     let log = work.path().join("sorter.log");
     let path = format!(
         "{}:{}:{}",
@@ -177,7 +178,7 @@ fn run_with_sorters(extra: &[&str], env_parallel: Option<&str>) -> String {
             "--sam",
         ])
         .args(extra)
-        .arg(fixture.join("input.sam"));
+        .arg("input.sam");
     if let Some(n) = env_parallel {
         cmd.env("SNPSPLIT_PARALLEL", n);
     }
