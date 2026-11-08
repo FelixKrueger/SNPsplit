@@ -1,0 +1,9 @@
+/Users/fkrueger/Github/SNPsplit/rust/target/release/deps/noodles_core-df9802799495a255.d: /Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/lib.rs /Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/position.rs /Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/position/sequence_index.rs /Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/region.rs /Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/region/interval.rs
+
+/Users/fkrueger/Github/SNPsplit/rust/target/release/deps/libnoodles_core-df9802799495a255.rmeta: /Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/lib.rs /Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/position.rs /Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/position/sequence_index.rs /Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/region.rs /Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/region/interval.rs
+
+/Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/lib.rs:
+/Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/position.rs:
+/Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/position/sequence_index.rs:
+/Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/region.rs:
+/Users/fkrueger/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/noodles-core-0.20.0/src/region/interval.rs:
