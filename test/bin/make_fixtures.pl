@@ -226,7 +226,6 @@ $F{sam_input} = {
     reads    => $F{se_basic}{reads},
 };
 
-### --sam has to work end to end: SAM in, SAM out, sorting report merged, no intermediate left behind.
 ### The report name drops the first "sorted." anywhere in the input name, not only a suffix.
 $F{sorted_name_se} = {
     args       => '--single_end',
@@ -250,6 +249,7 @@ $F{unsorted_name} = {
     reads      => $F{se_basic}{reads},
 };
 
+### --sam has to work end to end: SAM in, SAM out, sorting report merged, no intermediate left behind.
 $F{sam_output} = {
     args  => '--single_end --sam',
     notes => 'SAM output throughout, including the sorting report merge and cleanup',

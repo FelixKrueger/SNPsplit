@@ -215,7 +215,10 @@ sub prepare_inputs {
         $n++;
         my $stem = $n == 1 ? $name : "${name}_$n";
         my ($given) = read_lines(File::Spec->catfile($dir, 'input_name'));
-        $stem = $1 if $n == 1 && defined $given && $given =~ /^(.+)\.(?:bam|sam)$/;
+        if ($n == 1 && defined $given) {
+            $given =~ /^([^\/]+)\.(?:bam|sam)$/ or die "$name: input_name must be a file name ending in .bam or .sam\n";
+            $stem = $1;
+        }
         if ($feed_sam) {
             my $dst = "$stem.sam";
             copy($src, File::Spec->catfile($scratch, $dst)) or die "copy $src: $!\n";
