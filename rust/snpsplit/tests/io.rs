@@ -367,3 +367,96 @@ fn samtools_reads_a_multithreaded_bam() {
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(text.contains("read1") && text.contains("read2"));
 }
+
+/// Name, flag and position of every record, as samtools prints them.
+fn keys_by_samtools(path: &std::path::Path) -> Option<Vec<String>> {
+    let out = std::process::Command::new("samtools")
+        .args(["view", path.to_str().unwrap()])
+        .output()
+        .ok()?;
+    out.status.success().then(|| {
+        String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .map(|l| l.split('\t').take(4).collect::<Vec<_>>().join(" "))
+            .collect()
+    })
+}
+
+/// Records sharing a name (both mates, primary, supplementary, secondary, and repeated secondaries)
+/// come out in samtools' order, from SAM and from BAM, through the spill-and-merge path.
+/// Skipped when samtools is absent.
+#[test]
+fn records_sharing_a_name_are_ordered_as_samtools_orders_them() {
+    let dir = TempDir::new().unwrap();
+    let flags = [99, 147, 355, 403, 355, 403, 2147, 2195];
+    let mut records: Vec<(usize, u16, usize)> = Vec::new();
+    let mut pos = 1;
+    for name in 1..=300 {
+        for &flag in &flags {
+            records.push((name, flag, pos));
+            pos += 1;
+        }
+    }
+    let mut state: u64 = 0xD1B54A32D192ED03;
+    for i in (1..records.len()).rev() {
+        state = state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        records.swap(i, (state >> 33) as usize % (i + 1));
+    }
+    let mut sam = String::from("@HD\tVN:1.6\tSO:unsorted\n@SQ\tSN:chr1\tLN:1000000\n");
+    for (name, flag, pos) in &records {
+        sam.push_str(&format!(
+            "read{name}\t{flag}\tchr1\t{pos}\t42\t4M\t=\t1\t0\tACGT\tIIII\n"
+        ));
+    }
+    let src = dir.path().join("tied.sam");
+    std::fs::File::create(&src)
+        .unwrap()
+        .write_all(sam.as_bytes())
+        .unwrap();
+    let bam = dir.path().join("tied.bam");
+    let Ok(st) = std::process::Command::new("samtools")
+        .args([
+            "view",
+            "-b",
+            "-o",
+            bam.to_str().unwrap(),
+            src.to_str().unwrap(),
+        ])
+        .status()
+    else {
+        return;
+    };
+    assert!(st.success());
+    let expected = dir.path().join("expected.bam");
+    let st = std::process::Command::new("samtools")
+        .args([
+            "sort",
+            "-n",
+            "-o",
+            expected.to_str().unwrap(),
+            src.to_str().unwrap(),
+        ])
+        .status()
+        .unwrap();
+    assert!(st.success());
+    let expected = keys_by_samtools(&expected).unwrap();
+    assert_eq!(expected.len(), 2400);
+
+    for input in [&src, &bam] {
+        let out = dir.path().join("ours.bam");
+        let header = RecordReader::open(input).unwrap().header().clone();
+        sort_by_name(input, &out, &header, 100).unwrap();
+        let ours = keys_by_samtools(&out).unwrap();
+        let first = ours.iter().zip(&expected).position(|(a, b)| a != b);
+        assert_eq!(
+            first,
+            None,
+            "{}: at {first:?} ours {:?} vs samtools {:?}",
+            input.display(),
+            first.map(|i| &ours[i]),
+            first.map(|i| &expected[i])
+        );
+    }
+}

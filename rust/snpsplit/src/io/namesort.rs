@@ -287,21 +287,17 @@ impl Sortable for noodles_bam::Record {
     }
 }
 
-/// Order two records the way `samtools sort -n` would: by name, then by the READ1/READ2
-/// flags so mates keep a stable relative order.
+/// Order two records the way `samtools sort -n` would: by name, then READ1, READ2, and within
+/// each the primary, supplementary and secondary alignments; equal records keep input order.
 fn compare<T: Sortable>(a: &T, b: &T) -> Ordering {
-    strnum_cmp(a.sort_name(), b.sort_name()).then_with(|| mate_rank(a).cmp(&mate_rank(b)))
+    strnum_cmp(a.sort_name(), b.sort_name())
+        .then_with(|| flag_key(a.sort_flags().bits()).cmp(&flag_key(b.sort_flags().bits())))
 }
 
-fn mate_rank<T: Sortable>(record: &T) -> u8 {
-    let flags = record.sort_flags();
-    if flags.is_first_segment() {
-        0
-    } else if flags.is_last_segment() {
-        1
-    } else {
-        2
-    }
+/// samtools' `bam1_cmp_core` key: the mate bits first, then secondary above supplementary.
+fn flag_key(flags: u16) -> u32 {
+    let f = u32::from(flags);
+    ((f & 0xc0) << 8) | ((f & 0x100) << 3) | ((f & 0x800) >> 3)
 }
 
 /// Sort a BAM by name without decoding its records.
