@@ -948,11 +948,15 @@ fn write_yaml(
     Ok(())
 }
 
-/// A timestamp in the canonical YAML shape the Perl builds by hand.
+unsafe extern "C" {
+    fn tzset();
+}
+
 /// Local time in the Perl's form, `YYYY-M-DTHH:MM:SS.1Z`.
 fn timestamp() -> String {
-    // SAFETY: time and localtime_r only write to the locals passed in
+    // SAFETY: tzset reads TZ; time and localtime_r only write to the locals passed in
     let (now, mut tm) = unsafe {
+        tzset();
         (
             libc::time(std::ptr::null_mut()),
             std::mem::zeroed::<libc::tm>(),
