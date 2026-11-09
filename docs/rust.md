@@ -19,7 +19,7 @@ needed to run them.
 | Fetching references | by hand | `--download`, opt-in |
 
 Everything else is meant to be identical, and "meant to" is checked rather than asserted:
-55 of the 57 committed fixtures produce byte-identical output, compared file by file after
+All committed fixtures but two produce byte-identical output, compared file by file after
 the same normalisation the Perl suite uses. The two exceptions are described under
 [Known differences](#known-differences).
 

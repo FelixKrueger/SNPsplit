@@ -27,12 +27,12 @@ test/run_genome_tests.pl --impl rust/target/impl/SNPsplit_genome_preparation
 |---|---|---|
 | multicall dispatch, version banners | done | n/a |
 | `io` (BAM/SAM read, BAM write, name sort) | done | n/a |
-| `genome_prep` | done | 31 / 31 |
+| `genome_prep` | done | all |
 | `sort` (tag2sort) | done | see below |
-| `tag` (SNPsplit) | done | 24 / 26 with both tools in Rust |
+| `tag` (SNPsplit) | done | all but two, with both tools in Rust |
 
 The two fixture counts are the two suites, not two halves of one: the alignment suite runs
-`SNPsplit` and `tag2sort` together, so its 26 fixtures only pass once both are ported.
+`SNPsplit` and `tag2sort` together, so its fixtures only pass once both are ported. `test/rust_fixtures.txt` is the list.
 
 Which fixtures the Rust build is expected to pass is not a claim in this table but a
 checked file, `test/rust_fixtures.txt`, enforced by `test/bin/run_rust_gate.sh` in both
@@ -157,10 +157,17 @@ reading and writing the alignments, so most of what is left is I/O. The 2,000,00
 records are byte-identical between 1 and 16 workers, checked by comparing the output, not by
 comparing the counters.
 
-## Known deviations from Perl v0.9.0
+## Known deviations from Perl v0.9.1
 
 Anything that lands here stays here: a deviation that is not written down is a bug the next
 person has to rediscover.
+
+- **VCF positions are compared as numbers.** A position written with leading zeros (`007`)
+  is the same position as `7` here; the Perl keys on the text and keeps both. MGP VCFs do
+  not write leading zeros.
+- **Option parsing:** `--option=value` is accepted, a bare `--` is reported as an ambiguous
+  option, and only the first unknown option is named; the Perl rejects the first two and names
+  every unknown option. `SNPsplit_genome_preparation` with no arguments exits 1, the Perl 255.
 
 - **The all-SNP list is compressed through `gzip -c` when there is one to run**, and in
   process when there is not. Compressing in process throughout would be the obvious choice
