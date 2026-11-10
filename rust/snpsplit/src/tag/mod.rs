@@ -998,6 +998,8 @@ fn append_sorting_report(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn the_report_name_drops_the_first_sorted_anywhere_as_the_perl_does() {
         for (input, report) in [
@@ -1011,8 +1013,6 @@ mod tests {
         }
         assert_eq!(yaml_name("x.SNPsplit_report.txt"), "x.SNPsplit_report.yaml");
     }
-
-    use super::*;
 
     #[test]
     fn a_deleted_masked_position_is_counted() {
