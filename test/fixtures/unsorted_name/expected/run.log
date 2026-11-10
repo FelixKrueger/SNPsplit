@@ -2,7 +2,7 @@ Testing if input file 'sample.unsorted.bam' looks like a Bisulfite-Seq file
 Now starting to process file <<< 'sample.unsorted.bam' >>> 
 
 Input file:					'sample.unsorted.bam'
-Writing SNPplit-tag report to:			'sample.unSNPsplit_report.txt'
+Writing SNPplit-tag report to:			'sample.unsorted.SNPsplit_report.txt'
 Writing allele-flagged output file to:		'sample.unsorted.allele_flagged.bam'
 
 

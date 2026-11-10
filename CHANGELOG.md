@@ -3,6 +3,7 @@
 ### SNPsplit
 
 - The YAML report's `date_run` is no longer garbled on days 1 to 9 of a month ([#160](https://github.com/FelixKrueger/SNPsplit/pull/160))
+- The report name drops `sorted.` only where it starts a word, so `sample.unsorted.bam` gives `sample.unsorted.SNPsplit_report.txt` ([#166](https://github.com/FelixKrueger/SNPsplit/issues/166))
 
 ### SNPsplit_genome_preparation
 
