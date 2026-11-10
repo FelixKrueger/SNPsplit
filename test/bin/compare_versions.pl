@@ -6,6 +6,10 @@ use File::Path qw(make_path remove_tree);
 use File::Basename qw(dirname basename);
 use File::Spec ();
 use Cwd qw(abs_path getcwd);
+use File::Temp qw(tempdir);
+
+### Every failure outside the comparison itself means "could not compare"
+$SIG{__DIE__} = sub { return if $^S; print STDERR $_[0]; exit 2 };
 
 ### Runs two versions of SNPsplit over the same real BAM and compares what they produced.
 ###
@@ -33,12 +37,12 @@ GetOptions(
     'samtools=s' => \$samtools,
     'keep'       => \$keep,
     'h|help'     => \$help,
-) or usage(1);
+) or usage(2);
 usage(0) if $help;
 
-usage(1) unless defined $bam and defined $snps;
-$bam  = abs_path($bam);
-$snps = abs_path($snps);
+usage(2) unless defined $bam and length $bam and defined $snps and length $snps;
+$bam  = abs_path($bam)  // $bam;
+$snps = abs_path($snps) // $snps;
 bail("No such BAM: $bam")       unless -e $bam;
 bail("No such SNP file: $snps") unless -e $snps;
 
@@ -48,9 +52,6 @@ my $repo = abs_path(File::Spec->catdir(dirname(__FILE__), '..', '..'));
 ### than passed through, so the same binary is used for both runs and for the comparison.
 $samtools = defined $samtools ? abs_path($samtools) : which('samtools');
 bail("samtools not found; pass --samtools PATH") unless defined $samtools && -x $samtools;
-$outdir = defined $outdir ? abs_path($outdir)
-                          : File::Spec->catdir(($ENV{TMPDIR} || '/tmp'), "snpsplit_compare_$$");
-
 ### Both revisions are resolved before anything runs. Discovering a typo, or that the two sides are the
 ### same commit, after the first run has finished costs an hour on a real library - which is the only
 ### kind of input this script is for.
@@ -73,6 +74,23 @@ for my $rev ($old, $new) {
 if ($sha[0] eq $sha[1]) {
     warn "'$old' and '$new' are both $sha[0]. There is nothing to compare.\n";
     bail("A local branch is probably stale - try 'origin/master', or fetch and fast-forward it.");
+}
+
+### The workspace is deleted afterwards unless --keep, so it must be new or empty, and not a symlink
+if (defined $outdir) {
+    bail("--outdir is empty") unless length $outdir;
+    bail("--outdir $outdir is a symlink") if -l File::Spec->canonpath($outdir);
+    if (-e $outdir) {
+        bail("--outdir $outdir is not a directory") unless -d $outdir;
+        opendir(my $dh, $outdir) or bail("--outdir $outdir is not readable: $!");
+        bail("--outdir $outdir is not empty") if grep { !/^\.\.?$/ } readdir $dh;
+    }
+    make_path($outdir, { error => \my $err });
+    bail("Could not create --outdir $outdir") if @$err or !-d $outdir;
+    $outdir = abs_path($outdir);
+}
+else {
+    $outdir = tempdir('snpsplit_compare_XXXXXX', TMPDIR => 1);
 }
 
 warn "Comparing '$old' against '$new'\n";
@@ -116,8 +134,10 @@ for my $rev ($old, $new) {
     my $status = system($cmd);
     chdir $cwd or die "chdir back: $!\n";
 
-    warn "[$label] exit status: @{[ $status >> 8 ]}\n\n";
-    $ran{$label} = { dir => $work, exit => $status >> 8 };
+    ### A run killed by a signal is recorded as 128 + the signal, as a shell reports it
+    my $exit = $status == -1 ? 255 : ($status & 127) ? 128 + ($status & 127) : $status >> 8;
+    warn "[$label] exit status: $exit\n\n";
+    $ran{$label} = { dir => $work, exit => $exit };
 }
 
 my ($a, $b) = map { label_for($_) } ($old, $new);
@@ -158,9 +178,10 @@ for my $rel (sort keys %{ { map { %{ listing($ran{$_}{dir}) } } ($a, $b) } }) {
     }
 
     if ($rel =~ /\.bam$/) {
-        my $records = same(qq('$samtools' view '$fa'), qq('$samtools' view '$fb'));
-        my $header  = same(qq('$samtools' view -H '$fa' | grep -v '^\@PG'),
-                           qq('$samtools' view -H '$fb' | grep -v '^\@PG'));
+        my $records = capture(qq('$samtools' view '$fa')) eq capture(qq('$samtools' view '$fb'));
+        my ($ha, $hb) = map { join '', grep { !/^\@PG/ } split /^/, capture(qq('$samtools' view -H '$_')) }
+                        ($fa, $fb);
+        my $header  = $ha eq $hb;
         printf "%-46s records %s   header (minus \@PG) %s\n", $rel,
                $records ? 'identical' : 'DIFFER', $header ? 'identical' : 'DIFFER';
         $verdict = 1 unless $records and $header;
@@ -168,8 +189,10 @@ for my $rel (sort keys %{ { map { %{ listing($ran{$_}{dir}) } } ($a, $b) } }) {
     elsif ($rel =~ /\.(txt|yaml|log)$/) {
         ### version, date_run and command differ by construction, and are the same three fields the
         ### fixture harness masks in the YAML.
-        my $filter = q(grep -v -e 'ersion' -e 'date_run' -e 'command' -e ') . $outdir . q(');
-        my $ok = same(qq($filter '$fa'), qq($filter '$fb'));
+        -r $_ or die "cannot read $_\n" for $fa, $fb;
+        my ($ta, $tb) = map { join '', grep { !/ersion|date_run|command/ && index($_, $outdir) < 0 }
+                                       split /^/, slurp($_) } ($fa, $fb);
+        my $ok = $ta eq $tb;
         printf "%-46s %s\n", $rel, $ok ? 'identical' : 'differs';
         $verdict = 1 if !$ok and $rel =~ /report\.txt$/;
     }
@@ -180,11 +203,14 @@ if ($verdict) {
     print "SOMETHING CHANGED. Read the differing files before releasing.\n";
 }
 else {
-    print "No change in alignment records or reports. This is the expected result:\n";
-    print "neither #99 nor #116 touches allele assignment.\n";
+    print "No change in alignment records or reports.\n";
 }
-print "Workspace kept at $outdir\n" if $keep;
-remove_tree($outdir) unless $keep;
+if ($keep or $verdict) {
+    print "Workspace kept at $outdir\n";
+}
+else {
+    remove_tree($outdir);
+}
 exit $verdict;
 
 ###############################################################################
@@ -210,11 +236,12 @@ sub listing {
     return \%f;
 }
 
-sub same {
-    my ($cmd_a, $cmd_b) = @_;
-    my $out_a = `$cmd_a 2>/dev/null`;
-    my $out_b = `$cmd_b 2>/dev/null`;
-    return $out_a eq $out_b;
+### A command that fails dies, so an unreadable file is never compared as empty output
+sub capture {
+    my ($cmd) = @_;
+    my $out = `$cmd 2>/dev/null`;
+    die "failed: $cmd\n" if $?;
+    return $out;
 }
 
 sub run {
@@ -253,11 +280,11 @@ Run two versions of SNPsplit over the same BAM and compare the output.
   --new REV         Version under test. Default: dev
   --args 'STRING'   Extra SNPsplit arguments, e.g. '--paired --bisulfite'
   --samtools PATH   samtools to use. Default: samtools on PATH
-  --outdir DIR      Where to work. Default: a temporary directory
-  --keep            Keep the workspace for inspection
+  --outdir DIR      Where to work; must be new or empty. Default: a new temporary directory
+  --keep            Keep the workspace; it is always kept when something changed
   -h, --help        This message
 
-  Exit status is 0 when nothing that matters changed.
+  Exit status: 0 nothing that matters changed, 1 something changed, 2 could not compare.
 
   Alignment records are compared in full. BAM headers are compared with @PG lines
   removed, because @PG records the argv and 0.9.0 writes BAM through

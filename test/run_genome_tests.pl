@@ -126,8 +126,8 @@ sub run_fixture {
 
     stage_inputs($name, $dir, $scratch);
 
-    ### The poison shim proves nothing about --samtools_path here; it proves that a failed gzip is
-    ### silent. PATH subtraction cannot be used instead, because PATH must still resolve perl.
+    ### The poison shim proves that a failed gzip aborts with a message. PATH subtraction cannot be
+    ### used instead, because PATH must still resolve perl.
     my $run_path = $ENV{PATH};
     if (-e File::Spec->catfile($dir, 'poison_gzip')) {
         my $shim_dir = File::Spec->catdir($scratch, 'shim');

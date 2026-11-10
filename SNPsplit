@@ -23,7 +23,7 @@ use Cwd;
 ## along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ## Reading in a BAM or SAM file
-my $pipeline_version = '0.9.1';
+my $pipeline_version = '0.9.2';
 my $parent_dir = getcwd;
 my $full_commandline = join (" ","SNPsplit",@ARGV);
 # warn "Full commandline: $full_commandline\n"; sleep(5);
@@ -117,7 +117,7 @@ while (@ARGV){
 	$meta{$meta_count}->{infile} = $file;
     ++$meta_count;
 	# let's get canonical YAML date format (http://sweetohm.net/article/introduction-yaml.en.html#dates:e7bb92ccaaf13ef0e08921ccaca9f391)
-	my @elements = split (/ /,$timestamp);
+	my @elements = split (/\s+/,$timestamp);
 	my %months = (
 		'Jan' => 1,
 		'Feb' => 2,
@@ -1471,7 +1471,7 @@ sub open_output_filehandles{
     $genome2_file =~ s/sorted\.//;
     $unassigned_file =~ s/sorted\.//;
     $impossible_to_distinguish_file =~ s/sorted\.//;
-    $report_file =~ s/sorted\.//;
+    $report_file =~ s/(?<![A-Za-z0-9])sorted\.//;
 
     # if files were supplied with --no_sort then the files might end in .bam only
     $genome1_file =~ s/bam$/genome1.sam/;

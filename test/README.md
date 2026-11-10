@@ -62,6 +62,7 @@ Create `fixtures/<name>/` containing:
 | `allow_empty` | no | Marker: this fixture legitimately produces no alignments |
 | `break_tag2sort` | no | Marker: stage a sorter that always fails, to test the abort |
 | `exclude` | no | Glob per line: present in `manifest`, content not compared |
+| `input_name` | no | File name the first input is staged under, e.g. `x.sorted.bam` |
 
 Prefer adding reads to `test/bin/make_fixtures.pl` rather than editing `input.sam` by hand, so MD tags
 stay derived rather than asserted.
@@ -98,9 +99,11 @@ SNPsplit does not know about. `make_fixtures.pl` lists those positions under `un
 
 The expected output is normalised text, not raw files:
 
-- **BAM** → `samtools view -h`, with `@PG` `VN:`/`CL:` and `@HD` `SS:` values masked. `@PG` lines are
-  kept because `check_for_bs` reads them to decide library type and bisulfite mode — they are a control
-  input, not decoration. `SS:` is a recent sub-sort tag whose presence varies by samtools version.
+- **BAM** → `samtools view -h`, with `@PG` `VN:`/`CL:` and `@HD` `SS:` values masked. The input's `@PG`
+  lines are kept because `check_for_bs` reads them to decide library type and bisulfite mode — they are a
+  control input, not decoration. The `PN:samtools` or `PN:SNPsplit` records a run adds after them are
+  dropped, so the Perl and the Rust build are held to the same expected files. Records are kept by ID,
+  taken from all of a fixture's inputs together. `SS:` is a recent sub-sort tag whose presence varies by samtools version.
 - **YAML** → `version`, `date_run` and `command` masked. `command` is masked wholesale because a
   different implementation's argv differs legitimately.
 - **Reports** → verbatim; they contain only basenames.
@@ -202,8 +205,8 @@ git diff test/genome_fixtures      # READ THIS
 - **Give every hash-ordered output at least five records.** Below that the order cannot vary, or repeats
   by chance, and the fixture passes without exercising the normalisation it exists to prove. This is why
   `dual_hybrid` carries five records of each classification rather than one.
-- **Keep `poison_gzip`'s SNP list small.** The failure is silent because a ~1 KB buffered write still
-  fits the pipe buffer before the dead child is noticed. A larger list would behave differently.
+- **`poison_gzip`'s SNP list fits the pipe buffer**, so its failure usually surfaces at `close` rather
+  than at a write. Both paths end in the same message.
 - **Prefer error fixtures whose `die` carries no `$!`.** `strerror` text is not guaranteed identical
   across platforms.
 - For `reverse_strand`, the reference base must be the *complement* of the file's ref allele, since

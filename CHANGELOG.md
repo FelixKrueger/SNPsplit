@@ -1,3 +1,14 @@
+## v0.9.2 (Release 10 11 2026)
+
+### SNPsplit
+
+- The YAML report's `date_run` is no longer garbled on days 1 to 9 of a month ([#160](https://github.com/FelixKrueger/SNPsplit/pull/160))
+- The report name drops `sorted.` only where it starts a word, so `sample.unsorted.bam` gives `sample.unsorted.SNPsplit_report.txt` ([#166](https://github.com/FelixKrueger/SNPsplit/issues/166))
+
+### SNPsplit_genome_preparation
+
+- A gzip that fails while the SNP list is being written now always gets the "file is incomplete" message, instead of sometimes killing the run silently with SIGPIPE ([#152](https://github.com/FelixKrueger/SNPsplit/pull/152))
+
 ## v0.9.1 (Release 06 11 2026)
 
 ### SNPsplit

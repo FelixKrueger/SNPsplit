@@ -35,6 +35,7 @@ theme:
 nav:
   - Overview: README.md
   - workflow.md
+  - The Rust suite: rust.md
   - Genome preparation:
       - genome_prep/genome_preparation.md
       - genome_prep/legacy.md

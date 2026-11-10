@@ -51,6 +51,7 @@ die "No fixtures found under $fixture_dir\n" unless @fixtures;
 printf "Testing %s\nUsing   %s\n\n", $impl, $samtools;
 
 my (@passed, @failed);
+my %input_pg;
 
 for my $name (@fixtures) {
     my $dir = File::Spec->catdir($fixture_dir, $name);
@@ -110,6 +111,14 @@ sub run_fixture {
 
     my @inputs = prepare_inputs($name, $dir, $scratch, $feed_sam);
     die "$name: no input*.sam found\n" unless @inputs;
+
+    ### Read before the run: the inputs' own @PG records are the ones the comparison keeps
+    %input_pg = ();
+    for my $input (@inputs) {
+        my $header = `@{[ shell_quote($samtools) ]} view -H --no-PG @{[ shell_quote(File::Spec->catfile($scratch, $input)) ]}`;
+        die "$name: samtools could not read the header of $input\n" if $?;
+        $input_pg{$1} = 1 while $header =~ /^\@PG\t.*?\bID:([^\t\n]+)/mg;
+    }
 
     ### The poison shim proves --samtools_path is honoured everywhere: any bare `samtools` call lands
     ### on the shim, which records itself and fails. PATH subtraction cannot be used instead, because
@@ -193,6 +202,7 @@ SHIM
     chdir $scratch or die "chdir $scratch: $!\n";
     local $ENV{PATH}             = $run_path;
     local $ENV{SNPSPLIT_NO_SLEEP} = 1;
+    local $ENV{PERL5OPT} = "-I@{[ File::Spec->catdir($test_root, 'lib') ]} -MFixedClock";
     my $status = system("$cmdline > stdout.log 2> stderr.log");
     my $exit   = $status == -1 ? -1 : $status >> 8;
     chdir $prev or die "chdir back: $!\n";
@@ -214,6 +224,12 @@ sub prepare_inputs {
         check_md_tags($name, $dir, $src);
         $n++;
         my $stem = $n == 1 ? $name : "${name}_$n";
+        my ($given) = read_lines(File::Spec->catfile($dir, 'input_name'));
+        if ($n == 1 && defined $given) {
+            my $ext = $feed_sam ? 'sam' : 'bam';
+            $given =~ /^([^\/]+)\.\Q$ext\E$/ or die "$name: input_name must be a file name ending in .$ext\n";
+            $stem = $1;
+        }
         if ($feed_sam) {
             my $dst = "$stem.sam";
             copy($src, File::Spec->catfile($scratch, $dst)) or die "copy $src: $!\n";
@@ -349,8 +365,12 @@ sub mask_sam_text {
     my ($text) = @_;
     my @out;
     for my $line (split /^/, $text) {
-        ### @PG is a control input, not decoration: check_for_bs reads it to decide library type and
-        ### bisulfite mode, so the IDs and PP: chain stay and only the volatile fields are masked.
+        ### @PG is a control input: check_for_bs reads it, so the input's records are compared.
+        ### The samtools or SNPsplit records an implementation adds after them are dropped.
+        if ($line =~ /^\@PG\t/ && $line =~ /\tPN:(?:samtools|SNPsplit)\b/
+            && !($line =~ /\tID:([^\t\n]+)/ && $input_pg{$1})) {
+            next;
+        }
         if ($line =~ /^\@PG/) {
             $line =~ s/\tVN:[^\t\n]*/\tVN:<masked>/g;
             $line =~ s/\tCL:[^\t\n]*/\tCL:<masked>/g;
@@ -366,9 +386,11 @@ sub mask_sam_text {
 
 sub mask_yaml {
     my ($text) = @_;
-    for my $key (qw(version date_run command)) {
+    for my $key (qw(version command)) {
         $text =~ s/^(\s*\Q$key\E:).*$/$1 <masked>/mg;
     }
+    ### The time varies, its form does not: anything else is left in and fails the comparison
+    $text =~ s/^(\s*date_run:) \d{4}-\d{1,2}-\d{1,2}T\d{2}:\d{2}:\d{2}\.1Z$/$1 <masked>/mg;
     return $text;
 }
 
