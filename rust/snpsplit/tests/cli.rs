@@ -207,7 +207,7 @@ fn version_flags_behave_as_the_perl_does() {
             &["--version", "--bogus"],
         ] {
             let perl = Command::new("perl")
-                .arg(repo.join(tool))
+                .arg(repo.join("legacy_perl").join(tool))
                 .args(flags)
                 .output()
                 .unwrap();

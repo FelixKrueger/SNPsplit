@@ -56,6 +56,7 @@ bail("samtools not found; pass --samtools PATH") unless defined $samtools && -x 
 ### same commit, after the first run has finished costs an hour on a real library - which is the only
 ### kind of input this script is for.
 my @sha;
+my %layout;
 for my $rev ($old, $new) {
     my $sha = `git -C '$repo' rev-parse --verify --quiet '$rev^{commit}' 2>/dev/null`;
     chomp $sha;
@@ -67,6 +68,7 @@ for my $rev ($old, $new) {
 	bail("Pass a tag, branch or commit that exists.");
     }
     push @sha, substr($sha,0,7);
+    $layout{$rev} = layout_of($rev);
 }
 
 ### A local branch nobody updated resolves silently to whatever it last pointed at, and comparing it
@@ -109,7 +111,7 @@ for my $rev ($old, $new) {
     ### across that boundary would compare something nobody runs.
     for my $script (qw(SNPsplit tag2sort SNPsplit_genome_preparation)) {
         my $dst = File::Spec->catfile($dir, $script);
-        run("git -C '$repo' show '$rev:$script' > '$dst'");
+        run("git -C '$repo' show '$rev:$layout{$rev}$script' > '$dst'");
         chmod 0755, $dst;
     }
 
@@ -120,7 +122,8 @@ for my $rev ($old, $new) {
     chomp $sha;
     my ($stamp) = map { /_version = '([^']+)'/ ? $1 : () }
                   split /^/, slurp(File::Spec->catfile($dir, 'SNPsplit'));
-    warn "[$label] $rev is $sha, and reports version @{[ $stamp || '?' ]}\n";
+    warn "[$label] $rev is $sha, and reports version @{[ $stamp || '?' ]}",
+         " (scripts in @{[ length $layout{$rev} ? $layout{$rev} : 'the repository root' ]})\n";
     push @resolved, { label => $label, rev => $rev, sha => $sha, stamp => $stamp };
 
     my $work = File::Spec->catdir($dir, 'run');
@@ -217,6 +220,18 @@ exit $verdict;
 
 ### Everything that means "could not compare" leaves the same status, so a caller can tell that apart
 ### from "compared, and something changed".
+### The Perl scripts are at the root up to 0.9.2 and in legacy_perl/ after it.
+sub layout_of {
+    my ($rev) = @_;
+    my $has = sub { system("git -C '$repo' cat-file -e '$rev:$_[0]' 2>/dev/null") == 0 };
+    my ($dir) = grep { $has->("${_}SNPsplit") } ('legacy_perl/', '');
+    bail("'$rev' has no SNPsplit, at the root or in legacy_perl/.") unless defined $dir;
+    for my $script (qw(tag2sort SNPsplit_genome_preparation)) {
+        bail("'$rev' has ${dir}SNPsplit but no ${dir}$script.") unless $has->("$dir$script");
+    }
+    return $dir;
+}
+
 sub bail {
     my ($msg) = @_;
     warn "$msg\n";

@@ -8,7 +8,7 @@ Point `--impl` at any implementation to diff it against the same expected output
 
 | Runner | Tools | Fixtures | Needs |
 |---|---|---|---|
-| `run_tests.pl` | `SNPsplit`, `tag2sort` | `fixtures/`, 26 | `samtools`, `gzip` |
+| `run_tests.pl` | `SNPsplit`, `tag2sort` | `fixtures/`, 29 | `samtools`, `gzip` |
 | `run_genome_tests.pl` | `SNPsplit_genome_preparation` | `genome_fixtures/`, 32 | `gzip` only |
 
 Two runners rather than one: the tools disagree on nearly every tool-specific decision a runner makes.
@@ -28,8 +28,9 @@ test/run_tests.pl --keep          # leave scratch dirs for inspection
 test/run_tests.pl --impl /path/to/other/SNPsplit
 ```
 
-Exit status is 0 when everything matches, 1 otherwise. `tag2sort` is taken from the same directory as
-`--impl` and staged beside it, because `SNPsplit` invokes `$RealBin/tag2sort` with no override.
+Without `--impl` it runs the Perl in `legacy_perl/`. Exit status is 0 when everything matches, 1
+otherwise. `tag2sort` is taken from the same directory as `--impl` and staged beside it, because
+`SNPsplit` invokes `$RealBin/tag2sort` with no override.
 
 Requires `samtools` on `PATH` (or `--samtools PATH`) and core Perl only — no CPAN modules, matching
 the tools under test.
@@ -353,9 +354,10 @@ test/bin/compare_versions.pl --bam sample.bam --snps all_SNPs_STRAIN_GRCm39.txt.
     --old 0.8.0 --new dev --args '--paired --bisulfite'
 ```
 
-It stages all three scripts at each revision — `SNPsplit` calls `$RealBin/tag2sort` with no override, so
-mixing versions across that boundary would compare something nobody runs — runs both over the same BAM,
-and compares alignment records in full.
+It stages all three scripts at each revision, from `legacy_perl/` or, up to 0.9.2, the repository
+root — `SNPsplit` calls `$RealBin/tag2sort` with no override, so mixing versions across that boundary
+would compare something nobody runs — runs both over the same BAM, and compares alignment records in
+full.
 
 BAM headers are compared with `@PG` removed, because `@PG` records the argv and 0.9.0 writes BAM through
 `samtools view -o` rather than a shell redirect. `version`, `date_run` and `command` are filtered from
