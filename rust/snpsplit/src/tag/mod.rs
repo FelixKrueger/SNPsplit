@@ -155,6 +155,7 @@ fn tag_one(
     table: &mut Table,
     stored: &mut usize,
 ) -> Result<()> {
+    let started = timestamp();
     let mut err = std::io::stderr();
     let name = original.to_string_lossy().to_string();
 
@@ -238,7 +239,9 @@ fn tag_one(
 
     hand_off_to_sort(config, &outfile)?;
     append_sorting_report(config, &outfile, &mut report, &mut err)?;
-    write_yaml(config, &name, &outfile, &counts, *stored, &mut err)?;
+    write_yaml(
+        config, &name, &outfile, &counts, *stored, &started, &mut err,
+    )?;
     writeln!(
         err,
         "\n\nSNPsplit processing finished... [Allele-tagging + tag2sort]\n"
@@ -861,6 +864,7 @@ fn write_yaml(
     outfile: &str,
     c: &Counts,
     stored: usize,
+    started: &str,
     err: &mut impl Write,
 ) -> Result<()> {
     let base = infile.rsplit('/').next().unwrap_or(infile);
@@ -887,7 +891,7 @@ fn write_yaml(
     writeln!(yaml, "  infile: {infile}")?;
     // Masked by the fixture runner, along with version and command, because all three move
     // between runs.
-    writeln!(yaml, "  date_run: {}", timestamp())?;
+    writeln!(yaml, "  date_run: {started}")?;
     writeln!(yaml, "  mode: {mode}")?;
     writeln!(yaml, "  library: {library}")?;
     writeln!(yaml, "  command: {}", crate::io::command_line())?;
@@ -966,14 +970,36 @@ fn write_yaml(
     Ok(())
 }
 
-/// A timestamp in the canonical YAML shape the Perl builds by hand.
+unsafe extern "C" {
+    fn tzset();
+}
+
+/// Local time in the Perl's form, `YYYY-M-DTHH:MM:SS.1Z`.
 fn timestamp() -> String {
-    let secs = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    // Masked by the runner, so precision beyond "it moves between runs" buys nothing.
-    format!("{secs}")
+    // SAFETY: tzset reads TZ; time and localtime_r only write to the locals passed in
+    let (now, mut tm) = unsafe {
+        tzset();
+        (
+            libc::time(std::ptr::null_mut()),
+            std::mem::zeroed::<libc::tm>(),
+        )
+    };
+    if unsafe { libc::localtime_r(&now, &mut tm) }.is_null() {
+        return format!("{now}");
+    }
+    format_timestamp(&tm)
+}
+
+fn format_timestamp(tm: &libc::tm) -> String {
+    format!(
+        "{}-{}-{}T{:02}:{:02}:{:02}.1Z",
+        tm.tm_year + 1900,
+        tm.tm_mon + 1,
+        tm.tm_mday,
+        tm.tm_hour,
+        tm.tm_min,
+        tm.tm_sec
+    )
 }
 
 /// Fold the sorting report into the tagging report, as the Perl does.
@@ -1004,6 +1030,16 @@ fn append_sorting_report(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_date_is_written_as_the_perl_writes_it_on_a_single_digit_day() {
+        // SAFETY: an all-zero tm is a valid value
+        let mut tm: libc::tm = unsafe { std::mem::zeroed() };
+        (
+            tm.tm_year, tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
+        ) = (126, 10, 8, 7, 5, 3);
+        assert_eq!(super::format_timestamp(&tm), "2026-11-8T07:05:03.1Z");
+    }
 
     #[test]
     fn the_report_name_drops_the_first_sorted_anywhere_as_the_perl_does() {
