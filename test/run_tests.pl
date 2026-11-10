@@ -112,6 +112,14 @@ sub run_fixture {
     my @inputs = prepare_inputs($name, $dir, $scratch, $feed_sam);
     die "$name: no input*.sam found\n" unless @inputs;
 
+    ### Read before the run: the inputs' own @PG records are the ones the comparison keeps
+    %input_pg = ();
+    for my $input (@inputs) {
+        my $header = `@{[ shell_quote($samtools) ]} view -H --no-PG @{[ shell_quote(File::Spec->catfile($scratch, $input)) ]}`;
+        die "$name: samtools could not read the header of $input\n" if $?;
+        $input_pg{$1} = 1 while $header =~ /^\@PG\t.*?\bID:([^\t\n]+)/mg;
+    }
+
     ### The poison shim proves --samtools_path is honoured everywhere: any bare `samtools` call lands
     ### on the shim, which records itself and fails. PATH subtraction cannot be used instead, because
     ### PATH must still resolve perl (both scripts are #!/usr/bin/env perl) and on Debian-family CI
@@ -199,9 +207,6 @@ SHIM
     my $exit   = $status == -1 ? -1 : $status >> 8;
     chdir $prev or die "chdir back: $!\n";
 
-    %input_pg = map { /^\@PG\t.*?\bID:([^\t\n]+)/ ? ($1 => 1) : () }
-                map { split /^/, `@{[ shell_quote($samtools) ]} view -H --no-PG @{[ shell_quote(File::Spec->catfile($scratch, $_)) ]} 2>/dev/null` }
-                @inputs;
     my %actual = normalise($name, $dir, $scratch, $exit);
 
     return $update
