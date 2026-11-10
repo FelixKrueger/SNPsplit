@@ -117,7 +117,7 @@ while (@ARGV){
 	$meta{$meta_count}->{infile} = $file;
     ++$meta_count;
 	# let's get canonical YAML date format (http://sweetohm.net/article/introduction-yaml.en.html#dates:e7bb92ccaaf13ef0e08921ccaca9f391)
-	my @elements = split (/ /,$timestamp);
+	my @elements = split (/\s+/,$timestamp);
 	my %months = (
 		'Jan' => 1,
 		'Feb' => 2,
