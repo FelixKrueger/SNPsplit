@@ -38,7 +38,8 @@ cd SNPsplit
 ```
 
 Requires a Rust toolchain (1.89 or newer). This puts `SNPsplit`, `tag2sort` and
-`SNPsplit_genome_preparation` in `rust/target/impl/`; add that folder to your `PATH`.
+`SNPsplit_genome_preparation` in `rust/target/impl/`; add that folder to your `PATH`. The
+`snpsplit` binary used in the examples below is `rust/target/release/snpsplit`.
 
 ### Container image
 
