@@ -4,12 +4,10 @@ on:
     branches:
       - master
       - dev
-      - rust
   pull_request:
     branches:
       - master
       - dev
-      - rust
 
 jobs:
   build:
