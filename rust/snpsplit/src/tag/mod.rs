@@ -1007,6 +1007,8 @@ fn append_sorting_report(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn the_date_is_written_as_the_perl_writes_it_on_a_single_digit_day() {
         // SAFETY: an all-zero tm is a valid value
@@ -1016,8 +1018,6 @@ mod tests {
         ) = (126, 10, 8, 7, 5, 3);
         assert_eq!(super::format_timestamp(&tm), "2026-11-8T07:05:03.1Z");
     }
-
-    use super::*;
 
     #[test]
     fn a_deleted_masked_position_is_counted() {
