@@ -1,6 +1,6 @@
 use std::process::ExitCode;
 
-use snpsplit::{Tool, genome_prep, sort, tag, tool, version};
+use snpsplit::{Tool, genome_prep, sort, tag, tool};
 
 fn main() -> ExitCode {
     let mut args: Vec<String> = std::env::args().collect();
@@ -31,25 +31,6 @@ fn main() -> ExitCode {
 
 /// Run the selected tool.
 fn run(tool: Tool, args: &[String]) -> ExitCode {
-    let flag = format!("--{}", tool::version_flag(tool));
-
-    if args.iter().any(|a| a == &flag) {
-        print!("{}", version::banner(tool));
-        return ExitCode::SUCCESS;
-    }
-
-    // The Perl Getopt::Long rejection, reproduced: an unknown long option is fatal, and the
-    // near-miss spelling of the version flag is the one users actually hit.
-    for arg in args {
-        if let Some(name) = arg.strip_prefix("--")
-            && (name == "version" || name == "versions")
-        {
-            eprintln!("Unknown option: {name}");
-            eprintln!("Please respecify command line options");
-            return ExitCode::from(255);
-        }
-    }
-
     match tool {
         Tool::Prepare => genome_prep::run(args),
         Tool::Sort => sort::run(args),

@@ -31,8 +31,10 @@ fn execute(args: &[String]) -> Result<ExitCode> {
     let opts = match cli::parse(args) {
         Ok(o) => o,
         Err(message) => {
+            // Getopt::Long's failure is a Perl die, which exits 255
             eprintln!("{message}");
-            anyhow::bail!("Please respecify command line options\n");
+            eprintln!("Please respecify command line options");
+            return Ok(ExitCode::from(255));
         }
     };
 
