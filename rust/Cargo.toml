@@ -13,6 +13,7 @@ repository = "https://github.com/FelixKrueger/SNPsplit"
 anyhow = "1.0"
 clap = { version = "4.6", features = ["derive"] }
 flate2 = "1.1"
+libc = "0.2"
 noodles-bam = "0.94"
 noodles-bgzf = "0.51"
 noodles-sam = "0.89"

@@ -876,6 +876,7 @@ dependencies = [
  "assert_cmd",
  "clap",
  "flate2",
+ "libc",
  "noodles-bam",
  "noodles-bgzf",
  "noodles-sam",

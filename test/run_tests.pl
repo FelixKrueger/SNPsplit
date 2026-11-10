@@ -194,6 +194,7 @@ SHIM
     chdir $scratch or die "chdir $scratch: $!\n";
     local $ENV{PATH}             = $run_path;
     local $ENV{SNPSPLIT_NO_SLEEP} = 1;
+    local $ENV{PERL5OPT} = "-I@{[ File::Spec->catdir($test_root, 'lib') ]} -MFixedClock";
     my $status = system("$cmdline > stdout.log 2> stderr.log");
     my $exit   = $status == -1 ? -1 : $status >> 8;
     chdir $prev or die "chdir back: $!\n";
@@ -218,6 +219,12 @@ sub prepare_inputs {
         check_md_tags($name, $dir, $src);
         $n++;
         my $stem = $n == 1 ? $name : "${name}_$n";
+        my ($given) = read_lines(File::Spec->catfile($dir, 'input_name'));
+        if ($n == 1 && defined $given) {
+            my $ext = $feed_sam ? 'sam' : 'bam';
+            $given =~ /^([^\/]+)\.\Q$ext\E$/ or die "$name: input_name must be a file name ending in .$ext\n";
+            $stem = $1;
+        }
         if ($feed_sam) {
             my $dst = "$stem.sam";
             copy($src, File::Spec->catfile($scratch, $dst)) or die "copy $src: $!\n";
@@ -374,9 +381,11 @@ sub mask_sam_text {
 
 sub mask_yaml {
     my ($text) = @_;
-    for my $key (qw(version date_run command)) {
+    for my $key (qw(version command)) {
         $text =~ s/^(\s*\Q$key\E:).*$/$1 <masked>/mg;
     }
+    ### The time varies, its form does not: anything else is left in and fails the comparison
+    $text =~ s/^(\s*date_run:) \d{4}-\d{1,2}-\d{1,2}T\d{2}:\d{2}:\d{2}\.1Z$/$1 <masked>/mg;
     return $text;
 }
 

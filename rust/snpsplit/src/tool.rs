@@ -26,17 +26,6 @@ pub fn from_subcommand(name: &str) -> Option<Tool> {
     }
 }
 
-/// How this tool spells its version flag.
-///
-/// The spelling differs per tool in the Perl and the difference is observable: tag2sort
-/// rejects `--versions` outright. Reproduced rather than harmonised.
-pub fn version_flag(tool: Tool) -> &'static str {
-    match tool {
-        Tool::Tag | Tool::Prepare => "versions",
-        Tool::Sort => "version",
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,14 +57,5 @@ mod tests {
         assert_eq!(from_subcommand("sort"), Some(Tool::Sort));
         assert_eq!(from_subcommand("prepare"), Some(Tool::Prepare));
         assert_eq!(from_subcommand("split"), None);
-    }
-
-    /// tag2sort spells it in the singular and rejects the plural. See tests/cli.rs for the
-    /// exit-status half of that contract.
-    #[test]
-    fn version_flag_spelling_differs_per_tool() {
-        assert_eq!(version_flag(Tool::Tag), "versions");
-        assert_eq!(version_flag(Tool::Prepare), "versions");
-        assert_eq!(version_flag(Tool::Sort), "version");
     }
 }
