@@ -348,9 +348,8 @@ fn sort_by_name(file: &Path, config: &cli::Config, err: &mut impl Write) -> Resu
     Ok(sorted)
 }
 
-/// The report's file name: the first "sorted." at the start or after a byte that is not an ASCII
-/// letter or digit is dropped, then a trailing `sam` becomes `bam` and a trailing `bam` becomes
-/// `SNPsplit_report.txt`.
+/// Drops the first "sorted." not preceded by an ASCII letter or digit, then a trailing `sam`
+/// becomes `bam` and a trailing `bam` becomes `SNPsplit_report.txt`.
 fn report_name(base: &str) -> String {
     let bytes = base.as_bytes();
     let mut name = match base
@@ -1074,6 +1073,7 @@ mod tests {
             ("x_sorted.bam", "x_SNPsplit_report.txt"),
             ("x-sorted.bam", "x-SNPsplit_report.txt"),
             ("x.Sorted.bam", "x.Sorted.SNPsplit_report.txt"),
+            ("x9sorted.bam", "x9sorted.SNPsplit_report.txt"),
             ("caf\u{e9}sorted.bam", "caf\u{e9}SNPsplit_report.txt"),
         ] {
             assert_eq!(report_name(input), report, "{input}");
