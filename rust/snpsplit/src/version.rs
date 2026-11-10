@@ -1,4 +1,4 @@
-//! The three `--version` banners, captured byte for byte from Perl SNPsplit v0.9.1.
+//! The three `--version` banners, captured byte for byte from Perl SNPsplit v0.9.2.
 //!
 //! They are `include_str!`d from `banners/` rather than written out here, so they cannot
 //! drift from what the Perl actually prints. Regenerate them, do not edit them.
