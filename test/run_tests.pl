@@ -216,7 +216,8 @@ sub prepare_inputs {
         my $stem = $n == 1 ? $name : "${name}_$n";
         my ($given) = read_lines(File::Spec->catfile($dir, 'input_name'));
         if ($n == 1 && defined $given) {
-            $given =~ /^([^\/]+)\.(?:bam|sam)$/ or die "$name: input_name must be a file name ending in .bam or .sam\n";
+            my $ext = $feed_sam ? 'sam' : 'bam';
+            $given =~ /^([^\/]+)\.\Q$ext\E$/ or die "$name: input_name must be a file name ending in .$ext\n";
             $stem = $1;
         }
         if ($feed_sam) {
