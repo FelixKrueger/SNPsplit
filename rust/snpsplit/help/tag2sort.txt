@@ -1,0 +1,54 @@
+
+  SYNOPSIS:
+
+  This script processes allele tagged input files produced by SNPsplit and sorts the 'allele_tagged.bam'
+  file into several sub-files, depending on the experiment type and options selected. By default reads are
+  written to the following files:
+
+   ... _genome1.bam
+   ... _genome2.bam
+   ... _unassigned.bam
+
+  For more information on sorting options pelase refer to the SNPsplit documentation.
+
+  USAGE: tag2sort [options] [SNPsplit tagged input file(s)]
+
+SNPsplit tagged input file(s): These files are required to be SAM/BAM files that contain the
+optional field XX:Z: produced by the SNPsplit-flag module. The tags indicate if a read could
+be assigned to a specific allele, and they are one of the following:
+
+                             XX:Z:UA - Unassigned
+                             XX:Z:G1 - Genome 1-specific
+                             XX:Z:G2 - Genome 2-specific
+                             XX:Z:CF - Conflicting
+
+--paired               Paired-end mode. (Default: OFF).
+
+-o/--output_dir <dir>  Write all output files into this directory. By default the output files will be written into
+                       the same folder as the input file(s).
+
+--singletons           If the allele-tagged paired-end file also contains singleton alignments (which is the
+                       default for e.g. TopHat), these will be written out to extra files (ending in _st.bam)
+                       instead of writing everything to combined paired-end and singleton files. Default: OFF.
+
+--hic                  Assumes Hi-C data processed with HiCUP (www.bioinformatics.babraham.ac.uk/projects/hicup/)
+                       as input, i.e. the input BAM file is paired-end and Reads 1 and 2 follow each other. Thus,
+                       this option also sets the flags --paired and --no_sort. Default: OFF.
+
+--samtools_path        The path to your Samtools installation, e.g. /home/user/samtools/. Does not need to
+                       be specified explicitly if Samtools is in the PATH already.
+
+--conflicting/--weird  Reads or read pairs that were classified as 'Conflicting' (XX:Z:CF) will be written to
+                       an extra file (ending in .conflicting.bam) instead of being simply skipped. Reads may be
+                       classified as 'Conflicting' if a single read contains SNP information for both genomes at
+                       the same time, or if the SNP position was deleted from the read. Read-pairs are considered
+                       'Conflicting' if either read is was tagged with the XX:Z:CF flag. Default: OFF.
+
+--help                 Displays this help information and exits.
+
+--version              Displays version information and exits.
+
+
+
+                          Script last modified: 21 November 2019
+

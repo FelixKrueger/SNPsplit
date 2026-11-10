@@ -51,6 +51,7 @@ die "No fixtures found under $fixture_dir\n" unless @fixtures;
 printf "Testing %s\nUsing   %s\n\n", $impl, $samtools;
 
 my (@passed, @failed);
+my %input_pg;
 
 for my $name (@fixtures) {
     my $dir = File::Spec->catdir($fixture_dir, $name);
@@ -198,6 +199,9 @@ SHIM
     my $exit   = $status == -1 ? -1 : $status >> 8;
     chdir $prev or die "chdir back: $!\n";
 
+    %input_pg = map { /^\@PG\t.*?\bID:([^\t\n]+)/ ? ($1 => 1) : () }
+                map { split /^/, `@{[ shell_quote($samtools) ]} view -H --no-PG @{[ shell_quote(File::Spec->catfile($scratch, $_)) ]} 2>/dev/null` }
+                @inputs;
     my %actual = normalise($name, $dir, $scratch, $exit);
 
     return $update
@@ -356,8 +360,12 @@ sub mask_sam_text {
     my ($text) = @_;
     my @out;
     for my $line (split /^/, $text) {
-        ### @PG is a control input, not decoration: check_for_bs reads it to decide library type and
-        ### bisulfite mode, so the IDs and PP: chain stay and only the volatile fields are masked.
+        ### @PG is a control input: check_for_bs reads it, so the input's records are compared.
+        ### The samtools or SNPsplit records an implementation adds after them are dropped.
+        if ($line =~ /^\@PG\t/ && $line =~ /\tPN:(?:samtools|SNPsplit)\b/
+            && !($line =~ /\tID:([^\t\n]+)/ && $input_pg{$1})) {
+            next;
+        }
         if ($line =~ /^\@PG/) {
             $line =~ s/\tVN:[^\t\n]*/\tVN:<masked>/g;
             $line =~ s/\tCL:[^\t\n]*/\tCL:<masked>/g;
