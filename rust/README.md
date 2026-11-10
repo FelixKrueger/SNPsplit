@@ -1,8 +1,7 @@
 # SNPsplit Rust rewrite
 
-Port of SNPsplit from Perl to Rust, proposed in
-[#89](https://github.com/FelixKrueger/SNPsplit/issues/89). The design is in
-[DESIGN.md](DESIGN.md).
+Port of SNPsplit from Perl to Rust ([#89](https://github.com/FelixKrueger/SNPsplit/issues/89)),
+merged into `dev` through [#154](https://github.com/FelixKrueger/SNPsplit/pull/154).
 
 This file is the status journal. It says what is ported and at what fidelity, and it is
 updated in the same PR as the work it describes.
@@ -40,7 +39,7 @@ directions.
 
 ## Verified equivalences
 
-- All three version banners are byte-identical to Perl v0.9.0, checked by `diff` against the
+- All three version banners are byte-identical to Perl v0.9.2, checked by `diff` against the
   Perl scripts and pinned by a test that fails if `the package manifest` moves without the banners
   being regenerated.
 - Name sort: `io::sort_by_name` reproduces `samtools sort -n` ordering, cross-checked over
@@ -62,8 +61,11 @@ directions.
 
 ## Container image
 
+No image is published yet; build it from the repository root:
+
 ```sh
-docker run --rm ghcr.io/felixkrueger/snpsplit:latest --help
+docker build -t snpsplit rust/
+docker run --rm --entrypoint SNPsplit snpsplit --help
 ```
 
 The three classic names are on the `PATH` inside it, so a pipeline that calls `SNPsplit` or
@@ -157,7 +159,7 @@ reading and writing the alignments, so most of what is left is I/O. The 2,000,00
 records are byte-identical between 1 and 16 workers, checked by comparing the output, not by
 comparing the counters.
 
-## Known deviations from Perl v0.9.1
+## Known deviations from Perl v0.9.2
 
 Anything that lands here stays here: a deviation that is not written down is a bug the next
 person has to rediscover.
@@ -191,7 +193,7 @@ it shells out to, so the tool that actually did the work never appears in its ow
 self-contained build has no excuse for that, so `tag2sort` writes its own record:
 
 ```
-@PG	ID:SNPsplit	PN:SNPsplit	VN:0.9.0	CL:<the command line>	PP:<the previous record>
+@PG	ID:SNPsplit	PN:SNPsplit	VN:0.9.2	CL:<the command line>	PP:<the previous record>
 ```
 
 This is the one place the port writes something the Perl does not, and it is deliberate: the
