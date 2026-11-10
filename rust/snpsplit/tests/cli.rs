@@ -132,3 +132,103 @@ fn dispatch_survives_being_copied_under_a_classic_name() {
         include_str!("../banners/snpsplit.txt"),
     );
 }
+
+/// Every spelling of the version flag gives the Perl's exit status, and the Perl's banner when it succeeds.
+#[test]
+fn version_flags_behave_as_the_perl_does() {
+    let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let dir = TempDir::new().unwrap();
+    for tool in ["SNPsplit", "tag2sort", "SNPsplit_genome_preparation"] {
+        let rust = linked_as(dir.path(), tool);
+        for flags in [
+            &["--version"][..],
+            &["--versions"],
+            &["--vers"],
+            &["--v"],
+            &["--versions", "--bogus"],
+            &["--version", "--bogus"],
+        ] {
+            let perl = Command::new("perl")
+                .arg(repo.join(tool))
+                .args(flags)
+                .output()
+                .unwrap();
+            let ours = Command::new(&rust).args(flags).output().unwrap();
+            assert_eq!(ours.status.code(), perl.status.code(), "{tool} {flags:?}");
+            if perl.status.success() {
+                assert_eq!(ours.stdout, perl.stdout, "{tool} {flags:?}");
+            }
+        }
+    }
+}
+
+/// A stand-in sorter that records its arguments and the name it was found under.
+fn recording_sorter(dir: &Path, tag: &str) {
+    use std::os::unix::fs::PermissionsExt;
+    let path = dir.join("tag2sort");
+    std::fs::write(
+        &path,
+        format!("#!/bin/sh\necho \"{tag} $*\" >> \"$SORTER_LOG\"\n"),
+    )
+    .unwrap();
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+}
+
+/// Runs a copied `SNPsplit` by bare name, with a decoy `tag2sort` earlier on `PATH`.
+fn run_with_sorters(extra: &[&str], env_parallel: Option<&str>) -> String {
+    let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../test/fixtures/se_basic");
+    let work = TempDir::new().unwrap();
+    let bin = work.path().join("bin");
+    let decoy = work.path().join("decoy");
+    std::fs::create_dir_all(&bin).unwrap();
+    std::fs::create_dir_all(&decoy).unwrap();
+    std::fs::copy(cargo_bin("snpsplit"), bin.join("SNPsplit")).unwrap();
+    recording_sorter(&bin, "own");
+    recording_sorter(&decoy, "decoy");
+    std::fs::copy(fixture.join("input.sam"), work.path().join("input.sam")).unwrap();
+    let log = work.path().join("sorter.log");
+    let path = format!(
+        "{}:{}:{}",
+        decoy.display(),
+        bin.display(),
+        std::env::var("PATH").unwrap()
+    );
+
+    let mut cmd = Command::new("SNPsplit");
+    cmd.current_dir(work.path())
+        .env("PATH", path)
+        .env("SORTER_LOG", &log)
+        .env("SNPSPLIT_NO_SLEEP", "1")
+        .env_remove("SNPSPLIT_PARALLEL")
+        .args([
+            "--snp_file",
+            fixture.join("snps.txt").to_str().unwrap(),
+            "--single_end",
+            "--sam",
+        ])
+        .args(extra)
+        .arg("input.sam");
+    if let Some(n) = env_parallel {
+        cmd.env("SNPSPLIT_PARALLEL", n);
+    }
+    let out = cmd.output().unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    std::fs::read_to_string(log).unwrap()
+}
+
+#[test]
+fn the_sorter_is_the_one_next_to_the_running_binary_and_gets_the_worker_count() {
+    let calls = run_with_sorters(&["--parallel", "3"], None);
+    assert!(calls.starts_with("own "), "{calls}");
+    assert!(calls.contains("--parallel 3"), "{calls}");
+}
+
+#[test]
+fn the_worker_count_from_the_environment_reaches_the_sorter_too() {
+    let calls = run_with_sorters(&[], Some("5"));
+    assert!(calls.contains("--parallel 5"), "{calls}");
+}

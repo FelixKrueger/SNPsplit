@@ -55,8 +55,10 @@ fn execute(args: &[String]) -> Result<ExitCode> {
     let opts = match cli::parse(args) {
         Ok(o) => o,
         Err(message) => {
+            // Getopt::Long's failure is a Perl die, which exits 255
             eprintln!("{message}");
-            anyhow::bail!("Please respecify command line options\n");
+            eprintln!("Please respecify command line options");
+            return Ok(ExitCode::from(255));
         }
     };
 
@@ -346,6 +348,27 @@ fn sort_by_name(file: &Path, config: &cli::Config, err: &mut impl Write) -> Resu
     Ok(sorted)
 }
 
+/// The report's file name: the first "sorted." anywhere in the input name is dropped, then a
+/// trailing `sam` becomes `bam` and a trailing `bam` becomes `SNPsplit_report.txt`.
+fn report_name(base: &str) -> String {
+    let mut name = base.replacen("sorted.", "", 1);
+    if let Some(head) = name.strip_suffix("sam") {
+        name = format!("{head}bam");
+    }
+    match name.strip_suffix("bam") {
+        Some(head) => format!("{head}SNPsplit_report.txt"),
+        None => name,
+    }
+}
+
+/// The YAML report's file name: the report's, with a trailing `txt` made `yaml`.
+fn yaml_name(report: &str) -> String {
+    match report.strip_suffix("txt") {
+        Some(head) => format!("{head}yaml"),
+        None => report.to_string(),
+    }
+}
+
 /// Open the report files and announce them, returning the allele-flagged output name.
 fn report_header(
     config: &cli::Config,
@@ -359,14 +382,14 @@ fn report_header(
         .unwrap_or(base);
     let extension = if config.bam { "bam" } else { "sam" };
     let outfile = format!("{stem}.allele_flagged.{extension}");
-    let report_file = format!("{stem}.SNPsplit_report.txt");
+    let report_file = report_name(base);
 
     let mut report = std::fs::File::create(format!("{}{report_file}", config.output_dir))
         .with_context(|| format!("Unable to write to file '{report_file}'"))?;
 
     // Created here rather than when it is written, because the Perl opens it here and a run
     // that stops early (--skip_tag2sort, or a failed sorting step) leaves an empty one behind.
-    let yaml_file = format!("{stem}.SNPsplit_report.yaml");
+    let yaml_file = yaml_name(&report_file);
     std::fs::File::create(format!("{}{yaml_file}", config.output_dir))
         .with_context(|| format!("Unable to write to file '{yaml_file}'"))?;
 
@@ -806,11 +829,14 @@ fn hand_off_to_sort(config: &cli::Config, outfile: &str) -> Result<()> {
     if config.singletons {
         args.push("--singletons".into());
     }
+    args.push("--parallel".into());
+    args.push(config.parallel.to_string());
     args.push(outfile.to_string());
 
-    let own = std::env::args().next().unwrap_or_default();
-    let dir = Path::new(&own).parent().unwrap_or(Path::new("."));
-    let sorter = dir.join("tag2sort");
+    // The sorter beside the running binary, symlinks resolved, as the Perl's $RealBin
+    let own = std::env::current_exe()
+        .context("Allele-specific sorting (tag2sort) could not be located")?;
+    let sorter = own.with_file_name("tag2sort");
 
     let status = std::process::Command::new(&sorter).args(&args).status();
     let status = match status {
@@ -842,11 +868,7 @@ fn write_yaml(
     err: &mut impl Write,
 ) -> Result<()> {
     let base = infile.rsplit('/').next().unwrap_or(infile);
-    let stem = base
-        .strip_suffix(".sam")
-        .or_else(|| base.strip_suffix(".bam"))
-        .unwrap_or(base);
-    let path = format!("{}{stem}.SNPsplit_report.yaml", config.output_dir);
+    let path = format!("{}{}", config.output_dir, yaml_name(&report_name(base)));
     let mut yaml = std::io::BufWriter::new(std::fs::File::create(&path)?);
 
     let mode = if config.hic {
@@ -1017,6 +1039,20 @@ mod tests {
             tm.tm_year, tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,
         ) = (126, 10, 8, 7, 5, 3);
         assert_eq!(super::format_timestamp(&tm), "2026-11-8T07:05:03.1Z");
+    }
+
+    #[test]
+    fn the_report_name_drops_the_first_sorted_anywhere_as_the_perl_does() {
+        for (input, report) in [
+            ("x.bam", "x.SNPsplit_report.txt"),
+            ("x.sam", "x.SNPsplit_report.txt"),
+            ("x.sorted.bam", "x.SNPsplit_report.txt"),
+            ("x.sorted.sorted.bam", "x.sorted.SNPsplit_report.txt"),
+            ("sample.unsorted.bam", "sample.unSNPsplit_report.txt"),
+        ] {
+            assert_eq!(report_name(input), report, "{input}");
+        }
+        assert_eq!(yaml_name("x.SNPsplit_report.txt"), "x.SNPsplit_report.yaml");
     }
 
     #[test]
