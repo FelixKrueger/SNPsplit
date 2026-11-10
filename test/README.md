@@ -354,10 +354,10 @@ test/bin/compare_versions.pl --bam sample.bam --snps all_SNPs_STRAIN_GRCm39.txt.
     --old 0.8.0 --new dev --args '--paired --bisulfite'
 ```
 
-It stages all three scripts at each revision, from `legacy_perl/` or, up to 0.9.2, the repository
-root — `SNPsplit` calls `$RealBin/tag2sort` with no override, so mixing versions across that boundary
-would compare something nobody runs — runs both over the same BAM, and compares alignment records in
-full.
+It stages all three scripts at each revision, from `legacy_perl/` or, in older revisions, the
+repository root. All three, because `SNPsplit` calls `$RealBin/tag2sort` with no override: mixing
+versions across that boundary would compare something nobody runs. It runs both over the same BAM and
+compares alignment records in full.
 
 BAM headers are compared with `@PG` removed, because `@PG` records the argv and 0.9.0 writes BAM through
 `samtools view -o` rather than a shell redirect. `version`, `date_run` and `command` are filtered from

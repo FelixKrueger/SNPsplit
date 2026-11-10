@@ -220,7 +220,13 @@ exit $verdict;
 
 ### Everything that means "could not compare" leaves the same status, so a caller can tell that apart
 ### from "compared, and something changed".
-### The Perl scripts are at the root up to 0.9.2 and in legacy_perl/ after it.
+sub bail {
+    my ($msg) = @_;
+    warn "$msg\n";
+    exit 2;
+}
+
+### Older revisions have the Perl scripts at the root, newer ones in legacy_perl/.
 sub layout_of {
     my ($rev) = @_;
     my $has = sub { system("git -C '$repo' cat-file -e '$rev:$_[0]' 2>/dev/null") == 0 };
@@ -230,12 +236,6 @@ sub layout_of {
         bail("'$rev' has ${dir}SNPsplit but no ${dir}$script.") unless $has->("$dir$script");
     }
     return $dir;
-}
-
-sub bail {
-    my ($msg) = @_;
-    warn "$msg\n";
-    exit 2;
 }
 
 sub label_for { my $r = shift; $r =~ s/[^A-Za-z0-9._-]/_/g; return $r }
