@@ -168,6 +168,11 @@ person has to rediscover.
 - **Option parsing:** `--option=value` is accepted, a bare `--` is reported as an ambiguous
   option, and only the first unknown option is named; the Perl rejects the first two and names
   every unknown option. `SNPsplit_genome_preparation` with no arguments exits 1, the Perl 255.
+  An option given in upper case is echoed in messages as typed. `tests/cli.rs` compares exit
+  status and stdout with the Perl's, not stderr.
+- **An input whose name ends in `bam` or `sam` without a dot** (`xbam`) gets
+  `xbam.allele_flagged.bam`; the Perl writes `xallele_flagged.bam`. The report name follows the
+  Perl exactly.
 
 - **The all-SNP list is compressed through `gzip -c` when there is one to run**, and in
   process when there is not. Compressing in process throughout would be the obvious choice
