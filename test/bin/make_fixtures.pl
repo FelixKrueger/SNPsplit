@@ -226,7 +226,7 @@ $F{sam_input} = {
     reads    => $F{se_basic}{reads},
 };
 
-### The report name drops the first "sorted." anywhere in the input name, not only a suffix.
+### The report name drops the first "sorted." that starts a word: at the start, or after a non-alphanumeric byte.
 $F{sorted_name_se} = {
     args       => '--single_end',
     notes      => 'an input named x.sorted.bam gives x.SNPsplit_report.txt',
@@ -244,7 +244,7 @@ $F{sorted_name_pe} = {
 
 $F{unsorted_name} = {
     args       => '--single_end',
-    notes      => 'the first "sorted." is removed wherever it is: sample.unsorted.bam gives sample.unSNPsplit_report.txt',
+    notes      => '"sorted." is removed only where it starts a word: sample.unsorted.bam gives sample.unsorted.SNPsplit_report.txt',
     input_name => 'sample.unsorted.bam',
     reads      => $F{se_basic}{reads},
 };

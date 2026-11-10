@@ -348,10 +348,17 @@ fn sort_by_name(file: &Path, config: &cli::Config, err: &mut impl Write) -> Resu
     Ok(sorted)
 }
 
-/// The report's file name: the first "sorted." anywhere in the input name is dropped, then a
-/// trailing `sam` becomes `bam` and a trailing `bam` becomes `SNPsplit_report.txt`.
+/// Drops the first "sorted." not preceded by an ASCII letter or digit, then a trailing `sam`
+/// becomes `bam` and a trailing `bam` becomes `SNPsplit_report.txt`.
 fn report_name(base: &str) -> String {
-    let mut name = base.replacen("sorted.", "", 1);
+    let bytes = base.as_bytes();
+    let mut name = match base
+        .match_indices("sorted.")
+        .find(|&(i, _)| i == 0 || !bytes[i - 1].is_ascii_alphanumeric())
+    {
+        Some((i, hit)) => format!("{}{}", &base[..i], &base[i + hit.len()..]),
+        None => base.to_string(),
+    };
     if let Some(head) = name.strip_suffix("sam") {
         name = format!("{head}bam");
     }
@@ -1052,13 +1059,22 @@ mod tests {
     }
 
     #[test]
-    fn the_report_name_drops_the_first_sorted_anywhere_as_the_perl_does() {
+    fn the_report_name_drops_the_first_sorted_that_starts_a_word_as_the_perl_does() {
         for (input, report) in [
             ("x.bam", "x.SNPsplit_report.txt"),
             ("x.sam", "x.SNPsplit_report.txt"),
             ("x.sorted.bam", "x.SNPsplit_report.txt"),
             ("x.sorted.sorted.bam", "x.sorted.SNPsplit_report.txt"),
-            ("sample.unsorted.bam", "sample.unSNPsplit_report.txt"),
+            ("sample.unsorted.bam", "sample.unsorted.SNPsplit_report.txt"),
+            ("x.sorted.markdup.bam", "x.markdup.SNPsplit_report.txt"),
+            ("x.unsorted.sorted.bam", "x.unsorted.SNPsplit_report.txt"),
+            ("presorted.bam", "presorted.SNPsplit_report.txt"),
+            ("sorted.bam", "SNPsplit_report.txt"),
+            ("x_sorted.bam", "x_SNPsplit_report.txt"),
+            ("x-sorted.bam", "x-SNPsplit_report.txt"),
+            ("x.Sorted.bam", "x.Sorted.SNPsplit_report.txt"),
+            ("x9sorted.bam", "x9sorted.SNPsplit_report.txt"),
+            ("caf\u{e9}sorted.bam", "caf\u{e9}SNPsplit_report.txt"),
         ] {
             assert_eq!(report_name(input), report, "{input}");
         }

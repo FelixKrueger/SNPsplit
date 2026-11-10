@@ -1,5 +1,5 @@
-sample.unSNPsplit_report.txt
-sample.unSNPsplit_report.yaml
+sample.unsorted.SNPsplit_report.txt
+sample.unsorted.SNPsplit_report.yaml
 sample.unsorted.SNPsplit_sort.txt
 sample.unsorted.allele_flagged.bam
 sample.unsorted.bam

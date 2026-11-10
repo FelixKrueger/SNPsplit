@@ -1471,7 +1471,7 @@ sub open_output_filehandles{
     $genome2_file =~ s/sorted\.//;
     $unassigned_file =~ s/sorted\.//;
     $impossible_to_distinguish_file =~ s/sorted\.//;
-    $report_file =~ s/sorted\.//;
+    $report_file =~ s/(?<![A-Za-z0-9])sorted\.//;
 
     # if files were supplied with --no_sort then the files might end in .bam only
     $genome1_file =~ s/bam$/genome1.sam/;
