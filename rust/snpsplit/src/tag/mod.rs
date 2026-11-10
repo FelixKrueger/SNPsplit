@@ -824,11 +824,14 @@ fn hand_off_to_sort(config: &cli::Config, outfile: &str) -> Result<()> {
     if config.singletons {
         args.push("--singletons".into());
     }
+    args.push("--parallel".into());
+    args.push(config.parallel.to_string());
     args.push(outfile.to_string());
 
-    let own = std::env::args().next().unwrap_or_default();
-    let dir = Path::new(&own).parent().unwrap_or(Path::new("."));
-    let sorter = dir.join("tag2sort");
+    // The sorter beside the running binary, symlinks resolved, as the Perl's $RealBin
+    let own = std::env::current_exe()
+        .context("Allele-specific sorting (tag2sort) could not be located")?;
+    let sorter = own.with_file_name("tag2sort");
 
     let status = std::process::Command::new(&sorter).args(&args).status();
     let status = match status {
