@@ -1,0 +1,11 @@
+sample.unSNPsplit_report.txt
+sample.unSNPsplit_report.yaml
+sample.unsorted.SNPsplit_sort.txt
+sample.unsorted.allele_flagged.bam
+sample.unsorted.bam
+sample.unsorted.genome1.bam
+sample.unsorted.genome2.bam
+sample.unsorted.unassigned.bam
+snps.txt
+stderr.log
+stdout.log

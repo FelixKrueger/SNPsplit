@@ -74,4 +74,7 @@ samtools_path_spaced
 se_basic
 se_skipped
 skip_tag2sort
+sorted_name_pe
+sorted_name_se
 tag2sort_fails
+unsorted_name

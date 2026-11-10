@@ -62,6 +62,7 @@ Create `fixtures/<name>/` containing:
 | `allow_empty` | no | Marker: this fixture legitimately produces no alignments |
 | `break_tag2sort` | no | Marker: stage a sorter that always fails, to test the abort |
 | `exclude` | no | Glob per line: present in `manifest`, content not compared |
+| `input_name` | no | File name the first input is staged under, e.g. `x.sorted.bam` |
 
 Prefer adding reads to `test/bin/make_fixtures.pl` rather than editing `input.sam` by hand, so MD tags
 stay derived rather than asserted.

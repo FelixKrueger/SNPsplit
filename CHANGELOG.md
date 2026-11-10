@@ -1,5 +1,9 @@
 ## Unreleased
 
+### SNPsplit
+
+- The YAML report's `date_run` is no longer garbled on days 1 to 9 of a month ([#160](https://github.com/FelixKrueger/SNPsplit/pull/160))
+
 ### SNPsplit_genome_preparation
 
 - A gzip that fails while the SNP list is being written now always gets the "file is incomplete" message, instead of sometimes killing the run silently with SIGPIPE ([#152](https://github.com/FelixKrueger/SNPsplit/pull/152))
