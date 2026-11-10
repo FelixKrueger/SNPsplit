@@ -7,7 +7,7 @@
 # One name per line. A `genome:` prefix means a fixture of test/run_genome_tests.pl;
 # anything else is a fixture of test/run_tests.pl. Blank lines and # comments are ignored.
 
-# SNPsplit_genome_preparation: all 31.
+# SNPsplit_genome_preparation: all of them.
 genome:chrom_name_mismatch
 genome:dual_hybrid
 genome:duplicate_chrom_name
@@ -41,7 +41,7 @@ genome:vcf_missing
 genome:vcf_repeated_position
 genome:vcf_v7
 
-# SNPsplit + tag2sort: 24 of 26.
+# SNPsplit + tag2sort: all but two.
 #
 # bam_write_fails and sam2bam_fails are the exceptions, and neither is a port defect. Both
 # make samtools fail (a wrapper that fails on genome1, a failing shim on PATH) to prove that

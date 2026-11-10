@@ -99,9 +99,11 @@ SNPsplit does not know about. `make_fixtures.pl` lists those positions under `un
 
 The expected output is normalised text, not raw files:
 
-- **BAM** → `samtools view -h`, with `@PG` `VN:`/`CL:` and `@HD` `SS:` values masked. `@PG` lines are
-  kept because `check_for_bs` reads them to decide library type and bisulfite mode — they are a control
-  input, not decoration. `SS:` is a recent sub-sort tag whose presence varies by samtools version.
+- **BAM** → `samtools view -h`, with `@PG` `VN:`/`CL:` and `@HD` `SS:` values masked. The input's `@PG`
+  lines are kept because `check_for_bs` reads them to decide library type and bisulfite mode — they are a
+  control input, not decoration. The `PN:samtools` or `PN:SNPsplit` records a run adds after them are
+  dropped, so the Perl and the Rust build are held to the same expected files. Records are kept by ID,
+  taken from all of a fixture's inputs together. `SS:` is a recent sub-sort tag whose presence varies by samtools version.
 - **YAML** → `version`, `date_run` and `command` masked. `command` is masked wholesale because a
   different implementation's argv differs legitimately.
 - **Reports** → verbatim; they contain only basenames.

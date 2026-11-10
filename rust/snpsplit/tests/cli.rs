@@ -133,6 +133,64 @@ fn dispatch_survives_being_copied_under_a_classic_name() {
     );
 }
 
+/// The tagger and the sorter each add one @PG record, chained to the input's last one.
+/// Skipped when samtools is absent.
+#[test]
+fn the_output_records_its_own_programs_after_the_inputs() {
+    let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../test/fixtures/se_basic");
+    let work = TempDir::new().unwrap();
+    std::fs::copy(fixture.join("input.sam"), work.path().join("input.sam")).unwrap();
+    let dir = TempDir::new().unwrap();
+    linked_as(dir.path(), "tag2sort");
+    let out = Command::new(linked_as(dir.path(), "SNPsplit"))
+        .current_dir(work.path())
+        .env("SNPSPLIT_NO_SLEEP", "1")
+        .args([
+            "--snp_file",
+            fixture.join("snps.txt").to_str().unwrap(),
+            "--single_end",
+            "input.sam",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let Ok(view) = Command::new("samtools")
+        .args(["view", "-H", "--no-PG", "input.genome1.bam"])
+        .current_dir(work.path())
+        .output()
+    else {
+        return;
+    };
+    let header = String::from_utf8_lossy(&view.stdout);
+    let pg: Vec<&str> = header.lines().filter(|l| l.starts_with("@PG")).collect();
+    let input_last = std::fs::read_to_string(fixture.join("input.sam"))
+        .unwrap()
+        .lines()
+        .rfind(|l| l.starts_with("@PG"))
+        .unwrap()
+        .split('\t')
+        .find_map(|f| f.strip_prefix("ID:"))
+        .unwrap()
+        .to_string();
+    let field = |line: &str, tag: &str| {
+        line.split('\t')
+            .find_map(|f| f.strip_prefix(tag))
+            .map(str::to_string)
+    };
+    let ours: Vec<&&str> = pg.iter().filter(|l| l.contains("\tPN:SNPsplit")).collect();
+    assert_eq!(ours.len(), 2, "{header}");
+    assert_eq!(
+        field(ours[0], "VN:").as_deref(),
+        Some(env!("CARGO_PKG_VERSION"))
+    );
+    assert_eq!(field(ours[0], "PP:"), Some(input_last), "{header}");
+    assert_eq!(field(ours[1], "PP:"), field(ours[0], "ID:"), "{header}");
+}
+
 /// Every spelling of the version flag gives the Perl's exit status, and the Perl's banner when it succeeds.
 #[test]
 fn version_flags_behave_as_the_perl_does() {

@@ -52,6 +52,21 @@ jobs:
         # checked rather than asserted.
         run: test/bin/run_rust_gate.sh alignment 4
 
+  macos:
+    # Path handling differs on macOS (current_exe does not resolve symlinks there)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install samtools
+        run: brew install samtools
+      - name: Tests
+        working-directory: rust
+        run: cargo test --all-targets --locked
+      - name: Build the Rust implementation
+        run: ./rust/build-impl.sh
+      - name: Gates
+        run: test/bin/run_rust_gate.sh alignment && test/bin/run_rust_gate.sh genome
+
   genome-fixtures-rust:
     runs-on: ubuntu-24.04
     steps:
