@@ -54,7 +54,7 @@ jobs:
 
   macos:
     # Path handling differs on macOS (current_exe does not resolve symlinks there)
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install samtools
