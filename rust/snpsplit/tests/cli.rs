@@ -133,6 +133,35 @@ fn dispatch_survives_being_copied_under_a_classic_name() {
     );
 }
 
+/// Every spelling of the version flag gives the Perl's exit status, and the Perl's banner when it succeeds.
+#[test]
+fn version_flags_behave_as_the_perl_does() {
+    let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let dir = TempDir::new().unwrap();
+    for tool in ["SNPsplit", "tag2sort", "SNPsplit_genome_preparation"] {
+        let rust = linked_as(dir.path(), tool);
+        for flags in [
+            &["--version"][..],
+            &["--versions"],
+            &["--vers"],
+            &["--v"],
+            &["--versions", "--bogus"],
+            &["--version", "--bogus"],
+        ] {
+            let perl = Command::new("perl")
+                .arg(repo.join(tool))
+                .args(flags)
+                .output()
+                .unwrap();
+            let ours = Command::new(&rust).args(flags).output().unwrap();
+            assert_eq!(ours.status.code(), perl.status.code(), "{tool} {flags:?}");
+            if perl.status.success() {
+                assert_eq!(ours.stdout, perl.stdout, "{tool} {flags:?}");
+            }
+        }
+    }
+}
+
 /// A stand-in sorter that records its arguments and the name it was found under.
 fn recording_sorter(dir: &Path, tag: &str) {
     use std::os::unix::fs::PermissionsExt;
