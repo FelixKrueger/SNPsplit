@@ -3,7 +3,7 @@ hide:
   - navigation
 ---
 
-06 January, 2023; [v0.6.0]
+10 November, 2026; [v0.9.2]
 
 ![SNPsplit](images/SNPsplit.png)
 ______

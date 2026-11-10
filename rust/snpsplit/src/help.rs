@@ -1,4 +1,4 @@
-//! The three help pages, captured byte for byte from Perl SNPsplit v0.9.0.
+//! The three help pages, captured byte for byte from Perl SNPsplit v0.9.2.
 //!
 //! Compiled in from `help/` rather than rewritten, for the same reason as the version
 //! banners: a hand-rewritten help page drifts from the options it describes the first time an

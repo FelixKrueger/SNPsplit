@@ -6,8 +6,9 @@ needed to run them.
 
 !!! note "Status"
 
-    The port is proposed in [#89](https://github.com/FelixKrueger/SNPsplit/issues/89) and is
-    not released yet. This page describes what it does today.
+    The port is merged into the `dev` branch but not released yet. The Perl version is in
+    maintenance freeze ([#167](https://github.com/FelixKrueger/SNPsplit/issues/167)). This page
+    describes what the Rust does today.
 
 ## What is different
 
@@ -25,29 +26,32 @@ the same normalisation the Perl suite uses. The two exceptions are described und
 
 ## Installing
 
-### Prebuilt binaries
+There is no Rust release yet, so there are no prebuilt binaries, no published container image
+and no crate. Build it from the `dev` branch instead.
 
-Each release attaches archives for common Linux and macOS platforms. Extract one and put its
-contents on your `PATH`. The archive carries `snpsplit` plus the three classic names, which
-are links to it.
+### From source
+
+```sh
+git clone -b dev https://github.com/FelixKrueger/SNPsplit.git
+cd SNPsplit
+./rust/build-impl.sh
+```
+
+Requires a Rust toolchain (1.89 or newer). This puts `SNPsplit`, `tag2sort` and
+`SNPsplit_genome_preparation` in `rust/target/impl/`; add that folder to your `PATH`.
 
 ### Container image
 
+From the same checkout:
+
 ```sh
-docker run --rm ghcr.io/felixkrueger/snpsplit:latest --help
+docker build -t snpsplit rust/
+docker run --rm --entrypoint SNPsplit snpsplit --help
 ```
 
 `SNPsplit`, `tag2sort` and `SNPsplit_genome_preparation` are all on the `PATH` inside, so a
 pipeline that calls them by name is a drop-in. The image is distroless: no shell, no package
 manager, no Perl.
-
-### From source
-
-```sh
-cargo install snpsplit
-```
-
-Requires a Rust toolchain (1.89 or newer).
 
 ## Invoking it
 
