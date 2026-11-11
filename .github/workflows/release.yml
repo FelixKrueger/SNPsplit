@@ -151,8 +151,9 @@ jobs:
           set -euo pipefail
           A="snpsplit-$V-${{ matrix.name }}"
           mkdir -p "dist/$A"
-          cp "rust/target/${{ matrix.target }}/release/snpsplit" "dist/$A/"
-          for n in SNPsplit tag2sort SNPsplit_genome_preparation; do ln -s snpsplit "dist/$A/$n"; done
+          # SNPsplit is the binary itself: a lowercase snpsplit beside it would clash on case-insensitive disks
+          cp "rust/target/${{ matrix.target }}/release/snpsplit" "dist/$A/SNPsplit"
+          for n in tag2sort SNPsplit_genome_preparation; do ln -s SNPsplit "dist/$A/$n"; done
           cp LICENSE rust/THIRD-PARTY-NOTICES.md rust/dist/README.txt "dist/$A/"
           tar czf "dist/$A.tar.gz" -C dist "$A"
           (cd dist && shasum -a 256 "$A.tar.gz" > "$A.tar.gz.sha256")
@@ -165,16 +166,17 @@ jobs:
           (cd dist && shasum -a 256 -c "$A.tar.gz.sha256")
           tar xzf "dist/$A.tar.gz" -C "$S"
           D="$S/$A"
-          for n in SNPsplit tag2sort SNPsplit_genome_preparation; do
+          [ -f "$D/SNPsplit" ] && [ ! -L "$D/SNPsplit" ] || { echo "SNPsplit is not the binary"; exit 1; }
+          for n in tag2sort SNPsplit_genome_preparation; do
             [ -L "$D/$n" ] || { echo "$n is not a symlink"; exit 1; }
+          done
+          for n in SNPsplit tag2sort SNPsplit_genome_preparation; do
             got=$("$D/$n" --version | sed -n 's/.*ersion: //p' | head -1 | tr -d '[:space:]')
             [ "$got" = "$V" ] || { echo "$n --version says '$got', expected '$V'"; exit 1; }
             "$D/$n" --help > "$S/help.txt" || true
             [ -s "$S/help.txt" ] || { echo "$n --help printed nothing"; exit 1; }
           done
-          got=$("$D/snpsplit" tag --version | sed -n 's/.*ersion: //p' | head -1 | tr -d '[:space:]')
-          [ "$got" = "$V" ] || { echo "snpsplit tag --version says '$got'"; exit 1; }
-          # A real run through the symlink: the sorter must be found beside the binary
+          # A real run: the sorter must be found beside the binary, through its link
           W="$S/run"; mkdir -p "$W"; cp test/fixtures/se_basic/input.sam "$W/"
           (cd "$W" && SNPSPLIT_NO_SLEEP=1 "$D/SNPsplit" --snp_file "$GITHUB_WORKSPACE/test/fixtures/se_basic/snps.txt" --single_end --sam input.sam)
           ls "$W"/*genome1* "$W"/*SNPsplit_sort.txt

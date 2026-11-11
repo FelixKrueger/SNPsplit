@@ -29,9 +29,9 @@ the same normalisation the Perl suite uses. The two exceptions are described und
 
 Each Rust release, from 1.0.0-beta.1 on, attaches a `snpsplit-<version>-<platform>.tar.gz` to the
 [Releases page](https://github.com/FelixKrueger/SNPsplit/releases) for Linux x86_64 and aarch64
-(glibc 2.17 or newer) and macOS on Apple Silicon. Unpack it and put the folder on your `PATH`: it
-holds `snpsplit` and the three classic names, which are links to it. On macOS, run
-`xattr -d com.apple.quarantine snpsplit` once if the downloaded binary is blocked.
+(glibc 2.17 or newer) and macOS on Apple Silicon. Unpack it and put the folder on your `PATH`: `SNPsplit` is
+the binary, and `tag2sort` and `SNPsplit_genome_preparation` are links to it. On macOS, run
+`xattr -d com.apple.quarantine SNPsplit` once if the downloaded binary is blocked.
 
 ### Container image
 
