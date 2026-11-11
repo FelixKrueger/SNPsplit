@@ -66,7 +66,8 @@ SNPsplit_genome_preparation --vcf_file mgp_REL2021_snps.vcf.gz --strain 129S1_Sv
 SNPsplit --SNP_file all_SNPs_129S1_SvImJ_GRCm39.txt.gz sample.bam
 ```
 
-or through the single binary:
+or, where the binary is installed as `snpsplit` (the container image, or a build from source),
+by subcommand:
 
 ```sh
 snpsplit prepare --vcf_file ... --strain ...
@@ -74,8 +75,7 @@ snpsplit tag --SNP_file ... sample.bam
 snpsplit sort sample.allele_flagged.bam
 ```
 
-Both reach the same code. The classic names are links to one binary that decides which tool
-to be from the name it was called by.
+Both reach the same code: one binary decides which tool to be from the name it was called by.
 
 ## `--parallel`
 
