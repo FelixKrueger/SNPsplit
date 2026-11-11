@@ -10,11 +10,19 @@ use std::process::Command;
 use assert_cmd::cargo::cargo_bin;
 use tempfile::TempDir;
 
+/// The version of the Perl in `legacy_perl/`, which the banners are compared against.
+const PERL_VERSION: &str = "0.9.2";
+
 /// Links the built binary under `name` in a fresh directory and returns the link path.
 fn linked_as(dir: &Path, name: &str) -> PathBuf {
     let link = dir.join(name);
     symlink(cargo_bin("snpsplit"), &link).expect("symlink the binary under its classic name");
     link
+}
+
+/// A banner template as the binary prints it.
+fn filled(template: &str) -> String {
+    template.replacen("@VERSION@", env!("CARGO_PKG_VERSION"), 1)
 }
 
 /// Copies `src` to `dest` with `cp`, so no other test's child process inherits a write handle to it.
@@ -48,7 +56,7 @@ fn snpsplit_prints_its_banner_for_versions() {
     );
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
-        include_str!("../banners/snpsplit.txt"),
+        filled(include_str!("../banners/snpsplit.txt")),
     );
 }
 
@@ -63,7 +71,7 @@ fn tag2sort_prints_its_banner_for_the_singular_version() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
-        include_str!("../banners/tag2sort.txt"),
+        filled(include_str!("../banners/tag2sort.txt")),
     );
 }
 
@@ -96,7 +104,7 @@ fn genome_preparation_prints_its_banner() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
-        include_str!("../banners/genome_prep.txt"),
+        filled(include_str!("../banners/genome_prep.txt")),
     );
 }
 
@@ -110,7 +118,7 @@ fn the_subcommand_form_reaches_the_same_tool() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
-        include_str!("../banners/snpsplit.txt"),
+        filled(include_str!("../banners/snpsplit.txt")),
     );
 }
 
@@ -145,7 +153,7 @@ fn dispatch_survives_being_copied_under_a_classic_name() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
-        include_str!("../banners/snpsplit.txt"),
+        filled(include_str!("../banners/snpsplit.txt")),
     );
 }
 
@@ -207,9 +215,10 @@ fn the_output_records_its_own_programs_after_the_inputs() {
     assert_eq!(field(ours[1], "PP:"), field(ours[0], "ID:"), "{header}");
 }
 
-/// Every spelling of the version flag gives the Perl's exit status, and the Perl's banner when it succeeds.
+/// Every spelling of the version flag gives the Perl's exit status, and the Perl's banner with
+/// the suite version in place of the Perl's when it succeeds.
 #[test]
-fn version_flags_behave_as_the_perl_does() {
+fn version_flags_behave_as_the_perl_does_apart_from_the_version() {
     let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let dir = TempDir::new().unwrap();
     for tool in ["SNPsplit", "tag2sort", "SNPsplit_genome_preparation"] {
@@ -230,7 +239,18 @@ fn version_flags_behave_as_the_perl_does() {
             let ours = Command::new(&rust).args(flags).output().unwrap();
             assert_eq!(ours.status.code(), perl.status.code(), "{tool} {flags:?}");
             if perl.status.success() {
-                assert_eq!(ours.stdout, perl.stdout, "{tool} {flags:?}");
+                let perl_out = String::from_utf8(perl.stdout).unwrap();
+                assert_eq!(
+                    perl_out.matches(PERL_VERSION).count(),
+                    1,
+                    "{tool} {flags:?}: the Perl banner should name {PERL_VERSION} once"
+                );
+                let expected = perl_out.replacen(PERL_VERSION, env!("CARGO_PKG_VERSION"), 1);
+                assert_eq!(
+                    String::from_utf8(ours.stdout).unwrap(),
+                    expected,
+                    "{tool} {flags:?}"
+                );
             }
         }
     }

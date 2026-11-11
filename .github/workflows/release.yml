@@ -1,76 +1,448 @@
 name: release
+
+# Releases the Rust build. Started by hand only; the workflow makes the tag itself.
+#   GA (version without "-") from master, prerelease (e.g. 1.0.0-beta.1) from dev, dry run from anywhere.
+#   The version is rust/Cargo.toml's [workspace.package] version; the tag is snpsplit-rust-v<version>.
+#   A re-run after a failure resumes; a run for a version that is already released stops.
+#   Release notes are the CHANGELOG's "## Rust <version>" section, then GitHub's list of PRs.
+#   If only promote-image fails, use "Re-run failed jobs": a new run stops at "already released".
 on:
-  push:
-    tags:
-      - 'rust-v*'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: build and test everything, publish nothing.'
+        type: boolean
+        default: false
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  binaries:
-    # Not published until the release route for the Rust build is decided
-    if: false
-    # One archive per platform, attached to the release. A user who does not want a Rust
-    # toolchain should not need one.
+  check-release:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      tag: ${{ steps.check.outputs.tag }}
+      is_prerelease: ${{ steps.check.outputs.is_prerelease }}
+      is_dry_run: ${{ steps.check.outputs.is_dry_run }}
+      tag_exists: ${{ steps.check.outputs.tag_exists }}
+      image: ${{ steps.check.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check version, branch, tag and release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          stop() { if [ "$DRY_RUN" = "true" ]; then echo "::warning::$1 (ignored on a dry run)"; else echo "::error::$1"; exit 1; fi; }
+
+          V=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"$/\1/p' rust/Cargo.toml)
+          [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || { echo "::error::'$V' is not a version"; exit 1; }
+          LOCK=$(awk '$0 == "name = \"snpsplit\"" { getline; gsub(/version = |"/, ""); print; exit }' rust/Cargo.lock)
+          [ "$LOCK" = "$V" ] || { echo "::error::Cargo.lock has snpsplit $LOCK, Cargo.toml $V"; exit 1; }
+          PRE=false; [[ "$V" == *-* ]] && PRE=true
+
+          if [ "$DRY_RUN" != "true" ]; then
+            if [ "$PRE" = "false" ] && [ "$BRANCH" != "master" ]; then echo "::error::$V is a full release: run it from master, not $BRANCH"; exit 1; fi
+            if [ "$PRE" = "true" ] && [ "$BRANCH" != "dev" ]; then echo "::error::$V is a prerelease: run it from dev, not $BRANCH"; exit 1; fi
+          fi
+
+          TAG="snpsplit-rust-v$V"
+          TAG_EXISTS=false
+          TAG_SHA=$(git ls-remote --tags origin "refs/tags/$TAG" "refs/tags/$TAG^{}" | tail -1 | cut -f1)
+          if [ -n "$TAG_SHA" ]; then
+            [ "$TAG_SHA" = "$GITHUB_SHA" ] || stop "$TAG exists at $TAG_SHA, not at $GITHUB_SHA"
+            TAG_EXISTS=true
+          fi
+          # Drafts are invisible to this read-only token; create-release looks for one itself
+          if out=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft -q .isDraft 2>&1); then
+            [ "$out" = "true" ] || stop "$TAG is already released"
+          elif ! grep -q "release not found" <<< "$out"; then
+            echo "::error::cannot look up release $TAG: $out"; exit 1
+          fi
+          grep -qx "## Rust $V" CHANGELOG.md || { echo "::error::CHANGELOG.md has no '## Rust $V' section for the release notes"; exit 1; }
+
+          {
+            echo "version=$V"
+            echo "tag=$TAG"
+            echo "is_prerelease=$PRE"
+            echo "is_dry_run=$DRY_RUN"
+            echo "tag_exists=$TAG_EXISTS"
+            echo "image=ghcr.io/${GITHUB_REPOSITORY,,}"
+          } >> "$GITHUB_OUTPUT"
+          echo "$TAG (prerelease $PRE, dry run $DRY_RUN, tag exists $TAG_EXISTS)"
+
+  test:
+    needs: check-release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Formatting, lints, tests
+        # Before samtools is installed, as in rust.yml: the samtools comparisons need 1.21 or newer
+        working-directory: rust
+        run: |
+          cargo fmt --all --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo test --all-targets --locked
+      - name: Install samtools
+        run: sudo apt-get update && sudo apt-get install -y samtools
+      - name: Fixture gates
+        run: |
+          ./rust/build-impl.sh
+          test/bin/run_rust_gate.sh alignment
+          test/bin/run_rust_gate.sh genome
+
+  build-binaries:
+    needs: check-release
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04
+          - name: linux-x86_64
+            os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-          - os: ubuntu-24.04-arm
+            zig: true
+          - name: linux-aarch64
+            os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-          - os: macos-14
+            zig: true
+          - name: macos-aarch64
+            os: macos-latest
             target: aarch64-apple-darwin
-          - os: macos-13
-            target: x86_64-apple-darwin
-    runs-on: ${{ matrix.os }}
+            zig: false
+    env:
+      V: ${{ needs.check-release.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: mlugg/setup-zig@v2
+        if: matrix.zig
+        with:
+          version: 0.13.0
+      - uses: taiki-e/install-action@v2
+        if: matrix.zig
+        with:
+          tool: cargo-zigbuild
       - name: Build
         working-directory: rust
-        run: cargo build --release --locked --target ${{ matrix.target }}
-      - name: Stage the classic names
-        working-directory: rust
         run: |
-          out="snpsplit-${{ matrix.target }}"
-          mkdir -p "$out"
-          cp "target/${{ matrix.target }}/release/snpsplit" "$out/"
-          # Symlinks rather than copies: the binary dispatches on argv[0], and four copies of
-          # the same megabytes in one archive would be silly.
-          ln -s snpsplit "$out/SNPsplit"
-          ln -s snpsplit "$out/tag2sort"
-          ln -s snpsplit "$out/SNPsplit_genome_preparation"
-          cp ../LICENSE "$out/" 2>/dev/null || true
-          tar czf "$out.tar.gz" "$out"
-      - name: Attach to the release
-        uses: softprops/action-gh-release@v2
+          # Linux binaries are linked against glibc 2.17 so they run on older distributions
+          if [ "${{ matrix.zig }}" = "true" ]; then
+            cargo zigbuild --release --locked --target ${{ matrix.target }}.2.17
+          else
+            cargo build --release --locked --target ${{ matrix.target }}
+          fi
+      - name: Package
+        id: package
+        run: |
+          set -euo pipefail
+          A="snpsplit-$V-${{ matrix.name }}"
+          mkdir -p "dist/$A"
+          # SNPsplit is the binary itself: a lowercase snpsplit beside it would clash on case-insensitive disks
+          cp "rust/target/${{ matrix.target }}/release/snpsplit" "dist/$A/SNPsplit"
+          for n in tag2sort SNPsplit_genome_preparation; do ln -s SNPsplit "dist/$A/$n"; done
+          cp LICENSE rust/THIRD-PARTY-NOTICES.md rust/dist/README.txt "dist/$A/"
+          tar czf "dist/$A.tar.gz" -C dist "$A"
+          (cd dist && shasum -a 256 "$A.tar.gz" > "$A.tar.gz.sha256")
+          echo "archive=$A" >> "$GITHUB_OUTPUT"
+      - name: Smoke test the tarball
+        run: |
+          set -euo pipefail
+          A="${{ steps.package.outputs.archive }}"
+          S="$RUNNER_TEMP/smoke"; mkdir -p "$S"
+          (cd dist && shasum -a 256 -c "$A.tar.gz.sha256")
+          tar xzf "dist/$A.tar.gz" -C "$S"
+          D="$S/$A"
+          [ -f "$D/SNPsplit" ] && [ ! -L "$D/SNPsplit" ] || { echo "SNPsplit is not the binary"; exit 1; }
+          for n in tag2sort SNPsplit_genome_preparation; do
+            [ -L "$D/$n" ] || { echo "$n is not a symlink"; exit 1; }
+          done
+          for n in SNPsplit tag2sort SNPsplit_genome_preparation; do
+            got=$("$D/$n" --version | sed -n 's/.*ersion: //p' | head -1 | tr -d '[:space:]')
+            [ "$got" = "$V" ] || { echo "$n --version says '$got', expected '$V'"; exit 1; }
+            "$D/$n" --help > "$S/help.txt" || true
+            [ -s "$S/help.txt" ] || { echo "$n --help printed nothing"; exit 1; }
+          done
+          # A real run: the sorter must be found beside the binary, through its link
+          W="$S/run"; mkdir -p "$W"; cp test/fixtures/se_basic/input.sam "$W/"
+          (cd "$W" && SNPSPLIT_NO_SLEEP=1 "$D/SNPsplit" --snp_file "$GITHUB_WORKSPACE/test/fixtures/se_basic/snps.txt" --single_end --sam input.sam)
+          ls "$W"/*genome1* "$W"/*SNPsplit_sort.txt
+      - name: Install samtools for the fixture comparison
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then brew install samtools
+          else sudo apt-get -o Acquire::Retries=3 update && sudo apt-get -o Acquire::Retries=3 install -y samtools; fi
+      - name: Compare the tarball's output with the fixture
+        run: test/run_tests.pl --impl "$RUNNER_TEMP/smoke/${{ steps.package.outputs.archive }}/SNPsplit" se_basic
+      - name: Smoke test on older Linux
+        if: matrix.zig
+        run: |
+          set -euo pipefail
+          A="${{ steps.package.outputs.archive }}"
+          D="$RUNNER_TEMP/smoke/$A"
+          for img in rockylinux:8 ubuntu:20.04; do
+            echo "--- $img"
+            docker run --rm -v "$D:/b:ro" -v "$GITHUB_WORKSPACE/test/fixtures/se_basic:/f:ro" -e SNPSPLIT_NO_SLEEP=1 -e V="$V" -w /tmp "$img" \
+              sh -c 'set -e; ldd --version | head -1
+                     got=$(/b/SNPsplit --version | sed -n "s/.*ersion: //p" | head -1 | tr -d "[:space:]")
+                     [ "$got" = "$V" ] || { echo "--version says $got, expected $V"; exit 1; }
+                     cp /f/input.sam . && /b/SNPsplit --snp_file /f/snps.txt --single_end --sam input.sam > /dev/null && ls *genome1*'
+          done
+      - uses: actions/upload-artifact@v4
         with:
-          files: rust/snpsplit-${{ matrix.target }}.tar.gz
+          name: binary-${{ matrix.name }}
+          path: |
+            dist/${{ steps.package.outputs.archive }}.tar.gz
+            dist/${{ steps.package.outputs.archive }}.tar.gz.sha256
+          retention-days: 7
+          overwrite: true
 
-  container:
-    if: false
-    runs-on: ubuntu-24.04
+  docker-build:
+    needs: check-release
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - name: Build, and push by digest unless a dry run
+        id: build
+        uses: docker/build-push-action@v6
         with:
-          context: rust
+          context: .
           file: rust/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/snpsplit:latest
-            ghcr.io/${{ github.repository_owner }}/snpsplit:${{ github.ref_name }}
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ needs.check-release.outputs.image }},push-by-digest=true,name-canonical=true,push=${{ needs.check-release.outputs.is_dry_run != 'true' }}
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
+      - name: Export digest
+        if: needs.check-release.outputs.is_dry_run != 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          d="${{ steps.build.outputs.digest }}"
+          touch "$RUNNER_TEMP/digests/${d#sha256:}"
+      - uses: actions/upload-artifact@v4
+        if: needs.check-release.outputs.is_dry_run != 'true'
+        with:
+          name: digest-${{ matrix.runner }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+  docker-merge:
+    needs: [check-release, test, build-binaries, docker-build]
+    if: needs.check-release.outputs.is_dry_run != 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag the multi-arch image with its version only
+        working-directory: ${{ runner.temp }}/digests
+        env:
+          IMAGE: ${{ needs.check-release.outputs.image }}
+          V: ${{ needs.check-release.outputs.version }}
+        run: |
+          refs=()
+          for d in *; do refs+=("$IMAGE@sha256:$d"); done
+          docker buildx imagetools create -t "$IMAGE:$V" "${refs[@]}"
+
+  smoke-test-docker:
+    needs: [check-release, docker-merge]
+    if: needs.check-release.outputs.is_dry_run != 'true'
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull and run
+        env:
+          IMG: ${{ needs.check-release.outputs.image }}:${{ needs.check-release.outputs.version }}
+          V: ${{ needs.check-release.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker pull "$IMG"
+          for n in SNPsplit tag2sort SNPsplit_genome_preparation; do
+            got=$(docker run --rm --entrypoint "$n" "$IMG" --version | sed -n 's/.*ersion: //p' | head -1 | tr -d '[:space:]')
+            [ "$got" = "$V" ] || { echo "$n --version says '$got', expected '$V'"; exit 1; }
+          done
+          W="$RUNNER_TEMP/run"; mkdir -p "$W"; cp test/fixtures/se_basic/input.sam "$W/"
+          docker run --rm -e SNPSPLIT_NO_SLEEP=1 -v "$W:/w" -v "$GITHUB_WORKSPACE/test/fixtures/se_basic:/f:ro" -w /w \
+            --entrypoint SNPsplit "$IMG" --snp_file /f/snps.txt --single_end --sam input.sam
+          ls "$W"/*genome1* "$W"/*SNPsplit_sort.txt
+
+  publish-crate:
+    needs: [check-release, test, build-binaries, docker-build, smoke-test-docker]
+    # Runs on a dry run (where the image smoke test is skipped) and after a passing real run
+    if: >-
+      !cancelled() &&
+      needs.test.result == 'success' && needs.build-binaries.result == 'success' &&
+      needs.docker-build.result == 'success' &&
+      (needs.check-release.outputs.is_dry_run == 'true' || needs.smoke-test-docker.result == 'success')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish, or check that it would publish
+        working-directory: rust
+        env:
+          DRY_RUN: ${{ needs.check-release.outputs.is_dry_run }}
+          PRE: ${{ needs.check-release.outputs.is_prerelease }}
+          V: ${{ needs.check-release.outputs.version }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "$DRY_RUN" = "true" ]; then
+            cargo publish -p snpsplit --locked --dry-run
+            exit 0
+          fi
+          if [ "$PRE" = "true" ]; then
+            echo "Prerelease: not published to crates.io"
+            exit 0
+          fi
+          [ -n "${CARGO_REGISTRY_TOKEN:-}" ] || { echo "::error::CARGO_REGISTRY_TOKEN is not set"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'User-Agent: snpsplit-release' "https://crates.io/api/v1/crates/snpsplit/$V")
+          if [ "$code" = "200" ]; then
+            echo "snpsplit $V is already on crates.io"
+          else
+            cargo publish -p snpsplit --locked
+          fi
+
+  create-release:
+    needs: [check-release, build-binaries, smoke-test-docker, publish-crate]
+    if: needs.check-release.outputs.is_dry_run != 'true' && needs.publish-crate.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag and draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.check-release.outputs.tag }}
+          V: ${{ needs.check-release.outputs.version }}
+          PRE: ${{ needs.check-release.outputs.is_prerelease }}
+          TAG_EXISTS: ${{ needs.check-release.outputs.tag_exists }}
+        run: |
+          set -euo pipefail
+          if [ "$TAG_EXISTS" != "true" ]; then
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+          if state=$(gh release view "$TAG" --json isDraft -q .isDraft 2>/dev/null); then
+            [ "$state" = "true" ] || { echo "::error::$TAG is already released"; exit 1; }
+            echo "Draft for $TAG exists; reusing it"
+            exit 0
+          fi
+          awk -v h="## Rust $V" '$0 == h { on = 1; next } on && /^## / { exit } on' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          [ -s "$RUNNER_TEMP/notes.md" ] || { echo "::error::empty CHANGELOG section for $V"; exit 1; }
+          # The PR list starts at the previous Rust tag, or at the last Perl release for the first one
+          git fetch -q --tags origin
+          START=$(git -c versionsort.suffix=- tag -l 'snpsplit-rust-v*' --sort=-v:refname | grep -vx "$TAG" | head -1 || true)
+          [ -n "$START" ] || START=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+          [ -n "$START" ] || { echo "::error::no earlier tag to start the release notes from"; exit 1; }
+          FLAGS=(--draft --notes-file "$RUNNER_TEMP/notes.md" --generate-notes --notes-start-tag "$START" --verify-tag --title "SNPsplit $V (Rust)")
+          [ "$PRE" = "true" ] && FLAGS+=(--prerelease)
+          gh release create "$TAG" "${FLAGS[@]}"
+
+  upload-binaries:
+    needs: [check-release, create-release]
+    if: needs.check-release.outputs.is_dry_run != 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: ${{ runner.temp }}/binaries
+          merge-multiple: true
+      - name: Upload to the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "${{ needs.check-release.outputs.tag }}" --clobber "$RUNNER_TEMP"/binaries/*.tar.gz "$RUNNER_TEMP"/binaries/*.sha256
+
+  finalize-release:
+    needs: [check-release, upload-binaries, smoke-test-docker]
+    if: needs.check-release.outputs.is_dry_run != 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          LATEST: ${{ needs.check-release.outputs.is_prerelease == 'true' && '--latest=false' || '--latest' }}
+        run: gh release edit "${{ needs.check-release.outputs.tag }}" --draft=false "$LATEST"
+
+  promote-image:
+    needs: [check-release, finalize-release]
+    if: needs.check-release.outputs.is_dry_run != 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Point latest or beta at this version
+        env:
+          IMAGE: ${{ needs.check-release.outputs.image }}
+          V: ${{ needs.check-release.outputs.version }}
+          FLOAT: ${{ needs.check-release.outputs.is_prerelease == 'true' && 'beta' || 'latest' }}
+        run: docker buildx imagetools create -t "$IMAGE:$FLOAT" "$IMAGE:$V"

@@ -1,0 +1,5 @@
+# Only what rust/Dockerfile needs; the build context is the repository root.
+*
+!LICENSE
+!rust
+rust/target

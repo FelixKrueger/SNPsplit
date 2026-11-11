@@ -9,9 +9,12 @@
 # glibc the runtime image has. Building on a newer base produced a binary that failed at
 # startup with `GLIBC_2.39 not found`, which is the kind of thing only running the image
 # catches.
+#
+# Built from the repository root (`docker build -f rust/Dockerfile .`) so LICENSE is in reach.
 FROM rust:1.89-bookworm AS build
 WORKDIR /src
-COPY . /src
+COPY rust /src
+COPY LICENSE /src/LICENSE
 RUN cargo build --release --locked
 
 # The classic names are made here because the runtime image has no shell to make them in.
@@ -19,7 +22,9 @@ RUN mkdir -p /out/bin \
  && cp target/release/snpsplit /out/bin/snpsplit \
  && ln -s snpsplit /out/bin/SNPsplit \
  && ln -s snpsplit /out/bin/tag2sort \
- && ln -s snpsplit /out/bin/SNPsplit_genome_preparation
+ && ln -s snpsplit /out/bin/SNPsplit_genome_preparation \
+ && mkdir -p /out/doc \
+ && cp LICENSE THIRD-PARTY-NOTICES.md /out/doc/
 
 # cc rather than static: the binary links glibc. This base carries ca-certificates, which
 # --download needs and nothing else does.
@@ -30,6 +35,7 @@ LABEL org.opencontainers.image.source="https://github.com/FelixKrueger/SNPsplit"
 LABEL org.opencontainers.image.licenses="GPL-3.0-only"
 
 COPY --from=build /out/bin /usr/local/bin
+COPY --from=build /out/doc /usr/share/doc/snpsplit
 ENV PATH="/usr/local/bin:${PATH}"
 
 ENTRYPOINT ["/usr/local/bin/snpsplit"]
