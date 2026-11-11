@@ -17,9 +17,13 @@ fn linked_as(dir: &Path, name: &str) -> PathBuf {
     link
 }
 
-/// Copies `src` to `dest` with `cp`, so no test thread holds the copy open when it is run.
+/// Copies `src` to `dest` with `cp`, so no other test's child process inherits a write handle to it.
 fn copied_as(src: &Path, dest: &Path) {
-    let out = Command::new("cp").arg(src).arg(dest).output().unwrap();
+    let out = Command::new("cp")
+        .arg(src)
+        .arg(dest)
+        .output()
+        .expect("run cp");
     assert!(
         out.status.success(),
         "cp {} {} failed: {}",
