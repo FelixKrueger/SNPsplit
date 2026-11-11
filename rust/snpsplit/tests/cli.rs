@@ -17,6 +17,18 @@ fn linked_as(dir: &Path, name: &str) -> PathBuf {
     link
 }
 
+/// Copies `src` to `dest` with `cp`, so no test thread holds the copy open when it is run.
+fn copied_as(src: &Path, dest: &Path) {
+    let out = Command::new("cp").arg(src).arg(dest).output().unwrap();
+    assert!(
+        out.status.success(),
+        "cp {} {} failed: {}",
+        src.display(),
+        dest.display(),
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
 #[test]
 fn snpsplit_prints_its_banner_for_versions() {
     let dir = TempDir::new().unwrap();
@@ -122,7 +134,7 @@ fn an_unknown_name_and_an_unknown_subcommand_both_fail_loudly() {
 fn dispatch_survives_being_copied_under_a_classic_name() {
     let dir = TempDir::new().unwrap();
     let copied = dir.path().join("SNPsplit");
-    std::fs::copy(cargo_bin("snpsplit"), &copied).unwrap();
+    copied_as(&cargo_bin("snpsplit"), &copied);
 
     let out = Command::new(&copied).arg("--versions").output().unwrap();
 
@@ -240,7 +252,7 @@ fn run_with_sorters(extra: &[&str], env_parallel: Option<&str>) -> String {
     let decoy = work.path().join("decoy");
     std::fs::create_dir_all(&bin).unwrap();
     std::fs::create_dir_all(&decoy).unwrap();
-    std::fs::copy(cargo_bin("snpsplit"), bin.join("SNPsplit")).unwrap();
+    copied_as(&cargo_bin("snpsplit"), &bin.join("SNPsplit"));
     recording_sorter(&bin, "own");
     recording_sorter(&decoy, "decoy");
     std::fs::copy(fixture.join("input.sam"), work.path().join("input.sam")).unwrap();
@@ -298,7 +310,7 @@ fn a_symlinked_snpsplit_runs_the_tag2sort_beside_its_target() {
     let (bin, elsewhere) = (work.path().join("bin"), work.path().join("elsewhere"));
     std::fs::create_dir_all(&bin).unwrap();
     std::fs::create_dir_all(&elsewhere).unwrap();
-    std::fs::copy(cargo_bin("snpsplit"), bin.join("SNPsplit")).unwrap();
+    copied_as(&cargo_bin("snpsplit"), &bin.join("SNPsplit"));
     recording_sorter(&bin, "own");
     symlink(bin.join("SNPsplit"), elsewhere.join("SNPsplit")).unwrap();
     std::fs::copy(fixture.join("input.sam"), work.path().join("input.sam")).unwrap();
@@ -331,7 +343,7 @@ fn the_subcommand_form_sorts_without_a_tag2sort_beside_it() {
     let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../test/fixtures/se_basic");
     let work = TempDir::new().unwrap();
     let alone = work.path().join("snpsplit");
-    std::fs::copy(cargo_bin("snpsplit"), &alone).unwrap();
+    copied_as(&cargo_bin("snpsplit"), &alone);
     std::fs::copy(fixture.join("input.sam"), work.path().join("input.sam")).unwrap();
 
     let out = Command::new(&alone)
