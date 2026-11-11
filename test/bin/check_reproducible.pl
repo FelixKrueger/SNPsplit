@@ -23,7 +23,7 @@ use Cwd qw(abs_path getcwd);
 my $test_root = abs_path(File::Spec->catdir(dirname(__FILE__), '..'));
 my $repo_root = abs_path(File::Spec->catdir($test_root, '..'));
 
-my $impl = File::Spec->catfile($repo_root, 'SNPsplit_genome_preparation');
+my $impl = File::Spec->catfile($repo_root, 'legacy_perl', 'SNPsplit_genome_preparation');
 if (@ARGV >= 2 && $ARGV[0] eq '--impl') { $impl = abs_path($ARGV[1]) }
 die "implementation not found or not executable: $impl\n" unless -x $impl;
 

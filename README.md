@@ -15,6 +15,8 @@ SNPsplit has now been updated to work with new release of the [Mouse Genomes Pro
 
 SNPsplit is written in Perl and is executed from the command line. To install SNPsplit simply download the latest release of the code from the [Releases page](https://github.com/FelixKrueger/SNPsplit/releases) and extract the files into a SNPsplit installation folder.
 
+In the repository, the Perl scripts are in `legacy_perl/` and the Rust port is in `rust/` (see [the Rust docs](https://felixkrueger.github.io/SNPsplit/rust/)).
+
 SNPsplit requires the following tools installed and ideally available in the `PATH`:
 - [Samtools](http://samtools.sourceforge.net/)
 

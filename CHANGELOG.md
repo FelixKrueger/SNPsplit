@@ -1,3 +1,7 @@
+## Unreleased
+
+- The Perl scripts are now in `legacy_perl/` in the repository ([#174](https://github.com/FelixKrueger/SNPsplit/pull/174))
+
 ## v0.9.2 (Release 10 11 2026)
 
 ### SNPsplit
