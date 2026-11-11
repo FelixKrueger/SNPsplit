@@ -1,7 +1,8 @@
-//! The three `--version` banners, captured byte for byte from Perl SNPsplit v0.9.2.
+//! The three `--version` banners: the text Perl SNPsplit v0.9.2 prints, with `@VERSION@` in
+//! place of its version number.
 //!
 //! They are `include_str!`d from `banners/` rather than written out here, so they cannot
-//! drift from what the Perl actually prints. Regenerate them, do not edit them.
+//! drift from what the Perl actually prints.
 
 use crate::Tool;
 
@@ -13,12 +14,14 @@ use crate::Tool;
 /// manifest is a source of truth that ships with the code.
 pub const SUITE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Stands for the version in each banner template; it occurs exactly once per template.
+const PLACEHOLDER: &str = "@VERSION@";
+
 const BANNER_SNPSPLIT: &str = include_str!("../banners/snpsplit.txt");
 const BANNER_TAG2SORT: &str = include_str!("../banners/tag2sort.txt");
 const BANNER_GENOME_PREP: &str = include_str!("../banners/genome_prep.txt");
 
-/// The exact text the version flag writes to stdout for `tool`.
-pub fn banner(tool: Tool) -> &'static str {
+fn template(tool: Tool) -> &'static str {
     match tool {
         Tool::Tag => BANNER_SNPSPLIT,
         Tool::Sort => BANNER_TAG2SORT,
@@ -26,20 +29,40 @@ pub fn banner(tool: Tool) -> &'static str {
     }
 }
 
+/// The exact text the version flag writes to stdout for `tool`.
+pub fn banner(tool: Tool) -> String {
+    template(tool).replacen(PLACEHOLDER, SUITE_VERSION, 1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// The banners carry the version as literal text. If the package version moves and the
-    /// banners are not regenerated, the tool would report two different versions depending on
-    /// the flag.
+    const TOOLS: [Tool; 3] = [Tool::Tag, Tool::Sort, Tool::Prepare];
+
     #[test]
-    fn every_banner_states_the_suite_version() {
-        for tool in [Tool::Tag, Tool::Sort, Tool::Prepare] {
-            assert!(
-                banner(tool).contains(SUITE_VERSION),
-                "{tool:?} banner does not mention version {SUITE_VERSION}; regenerate banners/",
+    fn every_template_has_the_placeholder_exactly_once() {
+        for tool in TOOLS {
+            assert_eq!(
+                template(tool).matches(PLACEHOLDER).count(),
+                1,
+                "{tool:?} banner template"
             );
+        }
+    }
+
+    /// Compares the whole version token, so a banner stating a version that merely starts with
+    /// the suite version cannot pass.
+    #[test]
+    fn every_banner_states_exactly_the_suite_version() {
+        for tool in TOOLS {
+            let text = banner(tool);
+            let line = text
+                .lines()
+                .find(|l| l.contains("ersion: "))
+                .unwrap_or_else(|| panic!("{tool:?} banner has no version line"));
+            let token = line.split("ersion: ").nth(1).unwrap().trim();
+            assert_eq!(token, SUITE_VERSION, "{tool:?} banner");
         }
     }
 
@@ -49,7 +72,7 @@ mod tests {
         assert!(banner(Tool::Tag).starts_with('\n'));
         assert!(banner(Tool::Sort).starts_with("\n\n"));
         assert!(banner(Tool::Prepare).starts_with('\t'));
-        for tool in [Tool::Tag, Tool::Sort, Tool::Prepare] {
+        for tool in TOOLS {
             assert!(
                 banner(tool).ends_with("\n\n"),
                 "{tool:?} lost its trailing blank line"

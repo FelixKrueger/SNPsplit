@@ -28,6 +28,25 @@ jobs:
       - name: Tests
         run: cargo test --all-targets --locked
 
+  notices:
+    # THIRD-PARTY-NOTICES.md ships in every release; it must match the dependencies
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about@0.9.3
+      - name: Regenerate and compare
+        run: |
+          cargo about generate --locked -m snpsplit/Cargo.toml about.hbs -o "$RUNNER_TEMP/notices.md"
+          diff -u THIRD-PARTY-NOTICES.md "$RUNNER_TEMP/notices.md" || {
+            echo "::error::rust/THIRD-PARTY-NOTICES.md is out of date: run cargo about generate --locked -m snpsplit/Cargo.toml about.hbs -o THIRD-PARTY-NOTICES.md in rust/"
+            exit 1
+          }
+
   fixtures-rust:
     # The alignment suite against the Rust build. Gated by test/rust_fixtures.txt, which
     # fails both on a listed fixture that breaks and on an unlisted one that starts passing.

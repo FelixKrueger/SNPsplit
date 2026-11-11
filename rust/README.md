@@ -39,9 +39,9 @@ directions.
 
 ## Verified equivalences
 
-- All three version banners are byte-identical to Perl v0.9.2, checked by `diff` against the
-  Perl scripts and pinned by a test that fails if `the package manifest` moves without the banners
-  being regenerated.
+- All three version banners are the Perl v0.9.2 text with the Rust's version number, compared
+  byte for byte with the Perl scripts' output by `tests/cli.rs`. The banner files hold the text
+  with `@VERSION@`, filled from the package manifest when printed.
 - Name sort: `io::sort_by_name` reproduces `samtools sort -n` ordering, cross-checked over
   5000 shuffled names with a 500-record memory budget (so the spill and merge paths are the
   ones under test) against samtools 1.24. The comparator is a port of samtools' `strnum_cmp`,
@@ -61,10 +61,11 @@ directions.
 
 ## Container image
 
-No image is published yet; build it from the repository root:
+Each release pushes `ghcr.io/felixkrueger/snpsplit:<version>`, and `:latest` or `:beta`. To build
+it yourself, from the repository root:
 
 ```sh
-docker build -t snpsplit rust/
+docker build -f rust/Dockerfile -t snpsplit .
 docker run --rm --entrypoint SNPsplit snpsplit --help
 ```
 
@@ -164,6 +165,8 @@ comparing the counters.
 Anything that lands here stays here: a deviation that is not written down is a bug the next
 person has to rediscover.
 
+- **`--version` gives the Rust's version number** (1.0 onwards); the rest of each banner is the
+  Perl's text. The YAML report's `version:` follows it.
 - **VCF positions are compared as numbers.** A position written with leading zeros (`007`)
   is the same position as `7` here; the Perl keys on the text and keeps both. MGP VCFs do
   not write leading zeros.
@@ -193,7 +196,7 @@ it shells out to, so the tool that actually did the work never appears in its ow
 self-contained build has no excuse for that, so `tag2sort` writes its own record:
 
 ```
-@PG	ID:SNPsplit	PN:SNPsplit	VN:0.9.2	CL:<the command line>	PP:<the previous record>
+@PG	ID:SNPsplit	PN:SNPsplit	VN:1.0.0	CL:<the command line>	PP:<the previous record>
 ```
 
 This is the one place the port writes something the Perl does not, and it is deliberate: the

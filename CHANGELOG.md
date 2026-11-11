@@ -1,3 +1,7 @@
+## Rust 1.0.0-beta.1
+
+- First release of the Rust port, which gives the same output as Perl 0.9.2 (see `docs/rust.md`)
+
 ## Unreleased
 
 - The Perl scripts are now in `legacy_perl/` in the repository ([#174](https://github.com/FelixKrueger/SNPsplit/pull/174))
