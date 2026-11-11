@@ -88,14 +88,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Install samtools
-        run: sudo apt-get update && sudo apt-get install -y samtools
       - name: Formatting, lints, tests
+        # Before samtools is installed, as in rust.yml: the samtools comparisons need 1.21 or newer
         working-directory: rust
         run: |
           cargo fmt --all --check
           cargo clippy --all-targets --locked -- -D warnings
           cargo test --all-targets --locked
+      - name: Install samtools
+        run: sudo apt-get update && sudo apt-get install -y samtools
       - name: Fixture gates
         run: |
           ./rust/build-impl.sh
