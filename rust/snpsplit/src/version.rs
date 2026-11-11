@@ -51,8 +51,7 @@ mod tests {
         }
     }
 
-    /// Compares the whole version token, so a banner stating a version that merely starts with
-    /// the suite version cannot pass.
+    /// The whole version token, not a substring.
     #[test]
     fn every_banner_states_exactly_the_suite_version() {
         for tool in TOOLS {

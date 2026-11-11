@@ -4,6 +4,8 @@ name: release
 #   GA (version without "-") from master, prerelease (e.g. 1.0.0-beta.1) from dev, dry run from anywhere.
 #   The version is rust/Cargo.toml's [workspace.package] version; the tag is snpsplit-rust-v<version>.
 #   A re-run after a failure resumes; a run for a version that is already released stops.
+#   Release notes are the CHANGELOG's "## Rust <version>" section, then GitHub's list of PRs.
+#   If only promote-image fails, use "Re-run failed jobs": a new run stops at "already released".
 on:
   workflow_dispatch:
     inputs:
@@ -31,7 +33,6 @@ jobs:
       is_prerelease: ${{ steps.check.outputs.is_prerelease }}
       is_dry_run: ${{ steps.check.outputs.is_dry_run }}
       tag_exists: ${{ steps.check.outputs.tag_exists }}
-      draft_exists: ${{ steps.check.outputs.draft_exists }}
       image: ${{ steps.check.outputs.image }}
     steps:
       - uses: actions/checkout@v4
@@ -63,11 +64,13 @@ jobs:
             [ "$TAG_SHA" = "$GITHUB_SHA" ] || stop "$TAG exists at $TAG_SHA, not at $GITHUB_SHA"
             TAG_EXISTS=true
           fi
-          DRAFT_EXISTS=false
-          if DRAFT=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft -q .isDraft 2>/dev/null); then
-            [ "$DRAFT" = "true" ] || stop "$TAG is already released"
-            DRAFT_EXISTS=true
+          # Drafts are invisible to this read-only token; create-release looks for one itself
+          if out=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft -q .isDraft 2>&1); then
+            [ "$out" = "true" ] || stop "$TAG is already released"
+          elif ! grep -q "release not found" <<< "$out"; then
+            echo "::error::cannot look up release $TAG: $out"; exit 1
           fi
+          grep -qx "## Rust $V" CHANGELOG.md || { echo "::error::CHANGELOG.md has no '## Rust $V' section for the release notes"; exit 1; }
 
           {
             echo "version=$V"
@@ -75,10 +78,9 @@ jobs:
             echo "is_prerelease=$PRE"
             echo "is_dry_run=$DRY_RUN"
             echo "tag_exists=$TAG_EXISTS"
-            echo "draft_exists=$DRAFT_EXISTS"
             echo "image=ghcr.io/${GITHUB_REPOSITORY,,}"
           } >> "$GITHUB_OUTPUT"
-          echo "$TAG (prerelease $PRE, dry run $DRY_RUN, tag exists $TAG_EXISTS, draft exists $DRAFT_EXISTS)"
+          echo "$TAG (prerelease $PRE, dry run $DRY_RUN, tag exists $TAG_EXISTS)"
 
   test:
     needs: check-release
@@ -181,6 +183,12 @@ jobs:
           W="$S/run"; mkdir -p "$W"; cp test/fixtures/se_basic/input.sam "$W/"
           (cd "$W" && SNPSPLIT_NO_SLEEP=1 "$D/SNPsplit" --snp_file "$GITHUB_WORKSPACE/test/fixtures/se_basic/snps.txt" --single_end --sam input.sam)
           ls "$W"/*genome1* "$W"/*SNPsplit_sort.txt
+      - name: Install samtools for the fixture comparison
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then brew install samtools
+          else sudo apt-get -o Acquire::Retries=3 update && sudo apt-get -o Acquire::Retries=3 install -y samtools; fi
+      - name: Compare the tarball's output with the fixture
+        run: test/run_tests.pl --impl "$RUNNER_TEMP/smoke/${{ steps.package.outputs.archive }}/SNPsplit" se_basic
       - name: Smoke test on older Linux
         if: matrix.zig
         run: |
@@ -189,8 +197,11 @@ jobs:
           D="$RUNNER_TEMP/smoke/$A"
           for img in rockylinux:8 ubuntu:20.04; do
             echo "--- $img"
-            docker run --rm -v "$D:/b:ro" -v "$GITHUB_WORKSPACE/test/fixtures/se_basic:/f:ro" -e SNPSPLIT_NO_SLEEP=1 -w /tmp "$img" \
-              sh -c 'ldd --version | head -1; /b/SNPsplit --version | grep -i version; cp /f/input.sam . && /b/SNPsplit --snp_file /f/snps.txt --single_end --sam input.sam > /dev/null && ls *genome1*'
+            docker run --rm -v "$D:/b:ro" -v "$GITHUB_WORKSPACE/test/fixtures/se_basic:/f:ro" -e SNPSPLIT_NO_SLEEP=1 -e V="$V" -w /tmp "$img" \
+              sh -c 'set -e; ldd --version | head -1
+                     got=$(/b/SNPsplit --version | sed -n "s/.*ersion: //p" | head -1 | tr -d "[:space:]")
+                     [ "$got" = "$V" ] || { echo "--version says $got, expected $V"; exit 1; }
+                     cp /f/input.sam . && /b/SNPsplit --snp_file /f/snps.txt --single_end --sam input.sam > /dev/null && ls *genome1*'
           done
       - uses: actions/upload-artifact@v4
         with:
@@ -198,7 +209,8 @@ jobs:
           path: |
             dist/${{ steps.package.outputs.archive }}.tar.gz
             dist/${{ steps.package.outputs.archive }}.tar.gz.sha256
-          retention-days: 3
+          retention-days: 7
+          overwrite: true
 
   docker-build:
     needs: check-release
@@ -244,7 +256,8 @@ jobs:
           name: digest-${{ matrix.runner }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
-          retention-days: 3
+          retention-days: 7
+          overwrite: true
 
   docker-merge:
     needs: [check-release, test, build-binaries, docker-build]
@@ -303,7 +316,7 @@ jobs:
             got=$(docker run --rm --entrypoint "$n" "$IMG" --version | sed -n 's/.*ersion: //p' | head -1 | tr -d '[:space:]')
             [ "$got" = "$V" ] || { echo "$n --version says '$got', expected '$V'"; exit 1; }
           done
-          W="$RUNNER_TEMP/run"; mkdir -p "$W"; cp test/fixtures/se_basic/input.sam "$W/"; chmod 777 "$W"
+          W="$RUNNER_TEMP/run"; mkdir -p "$W"; cp test/fixtures/se_basic/input.sam "$W/"
           docker run --rm -e SNPSPLIT_NO_SLEEP=1 -v "$W:/w" -v "$GITHUB_WORKSPACE/test/fixtures/se_basic:/f:ro" -w /w \
             --entrypoint SNPsplit "$IMG" --snp_file /f/snps.txt --single_end --sam input.sam
           ls "$W"/*genome1* "$W"/*SNPsplit_sort.txt
@@ -360,22 +373,25 @@ jobs:
           V: ${{ needs.check-release.outputs.version }}
           PRE: ${{ needs.check-release.outputs.is_prerelease }}
           TAG_EXISTS: ${{ needs.check-release.outputs.tag_exists }}
-          DRAFT_EXISTS: ${{ needs.check-release.outputs.draft_exists }}
         run: |
           set -euo pipefail
           if [ "$TAG_EXISTS" != "true" ]; then
             git tag "$TAG"
             git push origin "$TAG"
           fi
-          if [ "$DRAFT_EXISTS" = "true" ]; then
+          if state=$(gh release view "$TAG" --json isDraft -q .isDraft 2>/dev/null); then
+            [ "$state" = "true" ] || { echo "::error::$TAG is already released"; exit 1; }
             echo "Draft for $TAG exists; reusing it"
             exit 0
           fi
-          # Notes start at the previous Rust tag, or at the last Perl release for the first one
+          awk -v h="## Rust $V" '$0 == h { on = 1; next } on && /^## / { exit } on' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          [ -s "$RUNNER_TEMP/notes.md" ] || { echo "::error::empty CHANGELOG section for $V"; exit 1; }
+          # The PR list starts at the previous Rust tag, or at the last Perl release for the first one
           git fetch -q --tags origin
-          START=$(git tag -l 'snpsplit-rust-v*' --sort=-v:refname | grep -vx "$TAG" | head -1 || true)
-          [ -n "$START" ] || START=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
-          FLAGS=(--draft --generate-notes --notes-start-tag "$START" --verify-tag --title "SNPsplit $V (Rust)")
+          START=$(git -c versionsort.suffix=- tag -l 'snpsplit-rust-v*' --sort=-v:refname | grep -vx "$TAG" | head -1 || true)
+          [ -n "$START" ] || START=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+          [ -n "$START" ] || { echo "::error::no earlier tag to start the release notes from"; exit 1; }
+          FLAGS=(--draft --notes-file "$RUNNER_TEMP/notes.md" --generate-notes --notes-start-tag "$START" --verify-tag --title "SNPsplit $V (Rust)")
           [ "$PRE" = "true" ] && FLAGS+=(--prerelease)
           gh release create "$TAG" "${FLAGS[@]}"
 

@@ -39,7 +39,7 @@ the binary, and `tag2sort` and `SNPsplit_genome_preparation` are links to it. On
 docker run --rm --entrypoint SNPsplit ghcr.io/felixkrueger/snpsplit:beta --help
 ```
 
-`:beta` is the newest prerelease, `:latest` the newest release, and each version has its own tag.
+`:beta` is the newest prerelease and each version has its own tag; `:latest` follows from 1.0.0.
 `SNPsplit`, `tag2sort` and `SNPsplit_genome_preparation` are all on the `PATH` inside, so a
 pipeline that calls them by name is a drop-in. The image is distroless: no shell, no package
 manager, no Perl.

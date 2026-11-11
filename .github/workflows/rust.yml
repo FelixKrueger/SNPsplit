@@ -43,7 +43,7 @@ jobs:
         run: |
           cargo about generate --locked -m snpsplit/Cargo.toml about.hbs -o "$RUNNER_TEMP/notices.md"
           diff -u THIRD-PARTY-NOTICES.md "$RUNNER_TEMP/notices.md" || {
-            echo "::error::rust/THIRD-PARTY-NOTICES.md is out of date: run cargo about generate --locked -m snpsplit/Cargo.toml about.hbs -o THIRD-PARTY-NOTICES.md in rust/"
+            echo "::error::rust/THIRD-PARTY-NOTICES.md is out of date: with cargo-about 0.9.3, run cargo about generate --locked -m snpsplit/Cargo.toml about.hbs -o THIRD-PARTY-NOTICES.md in rust/"
             exit 1
           }
 
