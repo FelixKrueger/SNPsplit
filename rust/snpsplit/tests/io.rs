@@ -1,8 +1,11 @@
 //! The BAM/SAM layer, exercised against files shaped like the ones the fixtures carry.
 
+mod common;
+
 use std::io::Write;
 use std::path::PathBuf;
 
+use common::samtools_present;
 use snpsplit::io::RecordReader;
 use tempfile::TempDir;
 
@@ -57,20 +60,19 @@ fn a_missing_file_reports_the_path_the_perl_way() {
 fn reads_a_real_fixture_converted_to_bam() {
     let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../test/fixtures/se_basic/input.sam");
-    if !fixture.exists() {
+    assert!(fixture.exists(), "missing fixture {}", fixture.display());
+    if !samtools_present() {
         return;
     }
 
     let dir = TempDir::new().unwrap();
     let bam = dir.path().join("input.bam");
-    let converted = std::process::Command::new("samtools")
+    let status = std::process::Command::new("samtools")
         .args(["view", "-bS", fixture.to_str().unwrap()])
         .stdout(std::fs::File::create(&bam).unwrap())
-        .status();
-    let Ok(status) = converted else { return };
-    if !status.success() {
-        return;
-    }
+        .status()
+        .unwrap();
+    assert!(status.success(), "samtools view -bS failed");
 
     let from_sam = names_of(&fixture);
     let from_bam = names_of(&bam);
@@ -123,6 +125,9 @@ fn creating_a_bam_where_it_cannot_be_written_is_an_error_not_a_silent_success() 
 /// that samtools can read it. Skipped when samtools is absent.
 #[test]
 fn samtools_can_read_the_bam_we_write() {
+    if !samtools_present() {
+        return;
+    }
     let dir = TempDir::new().unwrap();
     let src = sam_file(&dir);
     let dst = dir.path().join("out.bam");
@@ -135,12 +140,10 @@ fn samtools_can_read_the_bam_we_write() {
     }
     writer.finish().unwrap();
 
-    let Ok(out) = std::process::Command::new("samtools")
+    let out = std::process::Command::new("samtools")
         .args(["view", "-h", dst.to_str().unwrap()])
         .output()
-    else {
-        return;
-    };
+        .unwrap();
     if !out.status.success() {
         panic!(
             "samtools refused our BAM: {}",
@@ -197,6 +200,9 @@ fn sorting_spills_to_disk_and_still_produces_one_ordered_stream() {
 /// samtools is absent.
 #[test]
 fn the_whole_sort_matches_samtools_over_five_thousand_shuffled_names() {
+    if !samtools_present() {
+        return;
+    }
     let dir = TempDir::new().unwrap();
     let src = dir.path().join("big.sam");
     let dst = dir.path().join("big.bam");
@@ -223,15 +229,15 @@ fn the_whole_sort_matches_samtools_over_five_thousand_shuffled_names() {
         .write_all(sam.as_bytes())
         .unwrap();
 
-    let Ok(out) = std::process::Command::new("samtools")
+    let out = std::process::Command::new("samtools")
         .args(["sort", "-n", "-O", "sam", src.to_str().unwrap()])
         .output()
-    else {
-        return;
-    };
-    if !out.status.success() {
-        return;
-    }
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "samtools sort -n failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let samtools_order: Vec<String> = String::from_utf8_lossy(&out.stdout)
         .lines()
         .filter(|l| !l.starts_with('@'))
@@ -341,6 +347,9 @@ fn the_sorted_output_does_not_depend_on_the_memory_budget() {
 /// absent.
 #[test]
 fn samtools_reads_a_multithreaded_bam() {
+    if !samtools_present() {
+        return;
+    }
     let dir = TempDir::new().unwrap();
     let src = sam_file(&dir);
     let dst = dir.path().join("mt.bam");
@@ -353,12 +362,10 @@ fn samtools_reads_a_multithreaded_bam() {
     }
     writer.finish().unwrap();
 
-    let Ok(out) = std::process::Command::new("samtools")
+    let out = std::process::Command::new("samtools")
         .args(["view", "-h", dst.to_str().unwrap()])
         .output()
-    else {
-        return;
-    };
+        .unwrap();
     assert!(
         out.status.success(),
         "samtools refused a multithreaded BAM: {}",
@@ -387,6 +394,9 @@ fn keys_by_samtools(path: &std::path::Path) -> Option<Vec<String>> {
 /// Skipped when samtools is absent.
 #[test]
 fn records_sharing_a_name_are_ordered_as_samtools_orders_them() {
+    if !samtools_present() {
+        return;
+    }
     let dir = TempDir::new().unwrap();
     let flags = [99, 147, 355, 403, 355, 403, 2147, 2195];
     let mut records: Vec<(usize, u16, usize)> = Vec::new();
@@ -416,7 +426,7 @@ fn records_sharing_a_name_are_ordered_as_samtools_orders_them() {
         .write_all(sam.as_bytes())
         .unwrap();
     let bam = dir.path().join("tied.bam");
-    let Ok(st) = std::process::Command::new("samtools")
+    let st = std::process::Command::new("samtools")
         .args([
             "view",
             "-b",
@@ -425,9 +435,7 @@ fn records_sharing_a_name_are_ordered_as_samtools_orders_them() {
             src.to_str().unwrap(),
         ])
         .status()
-    else {
-        return;
-    };
+        .unwrap();
     assert!(st.success());
     let expected = dir.path().join("expected.bam");
     let st = std::process::Command::new("samtools")
