@@ -369,6 +369,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Tag and draft
         env:
           GH_TOKEN: ${{ github.token }}
@@ -389,10 +391,12 @@ jobs:
           fi
           awk -v h="## Rust $V" '$0 == h { on = 1; next } on && /^## / { exit } on' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
           [ -s "$RUNNER_TEMP/notes.md" ] || { echo "::error::empty CHANGELOG section for $V"; exit 1; }
-          # The PR list starts at the previous Rust tag, or at the last Perl release for the first one
+          # The PR list starts at the newest earlier tag in this commit's history: a full release
+          # after the previous full release, a prerelease after any Rust tag, else the last Perl tag
           git fetch -q --tags origin
-          START=$(git -c versionsort.suffix=- tag -l 'snpsplit-rust-v*' --sort=-v:refname | grep -vx "$TAG" | head -1 || true)
-          [ -n "$START" ] || START=$(git tag -l --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+          PATTERN='.'; [ "$PRE" = "true" ] || PATTERN='^snpsplit-rust-v[0-9]+\.[0-9]+\.[0-9]+$'
+          START=$(git -c versionsort.suffix=- tag --merged HEAD -l 'snpsplit-rust-v*' --sort=-v:refname | grep -vx "$TAG" | grep -E "$PATTERN" | head -1 || true)
+          [ -n "$START" ] || START=$(git tag --merged HEAD --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
           [ -n "$START" ] || { echo "::error::no earlier tag to start the release notes from"; exit 1; }
           FLAGS=(--draft --notes-file "$RUNNER_TEMP/notes.md" --generate-notes --notes-start-tag "$START" --verify-tag --title "SNPsplit $V (Rust)")
           [ "$PRE" = "true" ] && FLAGS+=(--prerelease)
