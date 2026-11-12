@@ -3,10 +3,10 @@ members = ["snpsplit"]
 resolver = "3"
 
 [workspace.package]
-version = "1.0.0-beta.1"
+version = "1.0.0"
 edition = "2024"
 rust-version = "1.89"
-license = "GPL-3.0-only"
+license = "GPL-3.0-or-later"
 repository = "https://github.com/FelixKrueger/SNPsplit"
 
 [workspace.dependencies]

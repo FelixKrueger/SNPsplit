@@ -344,6 +344,9 @@ jobs:
           set -euo pipefail
           if [ "$DRY_RUN" = "true" ]; then
             cargo publish -p snpsplit --locked --dry-run
+            if [ "$PRE" = "false" ] && [ -z "${CARGO_REGISTRY_TOKEN:-}" ]; then
+              echo "::error::CARGO_REGISTRY_TOKEN is empty; the real run would stop here"; exit 1
+            fi
             exit 0
           fi
           if [ "$PRE" = "true" ]; then

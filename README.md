@@ -13,7 +13,7 @@ SNPsplit has now been updated to work with new release of the [Mouse Genomes Pro
 
 ## Installation
 
-SNPsplit 1.0 is a Rust rewrite: one binary that needs nothing else installed. Download `snpsplit-<version>-<platform>.tar.gz` from the [Releases page](https://github.com/FelixKrueger/SNPsplit/releases) (Linux x86_64 and aarch64, macOS Apple Silicon) and put the unpacked folder on your `PATH`, or use the image `ghcr.io/felixkrueger/snpsplit`. See [the Rust docs](https://felixkrueger.github.io/SNPsplit/rust/) for details.
+SNPsplit 1.0 is a Rust rewrite: one binary that needs nothing else installed. Download `snpsplit-<version>-<platform>.tar.gz` from the [Releases page](https://github.com/FelixKrueger/SNPsplit/releases) (Linux x86_64 and aarch64, macOS Apple Silicon) and put the unpacked folder on your `PATH`, use the image `ghcr.io/felixkrueger/snpsplit`, or `cargo install snpsplit`. See [the Rust docs](https://felixkrueger.github.io/SNPsplit/rust/) for details.
 
 The Perl version (0.9.x) is in maintenance freeze. To use it, download the [0.9.2 release](https://github.com/FelixKrueger/SNPsplit/releases/tag/0.9.2) and extract the files into an installation folder; it needs [Samtools](http://samtools.sourceforge.net/) on the `PATH`.
 

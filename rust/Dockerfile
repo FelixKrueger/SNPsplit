@@ -32,7 +32,7 @@ FROM gcr.io/distroless/cc-debian12
 LABEL org.opencontainers.image.title="SNPsplit"
 LABEL org.opencontainers.image.description="Allele-specific alignment sorting"
 LABEL org.opencontainers.image.source="https://github.com/FelixKrueger/SNPsplit"
-LABEL org.opencontainers.image.licenses="GPL-3.0-only"
+LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
 
 COPY --from=build /out/bin /usr/local/bin
 COPY --from=build /out/doc /usr/share/doc/snpsplit

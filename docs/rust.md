@@ -6,7 +6,7 @@ needed to run them.
 
 !!! note "Status"
 
-    The Rust build is released as SNPsplit 1.0, starting with 1.0.0-beta.1. The Perl version
+    The Rust build is released as SNPsplit 1.0. The Perl version
     (0.9.x) is in maintenance freeze ([#167](https://github.com/FelixKrueger/SNPsplit/issues/167)).
 
 ## What is different
@@ -27,7 +27,7 @@ the same normalisation the Perl suite uses. The two exceptions are described und
 
 ### Prebuilt binaries
 
-Each Rust release, from 1.0.0-beta.1 on, attaches a `snpsplit-<version>-<platform>.tar.gz` to the
+Each Rust release attaches a `snpsplit-<version>-<platform>.tar.gz` to the
 [Releases page](https://github.com/FelixKrueger/SNPsplit/releases) for Linux x86_64 and aarch64
 (glibc 2.17 or newer) and macOS on Apple Silicon. Unpack it and put the folder on your `PATH`: `SNPsplit` is
 the binary, and `tag2sort` and `SNPsplit_genome_preparation` are links to it. On macOS, run
@@ -36,10 +36,10 @@ the binary, and `tag2sort` and `SNPsplit_genome_preparation` are links to it. On
 ### Container image
 
 ```sh
-docker run --rm --entrypoint SNPsplit ghcr.io/felixkrueger/snpsplit:beta --help
+docker run --rm --entrypoint SNPsplit ghcr.io/felixkrueger/snpsplit:latest --help
 ```
 
-`:beta` is the newest prerelease and each version has its own tag; `:latest` follows from 1.0.0.
+`:latest` is the newest release, `:beta` the newest prerelease, and each version has its own tag.
 `SNPsplit`, `tag2sort` and `SNPsplit_genome_preparation` are all on the `PATH` inside, so a
 pipeline that calls them by name is a drop-in. The image is distroless: no shell, no package
 manager, no Perl.
@@ -54,7 +54,9 @@ cd SNPsplit
 
 Requires a Rust toolchain (1.89 or newer) and a C compiler. This puts `SNPsplit`, `tag2sort` and
 `SNPsplit_genome_preparation` in `rust/target/impl/`; add that folder to your `PATH`. The
-`snpsplit` binary used in the examples below is `rust/target/release/snpsplit`. To build the image
+`snpsplit` binary used in the examples below is `rust/target/release/snpsplit`.
+`cargo install snpsplit` installs that binary from crates.io; link the three classic names to it
+if you want them. To build the image
 yourself: `docker build -f rust/Dockerfile -t snpsplit .` from the same checkout.
 
 ## Invoking it
