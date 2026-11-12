@@ -6,6 +6,7 @@ name: release
 #   A re-run after a failure resumes; a run for a version that is already released stops.
 #   Release notes are the CHANGELOG's "## Rust <version>" section, then GitHub's list of PRs.
 #   If only promote-image fails, use "Re-run failed jobs": a new run stops at "already released".
+#   After a full release, merge master back into dev so the next prerelease notes start after it.
 on:
   workflow_dispatch:
     inputs:
@@ -393,9 +394,8 @@ jobs:
           [ -s "$RUNNER_TEMP/notes.md" ] || { echo "::error::empty CHANGELOG section for $V"; exit 1; }
           # The PR list starts at the newest earlier tag in this commit's history: a full release
           # after the previous full release, a prerelease after any Rust tag, else the last Perl tag
-          git fetch -q --tags origin
           PATTERN='.'; [ "$PRE" = "true" ] || PATTERN='^snpsplit-rust-v[0-9]+\.[0-9]+\.[0-9]+$'
-          START=$(git -c versionsort.suffix=- tag --merged HEAD -l 'snpsplit-rust-v*' --sort=-v:refname | grep -vx "$TAG" | grep -E "$PATTERN" | head -1 || true)
+          START=$(git -c versionsort.suffix=- tag --merged HEAD -l 'snpsplit-rust-v*' --sort=-v:refname | grep -Fvx "$TAG" | grep -E "$PATTERN" | head -1 || true)
           [ -n "$START" ] || START=$(git tag --merged HEAD --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
           [ -n "$START" ] || { echo "::error::no earlier tag to start the release notes from"; exit 1; }
           FLAGS=(--draft --notes-file "$RUNNER_TEMP/notes.md" --generate-notes --notes-start-tag "$START" --verify-tag --title "SNPsplit $V (Rust)")
