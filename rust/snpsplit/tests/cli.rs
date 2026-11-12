@@ -3,6 +3,8 @@
 //! `argv[0]` dispatch cannot be unit-tested: it depends on how the process was actually
 //! spawned. These run the built binary under each of its names.
 
+mod common;
+
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -208,13 +210,19 @@ fn the_output_records_its_own_programs_after_the_inputs() {
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    let Ok(view) = Command::new("samtools")
+    if !common::samtools_present() {
+        return;
+    }
+    let view = Command::new("samtools")
         .args(["view", "-H", "--no-PG", "input.genome1.bam"])
         .current_dir(work.path())
         .output()
-    else {
-        return;
-    };
+        .unwrap();
+    assert!(
+        view.status.success(),
+        "samtools view -H failed: {}",
+        String::from_utf8_lossy(&view.stderr)
+    );
     let header = String::from_utf8_lossy(&view.stdout);
     let pg: Vec<&str> = header.lines().filter(|l| l.starts_with("@PG")).collect();
     let input_last = std::fs::read_to_string(fixture.join("input.sam"))

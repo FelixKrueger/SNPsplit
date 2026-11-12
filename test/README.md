@@ -29,8 +29,8 @@ test/run_tests.pl --impl /path/to/other/SNPsplit
 ```
 
 Without `--impl` it runs the Perl in `legacy_perl/`. Exit status is 0 when everything matches, 1
-otherwise. `tag2sort` is taken from the same directory as `--impl` and staged beside it, because
-`SNPsplit` invokes `$RealBin/tag2sort` with no override.
+otherwise. `tag2sort` is taken from the directory of `--impl` (or of its target, if `--impl` is a
+symlink) and staged beside it, because `SNPsplit` invokes `$RealBin/tag2sort` with no override.
 
 Requires `samtools` on `PATH` (or `--samtools PATH`) and core Perl only — no CPAN modules, matching
 the tools under test.
