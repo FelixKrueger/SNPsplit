@@ -47,7 +47,7 @@ manager, no Perl.
 ### From source
 
 ```sh
-git clone -b dev https://github.com/FelixKrueger/SNPsplit.git
+git clone https://github.com/FelixKrueger/SNPsplit.git
 cd SNPsplit
 ./rust/build-impl.sh
 ```
@@ -55,8 +55,7 @@ cd SNPsplit
 Requires a Rust toolchain (1.89 or newer) and a C compiler. This puts `SNPsplit`, `tag2sort` and
 `SNPsplit_genome_preparation` in `rust/target/impl/`; add that folder to your `PATH`. The
 `snpsplit` binary used in the examples below is `rust/target/release/snpsplit`.
-`cargo install snpsplit` installs that binary from crates.io; link the three classic names to it
-if you want them. To build the image
+`cargo install snpsplit` installs only that binary, from crates.io, so it is run by subcommand. To build the image
 yourself: `docker build -f rust/Dockerfile -t snpsplit .` from the same checkout.
 
 ## Invoking it
@@ -68,7 +67,7 @@ SNPsplit_genome_preparation --vcf_file mgp_REL2021_snps.vcf.gz --strain 129S1_Sv
 SNPsplit --SNP_file all_SNPs_129S1_SvImJ_GRCm39.txt.gz sample.bam
 ```
 
-or, where the binary is installed as `snpsplit` (the container image, or a build from source),
+or, where the binary is installed as `snpsplit` (`cargo install`, the container image, or a build from source),
 by subcommand:
 
 ```sh

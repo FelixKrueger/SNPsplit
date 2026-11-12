@@ -139,6 +139,32 @@ fn an_unknown_name_and_an_unknown_subcommand_both_fail_loudly() {
     assert!(String::from_utf8_lossy(&out.stderr).contains("frobnicate"));
 }
 
+/// `snpsplit` alone answers `--version` and `--help`; the classic names keep the Perl's flags.
+#[test]
+fn the_multicall_name_answers_version_and_help() {
+    let out = Command::new(cargo_bin("snpsplit"))
+        .arg("--version")
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        format!("snpsplit {}\n", env!("CARGO_PKG_VERSION"))
+    );
+
+    for flag in ["--help", "-h"] {
+        let out = Command::new(cargo_bin("snpsplit"))
+            .arg(flag)
+            .output()
+            .unwrap();
+        assert!(out.status.success(), "{flag}");
+        assert!(
+            String::from_utf8_lossy(&out.stdout).starts_with("Usage: snpsplit <tag|sort|prepare>"),
+            "{flag}"
+        );
+    }
+}
+
 /// The fixture runners copy the implementation into a scratch directory rather than
 /// invoking it in place. Dispatch must therefore survive being copied under a classic name,
 /// not merely being linked as one.

@@ -10,7 +10,6 @@ accepted = [
     "Unlicense",
     "Unicode-3.0",
     "CDLA-Permissive-2.0",
-    "GPL-3.0-only",
     "GPL-3.0-or-later",
 ]
 targets = [

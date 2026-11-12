@@ -1,6 +1,6 @@
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/snpsplit/README.html)
 
-<p align="center"> <img title="SNPsplit" id="logo_img" src="docs/images/SNPsplit.png" width=300></p>
+<p align="center"> <img title="SNPsplit" id="logo_img" src="https://raw.githubusercontent.com/FelixKrueger/SNPsplit/master/docs/images/SNPsplit.png" width=300></p>
 
 ## Allele-specific alignment sorting
 
@@ -32,4 +32,4 @@ The SNPsplit documentation can be found here: [SNPsplit User Guide](https://feli
 
 SNPsplit was written by Felix Krueger at [Babraham Bioinformatics](https://www.bioinformatics.babraham.ac.uk), now part of Altos Bioinformatics.
 
-<p align="center"> <img title="Babraham Bioinformatics" id="logo_img" src="docs/images/bioinformatics_logo.png" width=200></p>
+<p align="center"> <img title="Babraham Bioinformatics" id="logo_img" src="https://raw.githubusercontent.com/FelixKrueger/SNPsplit/master/docs/images/bioinformatics_logo.png" width=200></p>
