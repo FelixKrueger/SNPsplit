@@ -40,7 +40,7 @@ GetOptions(
 usage(0) if $help;
 
 $impl = defined $impl ? abs_path($impl)
-                      : File::Spec->catfile($repo_root, 'SNPsplit_genome_preparation');
+                      : File::Spec->catfile($repo_root, 'legacy_perl', 'SNPsplit_genome_preparation');
 
 die "Implementation not found or not executable: $impl\n" unless -x $impl;
 
@@ -593,7 +593,7 @@ Differential regression harness for SNPsplit_genome_preparation.
   test/run_genome_tests.pl [OPTIONS] [FIXTURE ...]
 
   --update          Regenerate expected/ for the selected fixtures instead of diffing.
-  --impl PATH       Implementation under test. Default: the repo's ./SNPsplit_genome_preparation.
+  --impl PATH       Implementation under test. Default: the repo's legacy_perl/SNPsplit_genome_preparation.
   --keep            Leave scratch directories in place for inspection.
   -v, --verbose     Echo each command as it runs.
   -h, --help        This message.

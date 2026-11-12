@@ -10,11 +10,35 @@ use std::process::Command;
 use assert_cmd::cargo::cargo_bin;
 use tempfile::TempDir;
 
+/// The version of the Perl in `legacy_perl/`, which the banners are compared against.
+const PERL_VERSION: &str = "0.9.2";
+
 /// Links the built binary under `name` in a fresh directory and returns the link path.
 fn linked_as(dir: &Path, name: &str) -> PathBuf {
     let link = dir.join(name);
     symlink(cargo_bin("snpsplit"), &link).expect("symlink the binary under its classic name");
     link
+}
+
+/// A banner template as the binary prints it.
+fn filled(template: &str) -> String {
+    template.replacen("@VERSION@", env!("CARGO_PKG_VERSION"), 1)
+}
+
+/// Copies `src` to `dest` with `cp`, so no other test's child process inherits a write handle to it.
+fn copied_as(src: &Path, dest: &Path) {
+    let out = Command::new("cp")
+        .arg(src)
+        .arg(dest)
+        .output()
+        .expect("run cp");
+    assert!(
+        out.status.success(),
+        "cp {} {} failed: {}",
+        src.display(),
+        dest.display(),
+        String::from_utf8_lossy(&out.stderr)
+    );
 }
 
 #[test]
@@ -32,7 +56,7 @@ fn snpsplit_prints_its_banner_for_versions() {
     );
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
-        include_str!("../banners/snpsplit.txt"),
+        filled(include_str!("../banners/snpsplit.txt")),
     );
 }
 
@@ -47,7 +71,7 @@ fn tag2sort_prints_its_banner_for_the_singular_version() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
-        include_str!("../banners/tag2sort.txt"),
+        filled(include_str!("../banners/tag2sort.txt")),
     );
 }
 
@@ -80,7 +104,7 @@ fn genome_preparation_prints_its_banner() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
-        include_str!("../banners/genome_prep.txt"),
+        filled(include_str!("../banners/genome_prep.txt")),
     );
 }
 
@@ -94,7 +118,7 @@ fn the_subcommand_form_reaches_the_same_tool() {
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
-        include_str!("../banners/snpsplit.txt"),
+        filled(include_str!("../banners/snpsplit.txt")),
     );
 }
 
@@ -115,6 +139,32 @@ fn an_unknown_name_and_an_unknown_subcommand_both_fail_loudly() {
     assert!(String::from_utf8_lossy(&out.stderr).contains("frobnicate"));
 }
 
+/// `snpsplit` alone answers `--version` and `--help`; the classic names keep the Perl's flags.
+#[test]
+fn the_multicall_name_answers_version_and_help() {
+    let out = Command::new(cargo_bin("snpsplit"))
+        .arg("--version")
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        format!("snpsplit {}\n", env!("CARGO_PKG_VERSION"))
+    );
+
+    for flag in ["--help", "-h"] {
+        let out = Command::new(cargo_bin("snpsplit"))
+            .arg(flag)
+            .output()
+            .unwrap();
+        assert!(out.status.success(), "{flag}");
+        assert!(
+            String::from_utf8_lossy(&out.stdout).starts_with("Usage: snpsplit <tag|sort|prepare>"),
+            "{flag}"
+        );
+    }
+}
+
 /// The fixture runners copy the implementation into a scratch directory rather than
 /// invoking it in place. Dispatch must therefore survive being copied under a classic name,
 /// not merely being linked as one.
@@ -122,14 +172,14 @@ fn an_unknown_name_and_an_unknown_subcommand_both_fail_loudly() {
 fn dispatch_survives_being_copied_under_a_classic_name() {
     let dir = TempDir::new().unwrap();
     let copied = dir.path().join("SNPsplit");
-    std::fs::copy(cargo_bin("snpsplit"), &copied).unwrap();
+    copied_as(&cargo_bin("snpsplit"), &copied);
 
     let out = Command::new(&copied).arg("--versions").output().unwrap();
 
     assert!(out.status.success());
     assert_eq!(
         String::from_utf8_lossy(&out.stdout),
-        include_str!("../banners/snpsplit.txt"),
+        filled(include_str!("../banners/snpsplit.txt")),
     );
 }
 
@@ -191,9 +241,10 @@ fn the_output_records_its_own_programs_after_the_inputs() {
     assert_eq!(field(ours[1], "PP:"), field(ours[0], "ID:"), "{header}");
 }
 
-/// Every spelling of the version flag gives the Perl's exit status, and the Perl's banner when it succeeds.
+/// Every spelling of the version flag gives the Perl's exit status, and the Perl's banner with
+/// the suite version in place of the Perl's when it succeeds.
 #[test]
-fn version_flags_behave_as_the_perl_does() {
+fn version_flags_behave_as_the_perl_does_apart_from_the_version() {
     let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let dir = TempDir::new().unwrap();
     for tool in ["SNPsplit", "tag2sort", "SNPsplit_genome_preparation"] {
@@ -207,14 +258,25 @@ fn version_flags_behave_as_the_perl_does() {
             &["--version", "--bogus"],
         ] {
             let perl = Command::new("perl")
-                .arg(repo.join(tool))
+                .arg(repo.join("legacy_perl").join(tool))
                 .args(flags)
                 .output()
                 .unwrap();
             let ours = Command::new(&rust).args(flags).output().unwrap();
             assert_eq!(ours.status.code(), perl.status.code(), "{tool} {flags:?}");
             if perl.status.success() {
-                assert_eq!(ours.stdout, perl.stdout, "{tool} {flags:?}");
+                let perl_out = String::from_utf8(perl.stdout).unwrap();
+                assert_eq!(
+                    perl_out.matches(PERL_VERSION).count(),
+                    1,
+                    "{tool} {flags:?}: the Perl banner should name {PERL_VERSION} once"
+                );
+                let expected = perl_out.replacen(PERL_VERSION, env!("CARGO_PKG_VERSION"), 1);
+                assert_eq!(
+                    String::from_utf8(ours.stdout).unwrap(),
+                    expected,
+                    "{tool} {flags:?}"
+                );
             }
         }
     }
@@ -240,7 +302,7 @@ fn run_with_sorters(extra: &[&str], env_parallel: Option<&str>) -> String {
     let decoy = work.path().join("decoy");
     std::fs::create_dir_all(&bin).unwrap();
     std::fs::create_dir_all(&decoy).unwrap();
-    std::fs::copy(cargo_bin("snpsplit"), bin.join("SNPsplit")).unwrap();
+    copied_as(&cargo_bin("snpsplit"), &bin.join("SNPsplit"));
     recording_sorter(&bin, "own");
     recording_sorter(&decoy, "decoy");
     std::fs::copy(fixture.join("input.sam"), work.path().join("input.sam")).unwrap();
@@ -298,7 +360,7 @@ fn a_symlinked_snpsplit_runs_the_tag2sort_beside_its_target() {
     let (bin, elsewhere) = (work.path().join("bin"), work.path().join("elsewhere"));
     std::fs::create_dir_all(&bin).unwrap();
     std::fs::create_dir_all(&elsewhere).unwrap();
-    std::fs::copy(cargo_bin("snpsplit"), bin.join("SNPsplit")).unwrap();
+    copied_as(&cargo_bin("snpsplit"), &bin.join("SNPsplit"));
     recording_sorter(&bin, "own");
     symlink(bin.join("SNPsplit"), elsewhere.join("SNPsplit")).unwrap();
     std::fs::copy(fixture.join("input.sam"), work.path().join("input.sam")).unwrap();
@@ -331,7 +393,7 @@ fn the_subcommand_form_sorts_without_a_tag2sort_beside_it() {
     let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../test/fixtures/se_basic");
     let work = TempDir::new().unwrap();
     let alone = work.path().join("snpsplit");
-    std::fs::copy(cargo_bin("snpsplit"), &alone).unwrap();
+    copied_as(&cargo_bin("snpsplit"), &alone);
     std::fs::copy(fixture.join("input.sam"), work.path().join("input.sam")).unwrap();
 
     let out = Command::new(&alone)

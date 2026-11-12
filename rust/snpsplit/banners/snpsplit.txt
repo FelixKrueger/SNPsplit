@@ -1,7 +1,7 @@
 
     SNPsplit - Allele-specific alignment sorting
 
-	        Version: 0.9.2
+	        Version: @VERSION@
 	  Copyright 2014-23 Felix Krueger
              Altos Bioinformatics
        https://github.com/FelixKrueger/SNPsplit

@@ -6,9 +6,8 @@ needed to run them.
 
 !!! note "Status"
 
-    The port is merged into the `dev` branch but not released yet. The Perl version is in
-    maintenance freeze ([#167](https://github.com/FelixKrueger/SNPsplit/issues/167)). This page
-    describes what the Rust does today.
+    The Rust build is released as SNPsplit 1.0. The Perl version
+    (0.9.x) is in maintenance freeze ([#167](https://github.com/FelixKrueger/SNPsplit/issues/167)).
 
 ## What is different
 
@@ -26,33 +25,38 @@ the same normalisation the Perl suite uses. The two exceptions are described und
 
 ## Installing
 
-There is no Rust release yet, so there are no prebuilt binaries, no published container image
-and no crate. Build it from the `dev` branch instead.
+### Prebuilt binaries
+
+Each Rust release attaches a `snpsplit-<version>-<platform>.tar.gz` to the
+[Releases page](https://github.com/FelixKrueger/SNPsplit/releases) for Linux x86_64 and aarch64
+(glibc 2.17 or newer) and macOS on Apple Silicon. Unpack it and put the folder on your `PATH`: `SNPsplit` is
+the binary, and `tag2sort` and `SNPsplit_genome_preparation` are links to it. On macOS, run
+`xattr -d com.apple.quarantine SNPsplit` once if the downloaded binary is blocked.
+
+### Container image
+
+```sh
+docker run --rm --entrypoint SNPsplit ghcr.io/felixkrueger/snpsplit:latest --help
+```
+
+`:latest` is the newest release, `:beta` the newest prerelease, and each version has its own tag.
+`SNPsplit`, `tag2sort` and `SNPsplit_genome_preparation` are all on the `PATH` inside, so a
+pipeline that calls them by name is a drop-in. The image is distroless: no shell, no package
+manager, no Perl.
 
 ### From source
 
 ```sh
-git clone -b dev https://github.com/FelixKrueger/SNPsplit.git
+git clone https://github.com/FelixKrueger/SNPsplit.git
 cd SNPsplit
 ./rust/build-impl.sh
 ```
 
-Requires a Rust toolchain (1.89 or newer). This puts `SNPsplit`, `tag2sort` and
+Requires a Rust toolchain (1.89 or newer) and a C compiler. This puts `SNPsplit`, `tag2sort` and
 `SNPsplit_genome_preparation` in `rust/target/impl/`; add that folder to your `PATH`. The
 `snpsplit` binary used in the examples below is `rust/target/release/snpsplit`.
-
-### Container image
-
-From the same checkout:
-
-```sh
-docker build -t snpsplit rust/
-docker run --rm --entrypoint SNPsplit snpsplit --help
-```
-
-`SNPsplit`, `tag2sort` and `SNPsplit_genome_preparation` are all on the `PATH` inside, so a
-pipeline that calls them by name is a drop-in. The image is distroless: no shell, no package
-manager, no Perl.
+`cargo install snpsplit` installs only that binary, from crates.io, so it is run by subcommand. To build the image
+yourself: `docker build -f rust/Dockerfile -t snpsplit .` from the same checkout.
 
 ## Invoking it
 
@@ -63,7 +67,8 @@ SNPsplit_genome_preparation --vcf_file mgp_REL2021_snps.vcf.gz --strain 129S1_Sv
 SNPsplit --SNP_file all_SNPs_129S1_SvImJ_GRCm39.txt.gz sample.bam
 ```
 
-or through the single binary:
+or, where the binary is installed as `snpsplit` (`cargo install`, the container image, or a build from source),
+by subcommand:
 
 ```sh
 snpsplit prepare --vcf_file ... --strain ...
@@ -71,8 +76,7 @@ snpsplit tag --SNP_file ... sample.bam
 snpsplit sort sample.allele_flagged.bam
 ```
 
-Both reach the same code. The classic names are links to one binary that decides which tool
-to be from the name it was called by.
+Both reach the same code: one binary decides which tool to be from the name it was called by.
 
 ## `--parallel`
 

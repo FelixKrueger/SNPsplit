@@ -491,7 +491,7 @@ sub generate_annotation {
     my ($dir, $cfg, $plain, $masked, $format) = @_;
     $format ||= 'archive';
 
-    my $gp = File::Spec->catfile($test_root, '..', 'SNPsplit_genome_preparation');
+    my $gp = File::Spec->catfile($test_root, '..', 'legacy_perl', 'SNPsplit_genome_preparation');
     die "genome preparation script not found at $gp\n" unless -x $gp;
 
     my $work = tempdir('gp_gen_XXXXXX', DIR => ($ENV{TMPDIR} || '/tmp'), CLEANUP => 1);
