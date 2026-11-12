@@ -1,5 +1,3 @@
-[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/snpsplit/README.html)
-
 <p align="center"> <img title="SNPsplit" id="logo_img" src="https://raw.githubusercontent.com/FelixKrueger/SNPsplit/master/docs/images/SNPsplit.png" width=300></p>
 
 ## Allele-specific alignment sorting
@@ -11,8 +9,11 @@ RNA-seq, ChIP-seq, ATAC-seq, bisulfite-seq (Bismark) and Hi-C (HiCUP).
 
 > **Documentation: https://felixkrueger.github.io/SNPsplit**
 
-SNPsplit 1.0 is a rewrite in Rust: one binary that gives the same output as the Perl version, is
-3 to 5 times faster and uses about a tenth of the memory, and needs nothing else installed.
+SNPsplit 1.0 is a rewrite in Rust: one binary that gives the same output as the Perl version and
+needs nothing else installed. On our test data it used under 1 GB where the Perl used about 9 GB,
+and with `--parallel 8` it ran 3 to 5 times faster; genome preparation needs about half the Perl's
+memory. The tool names, options and output are the Perl's, so existing pipelines need no changes,
+and samtools is no longer needed.
 
 ## Installation
 
@@ -26,7 +27,7 @@ your `PATH`:
 | Linux aarch64 (glibc 2.17 or newer) | `snpsplit-<version>-linux-aarch64.tar.gz` |
 | macOS Apple Silicon | `snpsplit-<version>-macos-aarch64.tar.gz` |
 
-It holds `SNPsplit`, `tag2sort` and `SNPsplit_genome_preparation`. On macOS, run
+The archive holds `SNPsplit`, `tag2sort` and `SNPsplit_genome_preparation`. On macOS, run
 `xattr -d com.apple.quarantine SNPsplit` once if the downloaded binary is blocked.
 
 **Container image:**
@@ -39,8 +40,8 @@ docker run --rm --entrypoint SNPsplit ghcr.io/felixkrueger/snpsplit:latest --hel
 (`snpsplit prepare`, `snpsplit tag`, `snpsplit sort`). It needs a Rust toolchain (1.89 or newer)
 and a C compiler.
 
-**Bioconda:** `conda install -c bioconda snpsplit` currently installs the Perl version; the recipe
-moves to 1.0 shortly after its release.
+**Bioconda:** `conda install -c conda-forge -c bioconda snpsplit` still installs the Perl version
+until the recipe moves to 1.0.
 
 **From source:** see [the Rust docs](https://felixkrueger.github.io/SNPsplit/rust/).
 
@@ -54,7 +55,10 @@ SNPsplit_genome_preparation --vcf_file mgp_REL2021_snps.vcf.gz --strain CAST_EiJ
 SNPsplit --snp_file all_SNPs_CAST_EiJ_GRCm39.txt.gz sample.bam
 ```
 
-This writes `sample.genome1.bam`, `sample.genome2.bam`, `sample.unassigned.bam` and a report.
+This writes `sample.genome1.bam`, `sample.genome2.bam` and `sample.unassigned.bam`, the tagged
+`sample.allele_flagged.bam`, and the reports (`.SNPsplit_report.txt`, `.SNPsplit_report.yaml`,
+`.SNPsplit_sort.txt`). After `cargo install`, run `snpsplit prepare` and `snpsplit tag` instead;
+`snpsplit sort` is `tag2sort`.
 Use `--paired`, `--bisulfite` or `--hic` to match the data, and `--parallel N` to use N workers.
 `SNPsplit_genome_preparation --download` fetches the VCF and the reference if they are missing.
 The documentation covers dual hybrid genomes, every option and the reports.
@@ -64,7 +68,7 @@ The documentation covers dual hybrid genomes, every option and the reports.
 The Perl version (0.9.x) is in maintenance freeze and gets critical fixes only
 ([#167](https://github.com/FelixKrueger/SNPsplit/issues/167)). To use it, download the
 [0.9.2 release](https://github.com/FelixKrueger/SNPsplit/releases/tag/0.9.2); it needs
-[Samtools](http://samtools.sourceforge.net/) on the `PATH`. In this repository the Perl scripts are
+[Samtools](https://www.htslib.org/) on the `PATH`. In this repository the Perl scripts are
 in `legacy_perl/` and the Rust is in `rust/`.
 
 ## Citation
