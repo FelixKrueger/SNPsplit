@@ -13,4 +13,4 @@ On macOS, a downloaded binary may be blocked until you run:
   xattr -d com.apple.quarantine SNPsplit
 
 Documentation: https://felixkrueger.github.io/SNPsplit
-Licence: LICENSE (GPL-3.0); third-party licences: THIRD-PARTY-NOTICES.md
+Licence: LICENSE (GPL-3.0-or-later); third-party licences: THIRD-PARTY-NOTICES.md
