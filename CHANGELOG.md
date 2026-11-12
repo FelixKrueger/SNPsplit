@@ -1,14 +1,15 @@
+# Changelog
+
+Releases 1.x are the Rust build; 0.x are the Perl version, frozen at 0.9.2.
+
 ## Rust 1.0.0
 
 - First full release of the Rust port, which gives the same output as Perl 0.9.2, now also on crates.io as `snpsplit` and licensed GPL-3.0-or-later like the Perl ([#177](https://github.com/FelixKrueger/SNPsplit/pull/177))
+- The Perl scripts are now in `legacy_perl/` in the repository ([#174](https://github.com/FelixKrueger/SNPsplit/pull/174))
 
 ## Rust 1.0.0-beta.1
 
 - First release of the Rust port, which gives the same output as Perl 0.9.2 (see `docs/rust.md`) ([#176](https://github.com/FelixKrueger/SNPsplit/pull/176))
-
-## Unreleased
-
-- The Perl scripts are now in `legacy_perl/` in the repository ([#174](https://github.com/FelixKrueger/SNPsplit/pull/174))
 
 ## v0.9.2 (Release 10 11 2026)
 

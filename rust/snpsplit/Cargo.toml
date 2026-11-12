@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 homepage = "https://felixkrueger.github.io/SNPsplit"
 documentation = "https://felixkrueger.github.io/SNPsplit"
-readme = "../README.md"
+readme = "../../README.md"
 keywords = ["bioinformatics", "genomics", "allele-specific", "snp", "bam"]
 categories = ["science::bioinformatics::genomics", "command-line-utilities"]
 # The tests read the fixtures and the Perl outside this directory, so they stay in the repository.
