@@ -11,7 +11,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 use crate::version;
 
@@ -21,7 +21,12 @@ pub fn run(args: &[String]) -> ExitCode {
     match execute(args) {
         Ok(code) => code,
         Err(e) => {
-            eprint!("{e}");
+            // An error with causes is printed with them, on one line.
+            if e.chain().count() > 1 {
+                eprintln!("{}", format!("{e:#}").trim_end());
+            } else {
+                eprint!("{e}");
+            }
             ExitCode::FAILURE
         }
     }
@@ -68,6 +73,7 @@ fn resolve(mut opts: cli::Options) -> Result<Option<cli::Config>> {
     // Before anything is validated, because what it fetches is what the validation then
     // looks at. Nothing below contacts the network when the flag is absent.
     if opts.download {
+        let v7 = v7 || opts.vcf_file.as_deref().is_some_and(cli::is_v7_release);
         fetch_inputs(&mut opts, v7)?;
     }
 
@@ -268,12 +274,14 @@ fn resolve(mut opts: cli::Options) -> Result<Option<cli::Config>> {
     }))
 }
 
-/// Fetch whatever of the two inputs is missing.
+/// Fetch whatever of the two inputs is missing or unfinished.
 ///
-/// A path the user named always wins: if `--vcf_file` or `--reference_genome` points at
-/// something that exists, it is used as given and nothing is downloaded over it. This is the
-/// one place in the port that reaches the network, and only with `--download`.
+/// A path the user named that already holds their own data is used as given; see
+/// `download::vcf_owner` and `download::genome_owner`. This is the one place in the port that
+/// reaches the network, and only with `--download`.
 fn fetch_inputs(opts: &mut cli::Options, v7: bool) -> Result<()> {
+    use download::Owner;
+
     let mut err = std::io::stderr();
     let dir = PathBuf::from(
         opts.download_dir
@@ -284,106 +292,68 @@ fn fetch_inputs(opts: &mut cli::Options, v7: bool) -> Result<()> {
         .genome_build
         .clone()
         .unwrap_or_else(|| "GRCm39".to_string());
-    let release = opts.ensembl_release.unwrap_or(DEFAULT_ENSEMBL_RELEASE);
-    let sources = download::sources(v7, &build, release);
+    let mut manifest = download::Manifest::load(&dir)?;
 
-    std::fs::create_dir_all(&dir)
-        .with_context(|| format!("Failed to create download directory {}", dir.display()))?;
-    writeln!(err, "Downloading reference data into {}\n", dir.display())?;
-
-    let mut fetched = Vec::new();
-
-    let wanted_vcf = opts
+    let vcf = opts
         .vcf_file
         .clone()
-        .unwrap_or_else(|| dir.join(&sources.vcf_name));
-    if wanted_vcf.exists() {
-        writeln!(
-            err,
-            "Using the VCF already present at '{}'",
-            wanted_vcf.display()
-        )?;
-    } else {
-        let bytes = download::fetch(&sources.vcf_url, &wanted_vcf, &mut err)?;
-        download::verify_vcf(&wanted_vcf)?;
-        writeln!(err, "Verified '{}'", wanted_vcf.display())?;
-        fetched.push(download::Fetched {
-            url: sources.vcf_url.clone(),
-            path: wanted_vcf.clone(),
-            bytes,
-            sha256: download::sha256(&wanted_vcf)?,
-        });
-    }
-    opts.vcf_file = Some(wanted_vcf);
-
-    let wanted_genome = PathBuf::from(
+        .unwrap_or_else(|| dir.join(download::V8_VCF_NAME));
+    let genome = PathBuf::from(
         opts.genome_folder
             .clone()
             .unwrap_or_else(|| dir.join(&build).to_string_lossy().to_string()),
     );
-    if wanted_genome.is_dir() && has_fasta(&wanted_genome) {
+    let fetch_vcf = download::vcf_owner(&vcf, opts.vcf_file.is_none(), &manifest) == Owner::Ours;
+    let fetch_genome =
+        download::genome_owner(&genome, opts.genome_folder.is_none(), &build) == Owner::Ours;
+    // A folder filled earlier keeps its release unless --ensembl_release says otherwise.
+    let release = opts
+        .ensembl_release
+        .or_else(|| download::marked_release(&genome, &build));
+    let release = download::check_request(
+        v7,
+        opts.vcf_file.as_deref(),
+        fetch_vcf,
+        fetch_genome,
+        &build,
+        release,
+    )?;
+
+    // The genome first: a release Ensembl lacks then fails before the 23 GB VCF is fetched.
+    let sources = download::sources(release);
+    if fetch_genome {
+        let chromosomes = download::mouse_chromosomes();
+        download::fetch_genome(
+            &genome,
+            &sources.genome_base,
+            &build,
+            release,
+            &chromosomes,
+            &mut manifest,
+            &mut err,
+        )?;
+    } else {
         writeln!(
             err,
             "Using the reference genome already present at '{}'",
-            wanted_genome.display()
+            genome.display()
+        )?;
+    }
+    if fetch_vcf {
+        download::fetch_vcf(
+            &vcf,
+            opts.vcf_file.is_some(),
+            &sources,
+            &mut manifest,
+            &mut err,
         )?;
     } else {
-        std::fs::create_dir_all(&wanted_genome)?;
-        for chr in download::mouse_chromosomes() {
-            let name = format!("Mus_musculus.{build}.dna.chromosome.{chr}.fa.gz");
-            let target = wanted_genome.join(format!("{chr}.fa"));
-            if target.exists() {
-                continue;
-            }
-            let url = format!("{}/{name}", sources.genome_base);
-            let compressed = wanted_genome.join(&name);
-            let bytes = download::fetch(&url, &compressed, &mut err)?;
-            decompress(&compressed, &target)?;
-            fetched.push(download::Fetched {
-                url,
-                path: target,
-                bytes,
-                sha256: download::sha256(&compressed)?,
-            });
-            std::fs::remove_file(&compressed)?;
-        }
+        writeln!(err, "Using the VCF already present at '{}'", vcf.display())?;
     }
-    opts.genome_folder = Some(wanted_genome.to_string_lossy().to_string());
 
-    if !fetched.is_empty() {
-        download::record(&dir, &fetched)?;
-        writeln!(
-            err,
-            "\nRecorded {} download(s) in {}",
-            fetched.len(),
-            dir.join("manifest.txt").display()
-        )?;
-    }
+    opts.vcf_file = Some(vcf);
+    opts.genome_folder = Some(genome.to_string_lossy().to_string());
     writeln!(err)?;
-    Ok(())
-}
-
-/// The Ensembl release the genome is taken from when none is given.
-const DEFAULT_ENSEMBL_RELEASE: u32 = 115;
-
-fn has_fasta(dir: &Path) -> bool {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return false;
-    };
-    entries.filter_map(|e| e.ok()).any(|e| {
-        let name = e.file_name().to_string_lossy().to_string();
-        name.ends_with(".fa") || name.ends_with(".fasta")
-    })
-}
-
-/// Decompress a downloaded chromosome, since the genome folder holds plain FastA.
-fn decompress(source: &Path, target: &Path) -> Result<()> {
-    let input = std::fs::File::open(source)?;
-    let mut reader = flate2::read::MultiGzDecoder::new(input);
-    let mut output = std::fs::File::create(target)
-        .with_context(|| format!("Failed to write to {}", target.display()))?;
-    std::io::copy(&mut reader, &mut output)
-        .with_context(|| format!("'{}' is truncated or corrupt", source.display()))?;
     Ok(())
 }
 

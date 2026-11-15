@@ -109,16 +109,20 @@ not needing Perl and samtools installed.
 SNPsplit_genome_preparation --download --strain 129S1_SvImJ
 ```
 
-Fetches whatever of the two inputs is missing: the Mouse Genomes Project SNP VCF and a folder
-of per-chromosome FastA files. `--download_dir PATH` says where (default
-`./SNPsplit_references/`) and `--ensembl_release N` picks the genome release.
+Fetches whatever of the two inputs is missing: the Mouse Genomes Project v8 SNP VCF (GRCm39)
+and a folder of per-chromosome FastA files for `--genome_build` (GRCm39 or GRCm38).
+`--download_dir PATH` says where (default `./SNPsplit_references/`) and `--ensembl_release N`
+picks the genome release (default 115 for GRCm39, 102 for GRCm38).
 
 - Nothing contacts the network without the flag.
-- A path you named with `--vcf_file` or `--reference_genome` always wins and is never
-  downloaded over.
-- Transfers resume rather than restart. The v8 VCF is 23 GB.
-- The VCF is verified by decompressing it in full and requiring a VCF header, which catches a
-  truncated transfer and an error page saved under a `.vcf.gz` name.
+- A file or folder you named with `--vcf_file` or `--reference_genome` that already holds your
+  own data is used as given and never downloaded over. A file you named
+  `mgp_REL2021_snps.vcf.gz` has to match EBI's MD5, or the run stops and leaves it unchanged.
+- An interrupted run is finished by running the same command again. The v8 VCF is 23 GB.
+- A genome folder filled by `--download` keeps its Ensembl release on later runs.
+- The VCF is checked against the MD5 that EBI publishes beside it.
+- The v7 VCF can no longer be downloaded; supply it with `--vcf_file` and use
+  `--genome_build GRCm38`.
 - URL, size and SHA-256 of everything fetched are written to `<download_dir>/manifest.txt`, so
   a later run can tell whether the remote file changed.
 

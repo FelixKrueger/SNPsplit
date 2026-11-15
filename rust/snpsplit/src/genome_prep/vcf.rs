@@ -272,8 +272,7 @@ pub fn filter_snps(
             err,
             "Folder '{dir}' doesn't exist. Creating it for you...\n"
         )?;
-        std::fs::create_dir(&dir)
-            .with_context(|| format!("Failed to created directory {dir}\n"))?;
+        std::fs::create_dir(&dir).with_context(|| format!("Failed to created directory {dir}"))?;
     }
 
     let mut handles: BTreeMap<String, std::io::BufWriter<File>> = BTreeMap::new();
