@@ -428,3 +428,100 @@ fn the_subcommand_form_sorts_without_a_tag2sort_beside_it() {
             || work.path().join("input.genome1.bam").exists()
     );
 }
+
+/// Download requests that cannot work stop before any file or network access.
+#[test]
+fn impossible_download_requests_stop_before_anything_is_fetched() {
+    let bin = TempDir::new().unwrap();
+    let prep = linked_as(bin.path(), "SNPsplit_genome_preparation");
+    let cases: [(&[&str], &str); 4] = [
+        (&["--v7_VCF"], "can no longer be downloaded"),
+        (&["--genome_build", "hg38"], "not 'hg38'"),
+        (
+            &["--genome_build", "GRCm38", "--ensembl_release", "115"],
+            "releases 76 to 102",
+        ),
+        (&["--genome_build", "GRCm38"], "uses GRCm39 coordinates"),
+    ];
+    for (extra, message) in cases {
+        let work = TempDir::new().unwrap();
+        let out = Command::new(&prep)
+            .current_dir(work.path())
+            .args(["--download", "--strain", "CAST_EiJ"])
+            .args(extra)
+            .output()
+            .unwrap();
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert!(!out.status.success(), "{extra:?} succeeded");
+        assert!(stderr.contains(message), "{extra:?}: {stderr}");
+        assert_eq!(
+            std::fs::read_dir(work.path()).unwrap().count(),
+            0,
+            "{extra:?} left files behind"
+        );
+    }
+}
+
+/// With the user's own VCF and genome folder, `--download` fetches and writes nothing.
+#[test]
+fn download_leaves_a_users_own_inputs_alone() {
+    let bin = TempDir::new().unwrap();
+    let prep = linked_as(bin.path(), "SNPsplit_genome_preparation");
+    let work = TempDir::new().unwrap();
+    let genome = work.path().join("my_genome");
+    std::fs::create_dir(&genome).unwrap();
+    std::fs::write(genome.join("chr1.fa"), ">1\nACGT\n").unwrap();
+    let vcf = work.path().join("mine.vcf");
+    std::fs::write(
+        &vcf,
+        "##fileformat=VCFv4.2\n#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tCAST_EiJ\n",
+    )
+    .unwrap();
+
+    let out = Command::new(&prep)
+        .current_dir(work.path())
+        .args(["--download", "--list_strains", "--vcf_file", "mine.vcf"])
+        .args(["--reference_genome", "my_genome"])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{stderr}");
+    assert!(
+        stderr.contains("Using the reference genome already present"),
+        "{stderr}"
+    );
+    assert!(stderr.contains("Using the VCF already present"), "{stderr}");
+    let mut left: Vec<String> = std::fs::read_dir(work.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
+        .collect();
+    left.sort();
+    assert_eq!(left, ["mine.vcf", "my_genome"], "nothing else is created");
+    assert_eq!(std::fs::read_dir(&genome).unwrap().count(), 1);
+}
+
+/// An error with a cause prints the cause too.
+#[test]
+fn a_download_error_names_its_cause() {
+    let bin = TempDir::new().unwrap();
+    let prep = linked_as(bin.path(), "SNPsplit_genome_preparation");
+    let work = TempDir::new().unwrap();
+    std::fs::write(work.path().join("afile"), "").unwrap();
+
+    let out = Command::new(&prep)
+        .current_dir(work.path())
+        .args([
+            "--download",
+            "--download_dir",
+            "afile",
+            "--strain",
+            "CAST_EiJ",
+        ])
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(!out.status.success());
+    assert!(stderr.contains("manifest.txt: Not a directory"), "{stderr}");
+}

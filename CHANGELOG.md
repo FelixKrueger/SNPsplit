@@ -2,6 +2,10 @@
 
 Releases 1.x are the Rust build; 0.x are the Perl version, frozen at 0.9.2.
 
+## Rust 1.0.1
+
+- `--download` finishes an interrupted download when run again instead of using the partial files, and refuses requests that cannot work before fetching anything ([#185](https://github.com/FelixKrueger/SNPsplit/pull/185))
+
 ## Rust 1.0.0
 
 - First full release of the Rust port, which gives the same output as Perl 0.9.2 and is now also on crates.io as `snpsplit` ([#177](https://github.com/FelixKrueger/SNPsplit/pull/177))

@@ -23,6 +23,7 @@ anyhow.workspace = true
 clap.workspace = true
 flate2.workspace = true
 libc.workspace = true
+md-5.workspace = true
 noodles-bam.workspace = true
 noodles-bgzf.workspace = true
 noodles-sam.workspace = true
