@@ -8,7 +8,7 @@ pub(crate) const ADDED: &[&str] = &["parallel"];
 
 /// Accepted but not on the help page, as in the Perl.
 #[cfg(test)]
-pub(crate) const UNLISTED: &[&str] = &["man", "verbose", "sam", "parent_dir"];
+pub(crate) const UNLISTED: &[&str] = &["man", "parent_dir"];
 
 /// The option names this tool registers, in the order the Perl's GetOptions lists them.
 ///
@@ -95,7 +95,9 @@ pub fn parse(args: &[String]) -> Result<Options, String> {
             "singletons" => opts.singletons = true,
             "parent_dir" => opts.parent_dir = Some(take_value(&mut i)?),
             "parallel" => {
-                opts.parallel = take_value(&mut i)?.parse().unwrap_or(1);
+                opts.parallel = take_value(&mut i)?
+                    .parse()
+                    .map_err(|_| "Option parallel requires a number".to_string())?;
             }
             other => return Err(format!("Unknown option: {other}")),
         }
@@ -112,6 +114,24 @@ mod tests {
 
     fn args(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn parallel_takes_a_number_and_nothing_else() {
+        for bad in [
+            &["--parallel", "abc"][..],
+            &["--parallel", "-1"],
+            &["--parallel", "4.5"],
+            &["--parallel="],
+        ] {
+            assert_eq!(
+                parse(&args(bad)).unwrap_err(),
+                "Option parallel requires a number",
+                "{bad:?}"
+            );
+        }
+        assert_eq!(parse(&args(&["--parallel", "0"])).unwrap().parallel, 0);
+        assert_eq!(parse(&args(&["--parallel=+4"])).unwrap().parallel, 4);
     }
 
     #[test]

@@ -38,6 +38,8 @@ be assigned to a specific allele, and they are one of the following:
 --samtools_path        The path to your Samtools installation, e.g. /home/user/samtools/. Does not need to
                        be specified explicitly if Samtools is in the PATH already.
 
+--sam                  Write the output files in SAM format instead of BAM. Default: OFF.
+
 --conflicting/--weird  Reads or read pairs that were classified as 'Conflicting' (XX:Z:CF) will be written to
                        an extra file (ending in .conflicting.bam) instead of being simply skipped. Reads may be
                        classified as 'Conflicting' if a single read contains SNP information for both genomes at
@@ -47,6 +49,9 @@ be assigned to a specific allele, and they are one of the following:
 --parallel <int>       Number of threads used to decompress the input and to compress each output BAM file.
                        Default: 1. 0 uses every available core. SNPSPLIT_PARALLEL sets the default when this
                        option is absent. The output does not depend on the number of threads.
+
+--verbose              Print every alignment to standard output as it is sorted (for debugging).
+                       Single-end mode only (ignored with --paired or --hic).
 
 --help                 Displays this help information and exits.
 

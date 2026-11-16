@@ -2,6 +2,11 @@
 
 Releases 1.x are the Rust build; 0.x are the Perl version, frozen at 0.9.2.
 
+## Rust 1.0.2
+
+- A `--parallel` value that is not a number now stops the run instead of running on one thread ([#191](https://github.com/FelixKrueger/SNPsplit/pull/191))
+- `tag2sort --help` lists `--sam` and `--verbose` ([#191](https://github.com/FelixKrueger/SNPsplit/pull/191))
+
 ## Rust 1.0.1
 
 - `--help` and the option pages list `--parallel`, `--download`, `--download_dir` and `--ensembl_release` ([#186](https://github.com/FelixKrueger/SNPsplit/pull/186))

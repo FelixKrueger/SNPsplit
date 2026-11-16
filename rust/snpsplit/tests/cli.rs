@@ -95,6 +95,31 @@ fn tag2sort_rejects_the_plural_version_flag() {
     );
 }
 
+/// A flag that is given wins over `SNPSPLIT_PARALLEL`, so a wrong one fails even with a valid default.
+#[test]
+fn every_tool_rejects_a_parallel_value_that_is_not_a_number() {
+    let dir = TempDir::new().unwrap();
+    for tool in ["SNPsplit", "tag2sort", "SNPsplit_genome_preparation"] {
+        let bin = linked_as(dir.path(), tool);
+        for env in [None, Some("4")] {
+            let mut cmd = Command::new(&bin);
+            cmd.args(["--parallel", "abc"])
+                .env_remove("SNPSPLIT_PARALLEL");
+            if let Some(n) = env {
+                cmd.env("SNPSPLIT_PARALLEL", n);
+            }
+            let out = cmd.output().unwrap();
+
+            assert_eq!(out.status.code(), Some(255), "{tool} {env:?}");
+            assert_eq!(
+                String::from_utf8_lossy(&out.stderr),
+                "Option parallel requires a number\nPlease respecify command line options\n",
+                "{tool} {env:?}"
+            );
+        }
+    }
+}
+
 #[test]
 fn genome_preparation_prints_its_banner() {
     let dir = TempDir::new().unwrap();
