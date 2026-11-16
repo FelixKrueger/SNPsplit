@@ -1,5 +1,5 @@
 //! The help pages: Perl SNPsplit v0.9.2's, plus an entry for each option in a tool's `ADDED`.
-//! A wrapped line never starts with `--`, since that is how a listed option is recognised.
+//! A wrapped line never starts with `-`, since that is how a listed option is recognised.
 
 use crate::Tool;
 
@@ -30,23 +30,31 @@ pub fn exit_status(tool: Tool) -> u8 {
 
 /// Every `--option` a help page lists as an option of its own tool.
 ///
-/// Only line-leading occurrences count. Help text also mentions options in prose, including
-/// options belonging to the other tools in the suite, and those are not promises about what
-/// this tool accepts: tag2sort's page explains that `--hic` "sets the flags --paired and
+/// Only the option column counts: the first field of a line starting with `-`, split on `/`
+/// (`-o/--output_dir`, `--conflicting/--weird`). Help text also mentions options in prose,
+/// including options belonging to the other tools in the suite, and those are not promises about
+/// what this tool accepts: tag2sort's page explains that `--hic` "sets the flags --paired and
 /// --no_sort", neither of which tag2sort has.
 pub fn documented_options(page: &str) -> Vec<String> {
     let mut found: Vec<String> = Vec::new();
 
     for line in page.lines() {
-        let Some(rest) = line.trim_start().strip_prefix("--") else {
+        let line = line.trim_start();
+        if !line.starts_with('-') {
             continue;
-        };
-        let name: String = rest
-            .chars()
-            .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
-            .collect();
-        if !name.is_empty() && !found.contains(&name) {
-            found.push(name);
+        }
+        let field = line.split_whitespace().next().unwrap_or("");
+        for part in field.split('/') {
+            let Some(rest) = part.strip_prefix("--") else {
+                continue;
+            };
+            let name: String = rest
+                .chars()
+                .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+                .collect();
+            if !name.is_empty() && !found.contains(&name) {
+                found.push(name);
+            }
         }
     }
 
@@ -116,11 +124,78 @@ mod tests {
         }
     }
 
+    /// Every option a tool accepts is on its help page, or `UNLISTED` and not on the page.
+    #[test]
+    fn every_accepted_option_is_listed_or_unlisted() {
+        // Tool, NAMES, ADDED, UNLISTED.
+        type Case = (
+            Tool,
+            &'static [&'static str],
+            &'static [&'static str],
+            &'static [&'static str],
+        );
+        let cases: [Case; 3] = [
+            (
+                Tool::Tag,
+                crate::tag::cli::NAMES,
+                crate::tag::cli::ADDED,
+                crate::tag::cli::UNLISTED,
+            ),
+            (
+                Tool::Sort,
+                crate::sort::cli::NAMES,
+                crate::sort::cli::ADDED,
+                crate::sort::cli::UNLISTED,
+            ),
+            (
+                Tool::Prepare,
+                crate::genome_prep::cli::NAMES,
+                crate::genome_prep::cli::ADDED,
+                crate::genome_prep::cli::UNLISTED,
+            ),
+        ];
+
+        for (tool, names, added, unlisted) in cases {
+            let listed: Vec<&str> = documented_options(page(tool))
+                .iter()
+                .map(|o| {
+                    crate::optmatch::resolve_with(o, names, added)
+                        .unwrap_or_else(|e| panic!("{tool:?} documents --{o}: {e}"))
+                })
+                .collect();
+            for name in names {
+                assert!(
+                    listed.contains(name) || unlisted.contains(name),
+                    "{tool:?} accepts --{name}, which is neither on its help page nor UNLISTED"
+                );
+            }
+            for name in unlisted {
+                assert!(
+                    names.contains(name),
+                    "{tool:?} lists --{name} as UNLISTED but does not accept it"
+                );
+                assert!(
+                    !listed.contains(name),
+                    "{tool:?} lists --{name} as UNLISTED but its page lists it"
+                );
+            }
+        }
+    }
+
     #[test]
     fn option_extraction_takes_the_list_and_not_the_prose() {
         let found =
             documented_options("    --snp_file <file>   text\n    --paired            more\n");
         assert_eq!(found, vec!["snp_file", "paired"]);
+
+        let found = documented_options(
+            "-o/--output_dir <dir>  text\n--conflicting/--weird  text\n\t--skip_tag2sort  text\n",
+        );
+        assert_eq!(
+            found,
+            vec!["output_dir", "conflicting", "weird", "skip_tag2sort"]
+        );
+        assert!(documented_options("- a bullet\n-- x\n--\n").is_empty());
 
         // Options named mid-sentence belong to whatever the sentence is about, which is not
         // necessarily this tool.
