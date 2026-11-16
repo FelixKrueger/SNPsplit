@@ -4,6 +4,7 @@ Releases 1.x are the Rust build; 0.x are the Perl version, frozen at 0.9.2.
 
 ## Rust 1.0.1
 
+- `--help` and the option pages list `--parallel`, `--download`, `--download_dir` and `--ensembl_release` ([#186](https://github.com/FelixKrueger/SNPsplit/pull/186))
 - `--download` finishes an interrupted download when run again instead of using the partial files, and refuses requests that cannot work before fetching anything ([#185](https://github.com/FelixKrueger/SNPsplit/pull/185))
 
 ## Rust 1.0.0

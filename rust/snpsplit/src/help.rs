@@ -1,8 +1,5 @@
-//! The three help pages, captured byte for byte from Perl SNPsplit v0.9.2.
-//!
-//! Compiled in from `help/` rather than rewritten, for the same reason as the version
-//! banners: a hand-rewritten help page drifts from the options it describes the first time an
-//! option changes, and nothing catches it. Regenerate them, do not edit them.
+//! The help pages: Perl SNPsplit v0.9.2's, plus an entry for each option in a tool's `ADDED`.
+//! A wrapped line never starts with `--`, since that is how a listed option is recognised.
 
 use crate::Tool;
 
@@ -86,6 +83,34 @@ mod tests {
                 assert!(
                     crate::optmatch::resolve(&option, names).is_ok(),
                     "{tool:?} documents --{option} but does not accept it"
+                );
+            }
+        }
+    }
+
+    /// Every option the port adds is listed on its tool's help page and accepted by its parser.
+    #[test]
+    fn every_added_option_is_listed_and_accepted() {
+        let cases: [(Tool, &[&str], &[&str]); 3] = [
+            (Tool::Tag, crate::tag::cli::ADDED, crate::tag::cli::NAMES),
+            (Tool::Sort, crate::sort::cli::ADDED, crate::sort::cli::NAMES),
+            (
+                Tool::Prepare,
+                crate::genome_prep::cli::ADDED,
+                crate::genome_prep::cli::NAMES,
+            ),
+        ];
+
+        for (tool, added, names) in cases {
+            let listed = documented_options(page(tool));
+            for name in added {
+                assert!(
+                    listed.iter().any(|o| o == name),
+                    "{tool:?} adds --{name} but its help page does not list it"
+                );
+                assert!(
+                    names.contains(name),
+                    "{tool:?} adds --{name} but does not accept it"
                 );
             }
         }

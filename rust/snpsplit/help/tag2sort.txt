@@ -44,6 +44,10 @@ be assigned to a specific allele, and they are one of the following:
                        the same time, or if the SNP position was deleted from the read. Read-pairs are considered
                        'Conflicting' if either read is was tagged with the XX:Z:CF flag. Default: OFF.
 
+--parallel <int>       Number of threads used to decompress the input and to compress each output BAM file.
+                       Default: 1. 0 uses every available core. SNPSPLIT_PARALLEL sets the default when this
+                       option is absent. The output does not depend on the number of threads.
+
 --help                 Displays this help information and exits.
 
 --version              Displays version information and exits.

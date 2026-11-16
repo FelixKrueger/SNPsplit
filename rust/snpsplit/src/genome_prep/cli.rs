@@ -14,14 +14,14 @@ pub enum Stop {
     Died(String),
 }
 
+/// Options this port adds. A tie with an option the Perl already had goes to the
+/// original, so no existing abbreviation changes meaning.
+pub(crate) const ADDED: &[&str] = &["parallel", "download", "download_dir", "ensembl_release"];
+
 /// The option names this tool registers, in the order the Perl's GetOptions lists them.
 ///
 /// Resolution goes through `optmatch`, which reproduces Getopt::Long's case-insensitivity
 /// and prefix matching, so every spelling an existing script might use still works.
-/// Options this port adds. A tie with an option the Perl already had goes to the
-/// original, so no existing abbreviation changes meaning.
-const ADDED: &[&str] = &["parallel", "download", "download_dir", "ensembl_release"];
-
 pub const NAMES: &[&str] = &[
     "help",
     "man",
