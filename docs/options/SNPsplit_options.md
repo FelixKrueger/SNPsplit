@@ -60,6 +60,10 @@ Assumes Bisulfite-Seq data processed with [Bismark](https://github.com/FelixKrue
 
 The path to your Samtools installation, e.g. `/home/user/samtools/`. Does not need to be specified explicitly if Samtools is in the `PATH` environment already.
 
+- `--parallel <int>`
+
+Number of workers for each parallel step: allele tagging, name sorting, and reading and writing BAM files. Default: 1. `0` uses every available core. The environment variable `SNPSPLIT_PARALLEL` sets the default when this option is absent. The output does not depend on the number of workers. Also accepted by `tag2sort`, where it sets the threads used to decompress the input and to compress each output BAM file.
+
 ## SNPsplit-sort specific options (tag2sort):
 
 - `--sam`

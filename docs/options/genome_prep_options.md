@@ -86,6 +86,22 @@ Disable N-masking if it is not desirable. Will automatically set `--full_sequenc
 
 Name of the genome build incorporated into some of the output files. Defaults to 'GRCm39'
 
+- `--parallel <int>`
+
+Number of chromosomes processed at a time. Default: 1. `0` uses every available core. `SNPSPLIT_PARALLEL` sets the default when this option is absent. The output is the same whatever the number.
+
+- `--download`
+
+Download whichever input is missing or unfinished: the MGP v8 SNP VCF (23 GB, from EBI) and the per-chromosome FastA genome of `--genome_build` (from Ensembl). The v8 VCF is GRCm39 only; for GRCm38, supply your own GRCm38 VCF with `--vcf_file` (the v7 VCF cannot be downloaded). With `--vcf_file` or `--reference_genome`, a path that does not exist yet is downloaded to, and one that holds your own data is used as given; a file named `mgp_REL2021_snps.vcf.gz` must match EBI's MD5, or the run stops. Running the same command again finishes an interrupted download. Nothing is downloaded without this option.
+
+- `--download_dir <path>`
+
+Folder for `manifest.txt`, a record of what `--download` fetched, and for the VCF and the genome folder (named after the build) unless `--vcf_file` or `--reference_genome` names them. Default: `./SNPsplit_references/`
+
+- `--ensembl_release <int>`
+
+Ensembl release of the genome that `--download` fetches: 103 or later for GRCm39, 76 to 102 for GRCm38. Default: the release the genome folder was filled from, otherwise 115 for GRCm39 and 102 for GRCm38.
+
 - `--help`
 
 Displays this help information and exits
