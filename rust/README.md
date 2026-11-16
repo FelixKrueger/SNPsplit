@@ -196,7 +196,7 @@ it shells out to, so the tool that actually did the work never appears in its ow
 self-contained build has no excuse for that, so `tag2sort` writes its own record:
 
 ```
-@PG	ID:SNPsplit	PN:SNPsplit	VN:1.0.0	CL:<the command line>	PP:<the previous record>
+@PG	ID:SNPsplit	PN:SNPsplit	VN:1.0.1	CL:<the command line>	PP:<the previous record>
 ```
 
 This is the one place the port writes something the Perl does not, and it is deliberate: the

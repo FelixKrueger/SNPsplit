@@ -3088,7 +3088,7 @@ insights.
 ## GNU General Public License v3.0 or later
 
 Used by:
-- [snpsplit 1.0.0](https://github.com/FelixKrueger/SNPsplit)
+- [snpsplit 1.0.1](https://github.com/FelixKrueger/SNPsplit)
 
 ```
                     GNU GENERAL PUBLIC LICENSE
