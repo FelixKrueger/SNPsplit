@@ -18,6 +18,10 @@ pub enum Stop {
 /// original, so no existing abbreviation changes meaning.
 pub(crate) const ADDED: &[&str] = &["parallel", "download", "download_dir", "ensembl_release"];
 
+/// Accepted but not on the help page, as in the Perl.
+#[cfg(test)]
+pub(crate) const UNLISTED: &[&str] = &["man"];
+
 /// The option names this tool registers, in the order the Perl's GetOptions lists them.
 ///
 /// Resolution goes through `optmatch`, which reproduces Getopt::Long's case-insensitivity
