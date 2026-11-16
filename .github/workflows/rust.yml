@@ -25,8 +25,24 @@ jobs:
         # Warnings are failures here on purpose. A port accumulates dead code between
         # phases, and an allow-by-default warning stream is one nobody reads.
         run: cargo clippy --all-targets --locked -- -D warnings
+      # The samtools comparisons need 1.21 or newer; apt has 1.19
+      - name: Install samtools 1.21 for the tests
+        uses: mamba-org/setup-micromamba@v3
+        with:
+          micromamba-version: '2.10.0-0'
+          environment-name: samtools
+          create-args: samtools=1.21
+          condarc: |
+            channels: [conda-forge, bioconda]
+            channel_priority: strict
+          init-shell: none
+          cache-environment: true
       - name: Tests
-        run: cargo test --all-targets --locked
+        env:
+          SNPSPLIT_REQUIRE_SAMTOOLS: '1'
+        run: |
+          micromamba run -n samtools samtools --version
+          micromamba run -n samtools cargo test --all-targets --locked
 
   notices:
     # THIRD-PARTY-NOTICES.md ships in every release; it must match the dependencies
@@ -78,6 +94,8 @@ jobs:
         run: brew install samtools
       - name: Tests
         working-directory: rust
+        env:
+          SNPSPLIT_REQUIRE_SAMTOOLS: '1'
         run: cargo test --all-targets --locked
       - name: Build the Rust implementation
         run: ./rust/build-impl.sh

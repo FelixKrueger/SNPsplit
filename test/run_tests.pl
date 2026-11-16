@@ -33,14 +33,15 @@ GetOptions(
 
 usage(0) if $help;
 
-$impl     = defined $impl     ? abs_path($impl)     : File::Spec->catfile($repo_root, 'legacy_perl', 'SNPsplit');
-$samtools = defined $samtools ? abs_path($samtools) : which('samtools');
+$impl     = defined $impl     ? File::Spec->rel2abs($impl) : File::Spec->catfile($repo_root, 'legacy_perl', 'SNPsplit');
+$samtools = defined $samtools ? abs_path($samtools)        : which('samtools');
 
 die "SNPsplit implementation not found or not executable: $impl\n" unless -x $impl;
 die "samtools not found; install it or pass --samtools PATH\n"     unless defined $samtools && -x $samtools;
 
-my $tag2sort = File::Spec->catfile(dirname($impl), 'tag2sort');
-die "tag2sort not found beside the implementation: $tag2sort\n" unless -x $tag2sort;
+### Beside --impl as given, else beside its resolved target
+my ($tag2sort) = grep { -f && -x } map { File::Spec->catfile(dirname($_), 'tag2sort') } $impl, abs_path($impl);
+die "tag2sort not found beside $impl or its target\n" unless defined $tag2sort;
 
 my $fixture_dir = File::Spec->catdir($test_root, 'fixtures');
 my @fixtures    = @ARGV ? @ARGV : all_fixtures();
@@ -605,7 +606,7 @@ Differential regression harness for SNPsplit + tag2sort.
 
   --update          Regenerate expected/ for the selected fixtures instead of diffing.
   --impl PATH       SNPsplit executable under test. Default: the repo's legacy_perl/SNPsplit.
-                    tag2sort is taken from the same directory and staged alongside it.
+                    tag2sort is taken from its directory (or its target's) and staged alongside it.
   --samtools PATH   samtools for fixture prep and normalisation. Default: first on PATH.
   --keep            Leave scratch directories in place for inspection.
   -v, --verbose     Echo each command as it runs.

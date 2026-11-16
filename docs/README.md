@@ -3,7 +3,7 @@ hide:
   - navigation
 ---
 
-12 November, 2026; Rust [v1.0.0], Perl [v0.9.2]
+16 November, 2026; Rust [v1.0.1], Perl [v0.9.2]
 
 ![SNPsplit](images/SNPsplit.png)
 ______

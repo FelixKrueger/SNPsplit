@@ -3,7 +3,7 @@ members = ["snpsplit"]
 resolver = "3"
 
 [workspace.package]
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 rust-version = "1.89"
 license = "GPL-3.0-or-later"
@@ -14,12 +14,13 @@ anyhow = "1.0"
 clap = { version = "4.6", features = ["derive"] }
 flate2 = "1.1"
 libc = "0.2"
+md-5 = "0.11"
 noodles-bam = "0.94"
 noodles-bgzf = "0.51"
 noodles-sam = "0.89"
 rayon = "1.12"
 sha2 = "0.11"
-ureq = "3.4"
+ureq = { version = "3.4", default-features = false, features = ["rustls"] }
 tempfile = "3.27"
 assert_cmd = "2.2"
 predicates = "3.1"

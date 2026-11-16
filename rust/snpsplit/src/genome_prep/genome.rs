@@ -61,7 +61,7 @@ pub fn read_genome_into_memory(
     for name in names {
         let path = folder.join(&name);
         let file = File::open(&path)
-            .with_context(|| format!("Failed to read from sequence file {name} "))?;
+            .with_context(|| format!("Failed to read from sequence file {name}"))?;
         let mut lines = BufReader::new(file).lines();
 
         let first = lines.next().transpose()?.unwrap_or_default();
@@ -344,7 +344,7 @@ pub fn write_planned(path: &Path, chr: &str, sequence: &[u8]) -> Result<()> {
 
     let mut fh = std::io::BufWriter::new(
         File::create(path)
-            .with_context(|| format!("Failed to write to file {}: ", path.display()))?,
+            .with_context(|| format!("Failed to write to file {}", path.display()))?,
     );
     writeln!(fh, ">{chr}")?;
 

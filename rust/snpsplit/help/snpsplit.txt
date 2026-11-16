@@ -76,6 +76,11 @@
 
     --verbose              Verbose output (for debugging).
 
+    --parallel <int>       Number of workers for each parallel step: allele tagging, name sorting, and reading and
+                           writing BAM files. Default: 1. 0 uses every available core. The environment variable
+                           SNPSPLIT_PARALLEL sets the default when this option is absent. The output does not
+                           depend on the number of workers.
+
 
 
 

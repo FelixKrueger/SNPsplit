@@ -39,7 +39,7 @@ GetOptions(
 
 usage(0) if $help;
 
-$impl = defined $impl ? abs_path($impl)
+$impl = defined $impl ? File::Spec->rel2abs($impl)
                       : File::Spec->catfile($repo_root, 'legacy_perl', 'SNPsplit_genome_preparation');
 
 die "Implementation not found or not executable: $impl\n" unless -x $impl;

@@ -1,3 +1,5 @@
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](https://bioconda.github.io/recipes/snpsplit/README.html)
+
 <p align="center"> <img title="SNPsplit" id="logo_img" src="https://raw.githubusercontent.com/FelixKrueger/SNPsplit/master/docs/images/SNPsplit.png" width=300></p>
 
 ## Allele-specific alignment sorting
@@ -40,8 +42,8 @@ docker run --rm --entrypoint SNPsplit ghcr.io/felixkrueger/snpsplit:latest --hel
 (`snpsplit prepare`, `snpsplit tag`, `snpsplit sort`). It needs a Rust toolchain (1.89 or newer)
 and a C compiler.
 
-**Bioconda:** `conda install -c conda-forge -c bioconda snpsplit` still installs the Perl version
-until the recipe moves to 1.0.
+**Bioconda:** `conda install -c conda-forge -c bioconda snpsplit` installs 1.0 for Linux x86_64,
+Linux aarch64 and macOS Apple Silicon. The Perl version stays available as `snpsplit=0.9.2`.
 
 **From source:** see [the Rust docs](https://felixkrueger.github.io/SNPsplit/rust/).
 
