@@ -122,7 +122,11 @@ pub fn parse(args: &[String]) -> Result<Options, String> {
             "reference_genome" => opts.genome_folder = Some(take_value(&mut i)?),
             "genome_build" => opts.genome_build = Some(take_value(&mut i)?),
             "v7_VCF" => opts.v7 = true,
-            "parallel" => opts.parallel = take_value(&mut i)?.parse().unwrap_or(1),
+            "parallel" => {
+                opts.parallel = take_value(&mut i)?
+                    .parse()
+                    .map_err(|_| "Option parallel requires a number".to_string())?;
+            }
             // The port's one addition, documented in rust/DESIGN.md. Nothing here contacts
             // the network unless --download is given.
             "download" => opts.download = true,
@@ -181,6 +185,24 @@ mod tests {
 
     fn args(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn parallel_takes_a_number_and_nothing_else() {
+        for bad in [
+            &["--parallel", "abc"][..],
+            &["--parallel", "-1"],
+            &["--parallel", "4.5"],
+            &["--parallel="],
+        ] {
+            assert_eq!(
+                parse(&args(bad)).unwrap_err(),
+                "Option parallel requires a number",
+                "{bad:?}"
+            );
+        }
+        assert_eq!(parse(&args(&["--parallel", "0"])).unwrap().parallel, 0);
+        assert_eq!(parse(&args(&["--parallel=+4"])).unwrap().parallel, 4);
     }
 
     #[test]
