@@ -1,4 +1,4 @@
-//! The help pages: Perl SNPsplit v0.9.2's, plus an entry for each option in a tool's `ADDED`.
+//! The help pages: Perl SNPsplit v0.9.2's, plus each `ADDED` option and Perl options it left out.
 //! A wrapped line never starts with `-`, since that is how a listed option is recognised.
 
 use crate::Tool;

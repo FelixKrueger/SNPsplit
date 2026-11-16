@@ -8,7 +8,7 @@ pub(crate) const ADDED: &[&str] = &["parallel"];
 
 /// Accepted but not on the help page, as in the Perl.
 #[cfg(test)]
-pub(crate) const UNLISTED: &[&str] = &["man", "verbose", "sam", "parent_dir"];
+pub(crate) const UNLISTED: &[&str] = &["man", "parent_dir"];
 
 /// The option names this tool registers, in the order the Perl's GetOptions lists them.
 ///
